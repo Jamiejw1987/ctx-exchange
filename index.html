@@ -418,7 +418,7 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 
 <script>
 const SC=document.getElementById("sc");
-const TASTER=(()=>{try{const t=new URLSearchParams(location.search).get("try");return t==="client"||t==="candidate"?t:null}catch(e){return null}})();
+const TASTER=(()=>{try{const t=new URLSearchParams(location.search).get("try");return t==="candidate"?"candidate":"client"}catch(e){return "client"}})();
 const STORE="cte-v6"+(TASTER?"-taster-"+TASTER:"");
 if(TASTER)document.body.classList.add("taster");
 /* ---------------- data ---------------- */
