@@ -231,6 +231,7 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
 #tbar .btn{flex:none}
 body.taster #tbar{display:flex}
+body.taster .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 body.taster .seg{display:none}
 .tsteps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:st}
 .tsteps li{display:flex;gap:12px;align-items:flex-start;counter-increment:st}
@@ -509,6 +510,7 @@ const S={
     hl:["Won 3 new national items at Kroger in 2025","Cut trade spend 12% while growing volume","Managed two broker partners across the Midwest"],
     retailers:["Kroger","Costco","Target"],prefStage:"SME",prefCats:["Salty snacks","Better-for-you","Protein snacks"],
     dream:"Northfield, protein snack brands, PE-backed scale-ups",kw:["Better-for-you","Protein","Chips","Club channel","Clean label","RTD"],hide:"Crunchly Foods",agreed:false},
+  interest:{},
   creqs:[
     {id:"q1",co:"Northfield Snack Co.",role:"National Account Manager, Kroger",base:"$130–150k + bonus",stage:"SME",hq:"Chicago, IL",why:"Equity for senior hires and a founder who came up through sales.",status:"new"},
     {id:"q2",co:"Harbor & Pine Confectionery",role:"National Account Director",base:"$150–170k + bonus",stage:"EST",hq:"Hershey, PA",why:"A 90-year-old brand relaunching with a new commercial team.",status:"new"}]
@@ -1407,12 +1409,71 @@ function vDash(){
   const m=$("#dMore");if(m)m.onclick=()=>{DF.shown=999;const y=SC.scrollTop;vDash();(SC.scrollTop=y)};
 }
 
+/* ---------------- companies hiring (professional side) ---------------- */
+const COMPANIES=[
+ {id:"k1",self:true},
+ {id:"k2",name:"Harbor & Pine Confectionery",stage:"EST",hq:"Hershey, PA",revenue:"$300–500M",size:"1,100 people",cats:["Chocolate","Confectionery"],
+  tagline:"A 90-year-old chocolate maker relaunching with a new commercial team.",
+  about:"Family-owned chocolate and seasonal candy business sold through grocery, mass and drug. New ownership in 2025 brought fresh investment in brand, innovation and route to market.",
+  why:"Build the national accounts team from the ground up, with the backing of a heritage brand and a clear three-year growth plan.",
+  roles:[{title:"National Account Director, Walmart",lvl:"NAD",region:"National",base:"$150–170k + bonus"},{title:"Brand Manager, Seasonal",lvl:"BM",region:"Northeast",base:"$115–135k + bonus"}]},
+ {id:"k3",name:"Sunridge Pantry Foods",stage:"EST",hq:"Denver, CO",revenue:"$250–400M",size:"900 people",cats:["Ambient","Pantry staples"],
+  tagline:"Better-for-you pantry staples in 30,000 stores.",
+  about:"Soups, broths and grain sides with clean-label recipes, sold across conventional, natural and club. Growing fastest in e-commerce and Costco.",
+  why:"A commercial team that's grown every year for a decade, with real career paths into director and VP roles.",
+  roles:[{title:"VP of Sales, Club and Mass",lvl:"VPS",region:"National",base:"$210–250k + bonus + LTIP"},{title:"Head of E-commerce",lvl:"HEC",region:"West",base:"$170–190k + bonus"},{title:"Category Manager, Kroger",lvl:"CATM",region:"Midwest",base:"$105–120k + bonus"}]},
+ {id:"k4",name:"Cedar & Salt Provisions",stage:"SME",hq:"Austin, TX",revenue:"$20–40M",size:"60 people",cats:["Meat snacks","Protein"],
+  tagline:"Grass-fed meat sticks, now in H-E-B, Whole Foods and Sprouts.",
+  about:"Founder-led meat snack brand that tripled distribution in two years. Backed by a growth investor focused on better-for-you food.",
+  why:"Equity for every senior hire, a direct line to the founders, and a national rollout planned for 2027.",
+  roles:[{title:"National Account Manager, Natural Channel",lvl:"NAM",region:"National",base:"$120–140k + bonus + equity"},{title:"Regional Sales Manager, South",lvl:"RSM",region:"South",base:"$100–120k + bonus"}]},
+ {id:"k5",name:"Little Orchard Kitchen",stage:"SME",hq:"Brooklyn, NY",revenue:"$10–20M",size:"35 people",cats:["Kids snacks","Better-for-you"],
+  tagline:"Fruit and veg snacks for kids, with nothing to hide on the label.",
+  about:"Kids snack brand selling through Target, Whole Foods and Amazon, with a loyal parent community and a fast-growing subscription business.",
+  why:"A small, ambitious team where senior hires shape the brand and the channel strategy from day one.",
+  roles:[{title:"Brand Director",lvl:"BD",region:"Northeast",base:"$150–170k + bonus + equity"}]},
+ {id:"k6",name:"Brightfield Bakehouse",stage:"EST",hq:"Columbus, OH",revenue:"$500M+",size:"2,400 people",cats:["Bakery","Crackers & cookies"],
+  tagline:"Crackers and cookies in nine out of ten US grocery stores.",
+  about:"One of the largest independent bakery businesses in North America, with national brands and a growing private label arm.",
+  why:"Scale, stability and investment in insight and revenue management, with leaders who are promoted from within.",
+  roles:[{title:"Director of Revenue Growth Management",lvl:"CATD",region:"Midwest",base:"$170–195k + bonus"},{title:"Key Account Manager, Kroger",lvl:"KAM",region:"Midwest",base:"$110–125k + bonus"},{title:"Consumer Insights Director",lvl:"CID",region:"Midwest",base:"$160–180k + bonus"}]},
+ {id:"k7",anon:true,stage:"SME",hq:"",revenue:"$40–60M",size:"110 people",cats:["Bars","Protein"],
+  tagline:"A PE-backed protein bar brand entering club and mass.",
+  about:"Fast-growing protein bar business with strong velocity in natural and e-commerce, now expanding into Costco, Sam's Club and Walmart.",
+  why:"Join ahead of the next stage of growth, with a meaningful bonus and equity plan for senior commercial hires.",
+  roles:[{title:"Chief Commercial Officer",lvl:"CCO",region:"National",base:"$260–300k + bonus + equity"},{title:"National Account Director, Club",lvl:"NAD",region:"National",base:"$160–180k + bonus"}]},
+ {id:"k8",name:"Golden Kernel Popcorn Co.",stage:"SME",hq:"Minneapolis, MN",revenue:"$40–60M",size:"95 people",cats:["Popcorn","Salty snacks"],
+  tagline:"Small-batch popcorn with a big following in the Midwest.",
+  about:"Ready-to-eat popcorn brand moving from regional favorite to national player, with new distribution at Target and Kroger.",
+  why:"A founder who wants senior people to build the playbook, not follow one.",
+  roles:[{title:"VP of Marketing",lvl:"VPM",region:"National",base:"$190–220k + bonus + equity"},{title:"Market Manager, Upper Midwest",lvl:"MM",region:"Midwest",base:"$85–100k + bonus"}]}
+];
+function coFull(k){if(!k.self)return k;const co=S.company;return {id:k.id,name:co.name,stage:co.stage,hq:co.hq,revenue:co.revenue,size:co.size,cats:co.cats,tagline:co.tagline,about:co.about,why:co.why,logo:co.logo,anon:co.anon,
+  roles:co.roles.filter(r=>r.title.trim()).map(r=>({...r,base:r.base||({r1:"$130–150k + bonus",r2:"$210–240k + bonus + equity",r3:"$110–130k + bonus + equity",r4:"$165–185k + bonus"})[r.id]||""}))}}
+function vCompanies(){
+  const p=S.cand,my=groupOf(p.lvl);
+  const list=COMPANIES.map(coFull).filter(k=>k.name||k.anon).map(k=>{const lvlHit=k.roles.some(r=>r.lvl===p.lvl),grpHit=k.roles.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,lvlHit,grpHit}})
+    .sort((a,b)=>(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit));
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Companies hiring</span><h1>Brands hiring on the Exchange</h1><p class="muted">Register interest in any of them. They'll see your anonymous profile, never your name or employer, and only you decide whether to reveal.</p></div>
+  <div class="list" style="max-width:760px">${list.map(({k,lvlHit,grpHit})=>{const name=k.anon?coDisplay({...k,anon:true}):k.name,on=!!S.interest[k.id];return `<div class="item">
+    <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?`<span class="colog">?</span>`:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
+      ${lvlHit?`<span class="tag hit">Hiring your level</span>`:grpHit?`<span class="tag">Hiring in your field</span>`:""}</div>
+    <p style="font-weight:600">${esc(k.tagline)}</p>
+    ${k.roles.map(r=>`<div class="openrole"><b>${esc(r.title)}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
+    <details><summary class="small" style="cursor:pointer;font-weight:600">About ${k.anon?"this company":esc(k.name)} and why join</summary><div class="stack" style="gap:8px;margin-top:8px"><p class="small">${esc(k.about)}</p><p class="small"><b>Why join now.</b> ${esc(k.why)}</p><div class="row" style="gap:6px">${(k.cats||[]).map(c=>`<span class="tag brand">${esc(c)}</span>`).join("")}${k.size?`<span class="tag">${esc(k.size)}</span>`:""}</div></div></details>
+    <div class="row">${on?`<span class="tag hit">Interest registered</span><button class="btn quiet sm" data-int="${k.id}">Withdraw</button>`:`<button class="btn sm" data-int="${k.id}">I'm interested</button>`}</div>
+  </div>`}).join("")}</div>`;
+  app.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
+    if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();toast(`We'll show ${k.anon?"them":k.name} your anonymous profile`)}
+    save();const y=SC.scrollTop;vCompanies();(SC.scrollTop=y)});
+}
+
 /* ---------------- routing ---------------- */
-const VIEWS={dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["alerts","Alerts"]];
-const CAND_TABS=[["candidate","My profile"],["introductions","Introductions","r"],["messages","Messages","m"]];
+const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
 const ADMIN_TABS=[["dash","Dashboard"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
-const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"]]:TASTER==="candidate"?[["candidate","My profile"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
+const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){
   const fy=completeness().pct===100;
@@ -1420,7 +1481,7 @@ function counts(){
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
-  const v=view();S.mode=(v==="candidate"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
@@ -1428,9 +1489,9 @@ function render(){
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe}))}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;
+  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
@@ -1443,7 +1504,7 @@ if(TASTER){
   $("#demoTxt").textContent="Taster · the professionals and companies you'll see are fictional samples";
   const seenKey=STORE+"-seen";let seen=false;try{seen=!!localStorage.getItem(seenKey)}catch(e){}
   const W=TASTER==="client"?{k:"For hiring teams",h:"Find your next senior hire",p:"Private introductions to senior food and snacking leaders across North America. Here's a two-minute taster.",steps:[["Tell us about your company","Add your name, a one-line pitch and a role you're hiring."],["See who we'd put forward","Your For you picks unlock as soon as your profile's ready."],["Shortlist the people you'd like to meet","Browse the pool, or swipe through your strongest fits."]],go:"Start with my company",to:"company"}
-   :{k:"For professionals",h:"Your next move, in confidence",p:"Be seen by the food and snacking brands hiring senior talent, without your name or employer ever being shown. Here's a two-minute taster.",steps:[["Build your anonymous profile","Your role, your wins and the brands you'd move for."],["See exactly what companies see","Your name, employer and contact details stay hidden."],["Review companies that want to meet you","Accept or decline introductions in confidence."]],go:"Build my profile",to:"candidate"};
+   :{k:"For professionals",h:"Your next move, in confidence",p:"Be seen by the food and snacking brands hiring senior talent, without your name or employer ever being shown. Here's a two-minute taster.",steps:[["Build your anonymous profile","Your role, your wins and the brands you'd move for."],["See exactly what companies see","Your name, employer and contact details stay hidden."],["Browse the brands hiring now","Register interest anonymously, or accept introductions in confidence."]],go:"Build my profile",to:"candidate"};
   if(!seen){layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="twT" style="max-width:460px">
     <div class="stack" style="gap:6px"><span class="kicker">${W.k} · Taster</span><h2 id="twT">${W.h}</h2><p class="muted">${W.p}</p></div>
     <ol class="tsteps">${W.steps.map(([b,t])=>`<li><div><b>${b}</b><span>${t}</span></div></li>`).join("")}</ol>
