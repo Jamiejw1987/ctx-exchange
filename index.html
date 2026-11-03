@@ -215,6 +215,21 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .arow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .dtable td{vertical-align:top}
+.curated{border-left:3px solid var(--brand);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.curated .sublabel{margin:0}
+.curated .by{font-size:12px;color:var(--muted)}
+.refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
+.badge:empty{display:none}
+.partners{padding-block:0 56px}
+.partners .kicker{display:block;margin-bottom:12px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.partner{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.partner .ph{width:54px;height:54px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--navy);color:#fff;font-family:var(--display);font-weight:600;font-size:18px;overflow:hidden;box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--line)}
+.partner .ph img{width:100%;height:100%;object-fit:cover}
+.partner .pi{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.partner .pi b{font-size:15px}
+.partner .pi span{font-size:12.5px;color:var(--muted)}
+@media (max-width:600px){.partner{flex-wrap:wrap}.partner .btn{width:100%;justify-content:center;text-align:center}}
 .why{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
 .why li{display:flex;gap:8px}
 .why li::before{content:"✓";color:var(--good);font-weight:800}
@@ -380,6 +395,13 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 <div id="sc">
 <div class="demo"><div class="wrap">Demo version · all candidates and companies are fictional samples</div></div>
 <main class="wrap" id="app"></main>
+<section id="partners" class="wrap partners" aria-label="Your Consumer Talent partners">
+  <span class="kicker">Your Consumer Talent partners</span>
+  <div class="pgrid">
+    <div class="partner"><div class="ph" data-photo="jamie">JW</div><div class="pi"><b>Jamie Wood</b><span>Founder · Food and snacking</span></div><a class="btn sm" href="mailto:jamie@consumer-talent.com?subject=Consumer%20Talent%20Exchange">Speak to Jamie</a></div>
+    <div class="partner"><div class="ph" data-photo="connor">CW</div><div class="pi"><b>Connor Whitehouse</b><span>Associate Director · Beverages</span></div><a class="btn sm" href="mailto:connor@consumer-talent.com?subject=Consumer%20Talent%20Exchange">Speak to Connor</a></div>
+  </div>
+</section>
 </div>
 <div id="layer"></div>
 
@@ -400,6 +422,9 @@ const REGIONS=["National","Northeast","Midwest","South","Southeast","Southwest",
 const RETAIL=["Costco","Kroger","Walmart","Target","Sprouts","Whole Foods","Albertsons","Publix","Sam's Club","CVS","Convenience","E-commerce"];
 const CATS=["Salty snacks","Confectionery","Ambient & pantry","Better-for-you","Protein snacks","Bakery"];
 const BANDS=[...new Set(DATA.map(p=>p.band))].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+DATA.forEach((p,i)=>{p.user="Candidate CTX-"+(1201+i*7)});
+const refOf=u=>String(u).replace(/^Candidate /,"Ref ");
+const fitWord=s=>s>=85?"Exceptional fit":s>=70?"Strong fit":"Good fit";
 let POOL=DATA.filter(p=>!p.reserve);
 const RESERVE=DATA.filter(p=>p.reserve);
 const SECTORS=["Salty snacks","Confectionery","Chocolate","Bakery","Ambient & pantry","Better-for-you","Protein snacks","Meat snacks & jerky","Bars","Nuts & seeds","Popcorn","Chips & crisps","Crackers & cookies","Breakfast & cereal","Frozen foods","Dairy","Plant-based","Plant-based dairy","Fresh & chilled","Deli & meats","Sauces & condiments","Spices & seasonings","Soups & meals","Pasta & grains","Baby & kids food","Hispanic foods","Asian foods","Coffee","Tea","RTD beverages","Energy drinks","Sports nutrition","Functional beverages","Sparkling water","Juice","Beer","Wine","Spirits","Supplements","Health & wellness","Pet food","Personal care","Household","Private label","Foodservice"];
@@ -567,11 +592,11 @@ function queue(){
 function profileCard(p,{match=null,hits=[],why=[],prefFit=false,mine=false,kwHits=[]}={}){
   return `<article class="pcard" data-id="${esc(p.id||"")}">
     <div class="top">
-      <div class="who"><div class="avatar">${personIcon}</div><div style="min-width:0"><div class="user">${esc(p.user)}</div><div class="lvl">${esc(LEVELS[p.lvl])} · ${esc(p.region)}${p.base&&p.region==="National"?"":""}</div></div></div>
-      ${match!==null?`<div class="match"><b class="num">${match}%</b><div class="meter"><i style="width:${match}%"></i></div><small>match</small></div>`:""}
+      <div class="who"><div class="avatar">${personIcon}</div><div style="min-width:0"><div class="user">${esc(LEVELS[p.lvl])}</div><div class="lvl">${esc(p.region)} · ${esc(refOf(p.user))}</div></div></div>
     </div>
-    <div class="row" style="gap:6px">${p.isNew?`<span class="tag new">New this week</span>`:""}<span class="tag">${esc(p.open)}</span>${p.active?`<span class="tag">${esc(p.active)}</span>`:""}${prefFit?`<span class="tag hit">Interested in companies like yours</span>`:""}</div>
+    <div class="row" style="gap:6px"><span class="tag">${esc(p.open)}</span>${prefFit?`<span class="tag hit">Interested in companies like yours</span>`:""}</div>
     <p class="head">${esc(p.headline)}</p>
+    ${why.length?`<div class="curated"><div class="sublabel">Why we've put them forward</div><ul class="why">${why.slice(0,4).map(w=>`<li>${esc(w)}</li>`).join("")}</ul><div class="by">Consumer Talent</div></div>`:""}
     ${p.summary?`<p class="sum">${esc(p.summary)}</p>`:""}
     ${p.hl&&p.hl.filter(Boolean).length?`<ul class="hl">${p.hl.filter(Boolean).map(h=>`<li>${esc(h)}</li>`).join("")}</ul>`:""}
     <dl class="facts">
@@ -584,7 +609,6 @@ function profileCard(p,{match=null,hits=[],why=[],prefFit=false,mine=false,kwHit
     ${p.kw&&p.kw.length?`<div><div class="sublabel">Sectors and keywords</div><div class="row" style="gap:6px">${p.kw.map(k=>`<span class="tag kw ${kwHits.some(x=>x.toLowerCase()===k.toLowerCase())?"hit":""}">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.skills?`<div><div class="sublabel">Strengths</div><div class="row" style="gap:6px">${p.skills.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.edu?`<div class="meta3"><span>${esc(p.edu)}</span><span>${esc(p.work)}</span><span>${esc(p.relocate)}</span><span>${esc(p.travel)}</span></div>`:""}
-    ${why.length?`<ul class="why">${why.slice(0,4).map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}
     <div class="anon">${lockIcon}<span>${mine?"Your name, employer and contact details stay hidden until you accept an introduction.":"Name and employer hidden until the candidate accepts your introduction."}</span></div>
   </article>`;
 }
@@ -595,7 +619,7 @@ function vCompany(){
   const apRet=addPick("apRet","retailers",co,STORES,"Add a store, e.g. H-E-B",rr),apReg=addPick("apReg","regions",co,PLACESUG,"Add a state or area, e.g. Texas",rr);
   app.innerHTML=`
   <div class="pagehead"><span class="kicker">Company profile</span><h1>Tell candidates who you are and who you need</h1>
-    <p class="muted">The Exchange is free until you reveal a candidate and hire. Complete your profile to unlock your For you picks.</p></div>
+    <p class="muted">This is what candidates see before they agree to meet you. Complete it to receive your curated For you picks.</p></div>
   <div class="cols">
     <form class="card" id="coForm">
       <div class="section"><h3>About the company</h3>
@@ -680,7 +704,7 @@ function vPool(){
    .sort((a,b)=>PF.sort==="match"?b.score-a.score:PF.sort==="new"?(b.c.isNew-a.c.isNew)||(b.score-a.score):LV.indexOf(a.c.lvl)-LV.indexOf(b.c.lvl));
   const lvOpts=(PF.grp==="all"?LV:GROUPS.find(g=>g[0]===PF.grp)[1]);
   app.innerHTML=`<div class="pagehead"><span class="kicker">Talent pool</span><h1>${visible().length} senior food and snacking professionals across North America</h1>
-    <p class="muted">Every member is vetted for the North American food sector. Browsing is free, and profiles stay anonymous until you both agree to reveal.</p></div>
+    <p class="muted">Every member is personally vetted by Consumer Talent. Profiles stay anonymous until you both agree to reveal.</p></div>
   <div class="row" style="gap:8px;margin-bottom:16px">${GROUPS.map(([g,ls])=>{const n=visible().filter(c=>ls.includes(c.lvl)).length;return `<button class="pick radio" data-grp="${esc(g)}" aria-pressed="${PF.grp===g}">${g} <span class="badge num">${n}</span></button>`}).join("")}<button class="pick radio" data-grp="all" aria-pressed="${PF.grp==="all"}">Everyone <span class="badge num">${visible().length}</span></button></div>
   <div class="protect" style="margin-bottom:14px">${lockIcon}<span><b>Your own team is never shown here.</b> Anyone who works at ${esc(S.company.name)}, or has asked not to be shown to you, is left out of these results. They can't see your company either.</span></div>
   <div class="filters">
@@ -688,15 +712,15 @@ function vPool(){
     <select id="pfl" aria-label="Level"><option value="all">All levels</option>${lvOpts.map(l=>`<option value="${l}" ${PF.lvl===l?"selected":""}>${LEVELS[l]}</option>`).join("")}</select>
     <select id="pfr" aria-label="Region"><option value="all">All regions</option>${REGIONS.map(r=>`<option ${PF.region===r?"selected":""}>${r}</option>`).join("")}</select>
     <select id="pfo" aria-label="Status"><option value="all">Any status</option>${["Actively looking","Open to the right move","Quietly exploring"].map(o=>`<option ${PF.open===o?"selected":""}>${o}</option>`).join("")}</select>
-    <select id="pfs" aria-label="Sort"><option value="match" ${PF.sort==="match"?"selected":""}>Best match first</option><option value="new" ${PF.sort==="new"?"selected":""}>Newest first</option><option value="level" ${PF.sort==="level"?"selected":""}>By seniority</option></select>
+    <select id="pfs" aria-label="Sort"><option value="match" ${PF.sort==="match"?"selected":""}>Best fit first</option><option value="new" ${PF.sort==="new"?"selected":""}>Newest first</option><option value="level" ${PF.sort==="level"?"selected":""}>By seniority</option></select>
   </div>
   <div class="row" style="gap:6px;margin-bottom:12px"><span class="muted small">Popular:</span>${topKw().map(k=>`<button type="button" class="sug${PF.q.toLowerCase()===k.toLowerCase()?" add":""}" data-kwq="${esc(k)}">${esc(k)}</button>`).join("")}</div>
   <div class="row" style="justify-content:space-between;margin-bottom:10px"><p class="muted small num">${PF.mode==="swipe"?`${rows.filter(x=>!S.decided[x.c.id]).length} left to review`:`Showing ${Math.min(PF.shown,rows.length)} of ${rows.length}`}</p>${modeSeg("pmode",PF.mode)}</div>
   ${PF.mode==="swipe"?`<section class="deck">${(()=>{const sw=rows.filter(x=>!S.decided[x.c.id]);return deckHTML(sw[0],sw.length,`<div class="empty"><h2>You've reviewed everyone here</h2><p class="muted">Change the filters above to swipe through more people.</p></div>`)})()}</section>`:
   rows.length?`<div class="pool">${rows.slice(0,PF.shown).map(x=>`<button class="mini ${S.shortlist.includes(x.c.id)?"kept":""}" data-open="${x.c.id}">
-      <div class="t"><div><div class="u">${esc(x.c.user)}</div><div class="l">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div><span class="pct num">${x.score}%</span></div>
+      <div class="t"><div><div class="u">${LEVELS[x.c.lvl]}</div><div class="l">${esc(x.c.region)} · ${esc(refOf(x.c.user))}</div></div></div>
       <div class="h">${esc(x.c.headline)}</div>
-      <div class="row" style="gap:5px">${x.c.isNew?`<span class="tag new">New</span>`:""}${x.c.retailers.slice(0,2).map(r=>`<span class="tag ${x.hits.includes(r)?"hit":""}">${esc(r)}</span>`).join("")}${x.c.kw.slice(0,3).map(k=>`<span class="tag kw ${x.kwHits.includes(k)?"hit":""}">${esc(k)}</span>`).join("")}</div>
+      <div class="row" style="gap:5px">${x.c.retailers.slice(0,2).map(r=>`<span class="tag ${x.hits.includes(r)?"hit":""}">${esc(r)}</span>`).join("")}${x.c.kw.slice(0,3).map(k=>`<span class="tag kw ${x.kwHits.includes(k)?"hit":""}">${esc(k)}</span>`).join("")}</div>
       <div class="ft"><span>${x.c.yrs} yrs · ${esc(x.c.band)}</span><span>${S.shortlist.includes(x.c.id)?"Shortlisted":S.decided[x.c.id]==="pass"?"Passed":esc(x.c.open)}</span></div></button>`).join("")}</div>
     ${rows.length>PF.shown?`<div style="text-align:center;margin-top:18px"><button class="btn line" id="more">Show more (${rows.length-PF.shown} left)</button></div>`:""}`
    :`<div class="empty"><h2>No one matches those filters</h2><p class="muted">Try a broader search or clear a filter.</p></div>`}`;
@@ -775,8 +799,8 @@ function vDiscover(){
   const q=queue(),x=q[0];
   app.innerHTML=`<div class="disc">
     <aside class="stack">
-      <div class="pagehead" style="margin:0"><span class="kicker">Discover</span><h1>${esc(S.company.name)}</h1><p class="muted small">Your best matches, one at a time. Swipe right to shortlist, left to pass.</p></div>
-      <div class="field">Show${picks("filter",["all",...S.company.levels],S.filter,{radio:true,label:l=>l==="all"?"Best matches":LEVELS[l]})}</div>
+      <div class="pagehead" style="margin:0"><span class="kicker">Discover</span><h1>${esc(S.company.name)}</h1><p class="muted small">Your strongest fits, one at a time. Swipe right to shortlist, left to pass.</p></div>
+      <div class="field">Show${picks("filter",["all",...S.company.levels],S.filter,{radio:true,label:l=>l==="all"?"Strongest fits":LEVELS[l]})}</div>
       <p class="muted small num">${q.length} profiles to review · ${S.shortlist.length} shortlisted</p>
     </aside>
     <section class="deck" id="deck">${deckHTML(x,q.length,`<div class="empty"><h2>You're all caught up</h2><p class="muted">You've reviewed everyone who matches right now. Turn on alerts and we'll tell you when someone new joins.</p><a class="btn" href="#alerts">Set up alerts</a></div>`)}</section>
@@ -802,9 +826,9 @@ function vShortlist(){
   S.shortlist=S.shortlist.filter(id=>POOL.some(p=>p.id===id));
   const items=S.shortlist.map(id=>{const c=POOL.find(p=>p.id===id);return {c,...score(c),i:S.intros[id]}});
   app.innerHTML=`<div class="pagehead"><span class="kicker">Shortlist</span><h1>People you'd like to meet</h1>
-    <p class="muted">Introductions and chats are free. Both sides stay anonymous until you both agree to reveal, and you only pay if you hire.</p></div>
+    <p class="muted">Both sides stay anonymous until you both agree to reveal. A fee applies only when you hire.</p></div>
   <div class="cols"><div class="list">${items.length?items.map(x=>{const st=x.i?x.i.stage:0;return `<div class="item">
-      <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)} · <span class="num">${x.score}% match</span></div></div>
+      <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div>
         <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">Request introduction</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?`<span class="tag new">Waiting for candidate</span>`:`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
       <div class="steps">${STEPS.map((s,i)=>`<div class="${i<=st?"on":""}">${s}</div>`).join("")}</div>
       ${st>=3?`<div class="protect">${lockIcon}<span><b>Protected introduction ${esc(x.i.ref)}.</b> Our fee applies to any hire of this person by ${esc(S.company.name)} or an associated company until <b>${fmtDay(plus12(new Date(x.i.revealedAt||x.i.at)))}</b>.</span></div>`:""}
@@ -832,7 +856,7 @@ function startIntro(id){
 const REPLIES=["That sounds interesting. How big is the team I'd be joining?","Thanks, that's helpful. What's driving the hire right now?","Good to know. I'm open to a first conversation if the role fits.","Appreciate the detail. Is the role remote or based near HQ?"];
 function vChats(){
   const ids=Object.keys(S.intros).filter(k=>S.intros[k].stage>=2&&POOL.some(p=>p.id===k));
-  if(!ids.length){app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Your conversations</h1></div><div class="empty"><h2>No conversations yet</h2><p class="muted">When a candidate accepts your introduction, you can chat here, anonymously and free.</p><a class="btn" href="#shortlist">Go to your shortlist</a></div>`;return}
+  if(!ids.length){app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Your conversations</h1></div><div class="empty"><h2>No conversations yet</h2><p class="muted">When a candidate accepts your introduction, you can chat here in confidence.</p><a class="btn" href="#shortlist">Go to your shortlist</a></div>`;return}
   if(!ids.includes(S.activeChat))S.activeChat=ids[0];
   const id=S.activeChat,c=POOL.find(p=>p.id===id),i=S.intros[id],st=i.stage;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Chats, reveals and interviews</h1><p class="muted">Everything runs through the Exchange, so both sides stay protected and nothing gets lost.</p></div>
@@ -937,7 +961,7 @@ function termsHTML(){
 function openTermsGate(onDone){
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="stack" style="gap:4px"><span class="kicker">Before your first reveal</span><h2 id="tT">Agree terms to reveal identities</h2>
-    <p class="muted small">You sign once for ${esc(S.company.name)}. Everything up to now has been free, and you only pay if you hire.</p></div>
+    <p class="muted small">You sign once for ${esc(S.company.name)}. A fee applies only on a successful hire.</p></div>
     ${termsHTML()}
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
     <div class="grid2"><label class="field">Full name<input type="text" id="sName" value="${esc(S.company.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="sTitle" value="${esc(S.company.contactTitle)}"></label></div>
@@ -961,8 +985,8 @@ function cmpTable(p,base=STD,label="Proposed"){return `<div class="scrollx"><tab
 function vTerms(){
   const d=S.deal;d.co=S.company.name;
   const status=termsOK()?(d.status==="agreed"?["Custom terms agreed","hit"]:["Standard terms signed","hit"]):d.status==="pending"?["Your proposal is with Consumer Talent","new"]:d.status==="countered"?["Consumer Talent sent a counter-offer","new"]:d.status==="declined"?["Your proposal was declined","new"]:["Not agreed yet","tag"];
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Terms</span><h1>Free until you reveal and hire</h1>
-    <p class="muted">Browsing, introductions and anonymous chats cost nothing. Terms only apply when you reveal a candidate's identity, and a fee is only due if you hire. If our standard terms don't work for you, propose your own or upload yours.</p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Terms</span><h1>Terms of engagement</h1>
+    <p class="muted">Terms only apply when you reveal a candidate's identity, and a fee is only due if you hire. If our standard terms don't work for you, propose your own or upload yours.</p></div>
   <div class="cols"><div class="stack">
     <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Your status</h2><span class="tag ${status[1]}">${status[0]}</span></div>
       ${d.status==="countered"?`<p>We've reviewed your proposal and come back with this:</p>${cmpTable(d.counter,STD,"Our counter")}<div class="row"><button class="btn" id="accC">Accept counter-offer</button><button class="btn line" id="decC">Decline</button></div>`:""}
@@ -991,9 +1015,9 @@ function vTerms(){
 function completeness(){const co=S.company;const checks=[["Company logo",!!co.logo],["One-line pitch",co.tagline.trim().length>10],["About us",co.about.trim().length>60],["Why join now",co.why.trim().length>30],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your sectors",co.cats.length>0],["Key retailers",co.retailers.length>0],["Territories",co.regions.length>0],["Three or more sectors and keywords",co.kw.length>=3],["Your contact",!!co.contact.trim()]];
   return {checks,pct:Math.round(checks.filter(c=>c[1]).length/checks.length*100)}}
 function miniCard(x){return `<button class="mini ${S.shortlist.includes(x.c.id)?"kept":""}" data-open="${x.c.id}">
-  <div class="t"><div><div class="u">${esc(x.c.user)}</div><div class="l">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div><span class="pct num">${x.score}%</span></div>
+  <div class="t"><div><div class="u">${LEVELS[x.c.lvl]}</div><div class="l">${esc(x.c.region)} · ${esc(refOf(x.c.user))}</div></div></div>
   <div class="h">${esc(x.c.headline)}</div>
-  <div class="row" style="gap:5px">${x.c.isNew?`<span class="tag new">New</span>`:""}${x.c.retailers.slice(0,2).map(r=>`<span class="tag ${x.hits.includes(r)?"hit":""}">${esc(r)}</span>`).join("")}${(x.c.kw||[]).slice(0,3).map(k=>`<span class="tag kw ${(x.kwHits||[]).includes(k)?"hit":""}">${esc(k)}</span>`).join("")}</div>
+  <div class="row" style="gap:5px">${x.c.retailers.slice(0,2).map(r=>`<span class="tag ${x.hits.includes(r)?"hit":""}">${esc(r)}</span>`).join("")}${(x.c.kw||[]).slice(0,3).map(k=>`<span class="tag kw ${(x.kwHits||[]).includes(k)?"hit":""}">${esc(k)}</span>`).join("")}</div>
   <div class="ft"><span>${x.c.yrs} yrs · ${esc(x.c.band)}</span><span>${S.shortlist.includes(x.c.id)?"Shortlisted":esc(x.c.open)}</span></div></button>`}
 const FY={mode:"grid"};
 function vForYou(){
@@ -1025,26 +1049,26 @@ function vAlerts(){
     <div class="toggle"><div><b>Email</b><p class="muted small">${esc(a.email_to)}</p></div><label class="switch"><input type="checkbox" id="aE" ${a.email?"checked":""} aria-label="Email alerts"><span></span></label></div>
     <div class="toggle"><div><b>Text message</b><p class="muted small">${esc(a.phone)}</p></div><label class="switch"><input type="checkbox" id="aS" ${a.sms?"checked":""} aria-label="Text alerts"><span></span></label></div>
     <div class="toggle" style="flex-direction:column;align-items:stretch"><div class="field">How often${picks("freq",["instant","daily","weekly"],a.freq,{radio:true,label:v=>({instant:"As they join",daily:"Daily summary",weekly:"Monday summary"})[v]})}</div></div>
-    <div class="toggle" style="flex-direction:column;align-items:stretch;border:0"><div class="field">Only for matches above <b id="aMv" class="num">${a.min}%</b><input type="range" id="aM" min="50" max="95" step="5" value="${a.min}"></div></div>
+    <div class="toggle" style="flex-direction:column;align-items:stretch;border:0"><div class="field">Only for <b id="aMv">${fitWord(a.min).toLowerCase()}s</b> and above<input type="range" id="aM" min="50" max="95" step="5" value="${a.min}"></div></div>
     <button class="btn line" id="aSim">Try it: simulate a new member joining</button>
     ${S.feed.length?`<div class="stack" style="margin-top:16px;gap:8px"><b class="small">Alerts sent</b>${S.feed.map(f=>`<div class="small"><span class="muted num">${f.t}</span> · ${esc(f.m)}</div>`).join("")}</div>`:""}
   </div>
   <div class="stack sticky">
-    ${a.email?`<div class="msg"><div class="mh"><b>Consumer Talent Exchange</b> · New ${LEVELS[x.c.lvl]}, ${x.score}% match</div><div class="mb"><p>Hi ${esc(co.contact.split(" ")[0])}, a new member who fits ${esc(co.name)} just joined.</p><p><b>${esc(x.c.user)}</b><br>${LEVELS[x.c.lvl]} · ${esc(x.c.region)} · ${esc(x.c.band)}</p><p class="muted">“${esc(x.c.headline)}”</p><div><a class="btn sm" href="#discover">View profile</a></div></div></div>`:""}
-    ${a.sms?`<div class="sms">Consumer Talent: new ${LEVELS[x.c.lvl]} (${x.score}% match) with ${esc(x.c.retailers.slice(0,2).join(" & "))} experience just joined. View: cte.link/${x.c.id}</div>`:""}
+    ${a.email?`<div class="msg"><div class="mh"><b>Consumer Talent Exchange</b> · New ${LEVELS[x.c.lvl]}, ${fitWord(x.score).toLowerCase()}</div><div class="mb"><p>Hi ${esc(co.contact.split(" ")[0])}, a new member who fits ${esc(co.name)} just joined.</p><p><b>${esc(LEVELS[x.c.lvl])}</b> · ${esc(refOf(x.c.user))}<br>${LEVELS[x.c.lvl]} · ${esc(x.c.region)} · ${esc(x.c.band)}</p><p class="muted">“${esc(x.c.headline)}”</p><div><a class="btn sm" href="#discover">View profile</a></div></div></div>`:""}
+    ${a.sms?`<div class="sms">Consumer Talent: new ${LEVELS[x.c.lvl]} (${fitWord(x.score).toLowerCase()}) with ${esc(x.c.retailers.slice(0,2).join(" & "))} experience just joined. View: cte.link/${x.c.id}</div>`:""}
     ${!a.email&&!a.sms?`<div class="card muted">Alerts are off. Turn on email or text to see a preview.</div>`:""}
   </div></div>`;
   $("#aE").onchange=e=>{a.email=e.target.checked;save();vAlerts()};$("#aS").onchange=e=>{a.sms=e.target.checked;save();vAlerts()};
   bindPicks(app,a,()=>{save();vAlerts()});
-  $("#aM").oninput=e=>{a.min=+e.target.value;$("#aMv").textContent=a.min+"%"};$("#aM").onchange=save;
+  $("#aM").oninput=e=>{a.min=+e.target.value;$("#aMv").textContent=fitWord(a.min).toLowerCase()+"s"};$("#aM").onchange=save;
   $("#aSim").onclick=simulate;
 }
 function simulate(){
-  const base=RESERVE[S.feed.length%RESERVE.length];const c={...base,id:base.id+"_"+S.feed.length,user:S.feed.length>=RESERVE.length?base.user+S.feed.length:base.user,isNew:true,prefStage:"ANY",prefCats:["Protein snacks","Salty snacks"],kw:["Protein","Club channel",...base.kw.slice(0,2)].filter((v,i,a)=>a.indexOf(v)===i),active:"Joined just now"};POOL.unshift(c);
+  const base=RESERVE[S.feed.length%RESERVE.length];const c={...base,id:base.id+"_"+S.feed.length,user:"Candidate CTX-"+(5001+S.feed.length),isNew:true,prefStage:"ANY",prefCats:["Protein snacks","Salty snacks"],kw:["Protein","Club channel",...base.kw.slice(0,2)].filter((v,i,a)=>a.indexOf(v)===i),active:"Joined just now"};POOL.unshift(c);
   const sc=score(c).score,t=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
   const ch=[S.alerts.email&&"email",S.alerts.sms&&"text"].filter(Boolean).join(" and ");
-  if(sc>=S.alerts.min&&ch){S.feed.unshift({t,m:`${c.user} joined, ${sc}% match. Sent by ${ch}${S.alerts.freq!=="instant"?" in your next summary":""}.`});toast(`New ${sc}% match joined. Alert sent by ${ch}.`)}
-  else{S.feed.unshift({t,m:`${c.user} joined, ${sc}% match. Below your alert setting, so no alert sent.`});toast("New member joined, below your alert setting")}
+  if(sc>=S.alerts.min&&ch){S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Sent by ${ch}${S.alerts.freq!=="instant"?" in your next summary":""}.`});toast(`New ${fitWord(sc).toLowerCase()} joined. Alert sent by ${ch}.`)}
+  else{S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Below your alert setting, so no alert sent.`});toast("New member joined, below your alert setting")}
   counts();vAlerts();
 }
 
@@ -1063,7 +1087,7 @@ function fixIssues(p){
   const hide=[p.current,...p.hide.split(",")].map(s=>s.trim()).filter(s=>s.length>2);
   const words=[...hide,...BRANDS];
   const fix=s=>{let o=s;words.forEach(w=>{const re=new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\']/g,"\\$&")+"('s)?\\b","gi");o=o.replace(re,"a leading snack brand")});return o.replace(/[\w.]+@[\w.]+\.\w+/g,"").replace(/\+?\d[\d\s().-]{8,}\d/g,"")};
-  p.headline=fix(p.headline);p.summary=fix(p.summary);p.hl=p.hl.map(fix);p.user=fix(p.user).replace(/\s+/g,"_");
+  p.headline=fix(p.headline);p.summary=fix(p.summary);p.hl=p.hl.map(fix);
 }
 function vProfile(){
   const p=S.cand;const apCRet=addPick("apCRet","retailers",p,STORES,"Add a store or channel",()=>vProfile());const issues=anonChecks(p);
@@ -1072,7 +1096,7 @@ function vProfile(){
   <div class="cols">
     <form class="card" id="pf">
       <div class="section"><h3>Your role</h3>
-        <label class="field">Display name <small>Shown instead of your real name</small><div class="row" style="flex-wrap:nowrap"><input type="text" id="p_user" value="${esc(p.user)}"><button type="button" class="btn line sm" id="suggest">Suggest</button></div></label>
+        <div class="field">Your reference <small>Companies see this instead of your name</small><div><span class="refpill">${lockIcon}${esc(refOf(p.user))}</span></div></div>
         <div class="grid2">
           <label class="field">Level<select id="p_lvl">${levelOptions(p.lvl)}</select></label>
           <label class="field">Region<select id="p_region">${REGIONS.map(g=>`<option ${g===p.region?"selected":""}>${g}</option>`).join("")}</select></label>
@@ -1111,18 +1135,18 @@ function vProfile(){
     const f=$("#fix");if(f)f.onclick=()=>{fixIssues(p);vProfile();toast("Identifying details replaced")};
     $("#pSave").disabled=!p.agreed;$("#pNote").textContent=p.agreed?"":"Tick the agreement above to save.";};
   prev();
-  const map={p_user:"user",p_lvl:"lvl",p_region:"region",p_yrs:"yrs",p_team:"team",p_band:"band",p_notice:"notice",p_headline:"headline",p_summary:"summary",p_dream:"dream",p_current:"current",p_hide:"hide"};
+  const map={p_lvl:"lvl",p_region:"region",p_yrs:"yrs",p_team:"team",p_band:"band",p_notice:"notice",p_headline:"headline",p_summary:"summary",p_dream:"dream",p_current:"current",p_hide:"hide"};
   Object.entries(map).forEach(([id,k])=>{const el=$("#"+id);el.addEventListener("input",()=>{p[k]=el.value;prev()});el.addEventListener("change",()=>{p[k]=el.value;prev()})});
   app.querySelectorAll("[data-hl]").forEach(el=>el.addEventListener("input",()=>{p.hl[+el.dataset.hl]=el.value;prev()}));
   bindPicks(app,p,()=>{const y=SC.scrollTop;vProfile();(SC.scrollTop=y)});apCRet.bind();
   bindTags("kwCand",p.kw,vProfile);
   $("#p_agree").onchange=e=>{p.agreed=e.target.checked;prev()};
-  $("#suggest").onclick=()=>{const opts={CCO:"CCO",VPS:"SalesVP",VPNA:"NatAcctsVP",NAD:"NAD",KAM:"KAM",NAM:"NAM",RSD:"RSD",RSM:"RSM",MM:"MarketMgr",SM:"StateMgr",CMO:"CMO",VPM:"MarketingVP",MD:"MktgDir",BD:"BrandDir",BM:"BrandMgr",VPD:"DigitalVP",HEC:"EcomHead",VPCI:"InsightsVP",CID:"InsightsDir",CATD:"CatDir",CATM:"CatMgr",VPFPA:"FPAVP",VPO:"OpsVP",OD:"OpsDir"};p.user=`${(p.retailers[0]||"Snack").replace(/[^A-Za-z]/g,"")}${opts[p.lvl]}_${p.region.replace(/\s/g,"")}`;vProfile()};
+
   $("#pf").addEventListener("submit",e=>{e.preventDefault();if(anonChecks(p).length){toast("Fix the highlighted details before saving");return}save();toast("Profile saved. Matching companies will see it from today.")});
 }
 function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
 function vRequests(){
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's free and anonymous. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
   <div class="list" style="max-width:760px">${S.creqs.map(r=>{const co=reqCo(r);return `<div class="item">
     <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
       ${r.status==="new"?`<span class="tag new">New request</span>`:r.status==="yes"?`<span class="tag hit">You accepted</span>`:`<span class="tag">Declined</span>`}</div>
@@ -1217,7 +1241,7 @@ function sendLink(id){
   const ch={email:true,sms:!!l.phone,wa:false};
   const body=l.type==="cand"
     ?`Hi ${first}, thanks for registering interest in the Consumer Talent Exchange, the private network for senior food and snacking leaders in North America. Your profile stays anonymous: companies only learn who you are if you accept an introduction. Tap below to sign in and build your profile. It takes about 5 minutes.`
-    :`Hi ${first}, thanks for your interest in the Consumer Talent Exchange. You'll get free access to an anonymous pool of senior food and snacking talent across sales, marketing, insights and operations. Tap below to sign in and set up ${esc(l.company||"your company")}'s profile. You only pay if you hire.`;
+    :`Hi ${first}, thanks for your interest in the Consumer Talent Exchange. You'll get private access to a vetted, anonymous pool of senior food and snacking talent across sales, marketing, insights and operations. Tap below to sign in and set up ${esc(l.company||"your company")}'s profile. You only pay if you hire.`;
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mlT">
     <div class="stack" style="gap:4px"><span class="kicker">Magic link</span><h2 id="mlT">Send ${esc(l.name)} a sign-in link</h2><p class="muted small">${esc(l.email)}${l.phone?" · "+esc(l.phone):""}</p></div>
     <div class="field">Send by<div class="picks" id="chs">${[["email","Email"],["sms","Text message"],["wa","WhatsApp"]].map(([k,t])=>`<button type="button" class="pick" data-k="${k}" aria-pressed="${ch[k]}">${t}</button>`).join("")}</div></div>
@@ -1237,7 +1261,7 @@ function vWelcome(){
     <span class="muted small">Opened from ${esc(l.link||"your magic link")}</span>
     <h1>Welcome, ${esc(first)}</h1>
     <div class="alert ok"><span><b>You're signed in.</b> Your magic link verified ${esc(l.email)}. No password needed.</span></div>
-    <p>${cand?"Next, build your anonymous profile. You choose what companies see, and nobody learns who you are unless you accept an introduction.":`Next, set up ${esc(l.company||"your company")}'s profile. Browsing is free, and you only pay if you hire.`}</p>
+    <p>${cand?"Next, build your anonymous profile. You choose what companies see, and nobody learns who you are unless you accept an introduction.":`Next, set up ${esc(l.company||"your company")}'s profile. A fee applies only when you hire.`}</p>
     <ol class="hl" style="color:var(--muted)">${(cand?["Your role, salary and availability","Your story and career highlights","Your ideal next company","Privacy: who to hide from"]:["Company details and logo","Levels and roles you're hiring","Where you sell","Who we should contact"]).map(x=>`<li>${x}</li>`).join("")}</ol>
     <div class="row"><button class="btn" id="go">${cand?"Build my profile":"Set up my company"}</button><span class="muted small">About 5 minutes</span></div></div>`;
   $("#go").onclick=()=>{l.status=3;
@@ -1370,7 +1394,7 @@ const ADMIN_TABS=[["dash","Dashboard"],["invites","Invites","i"],["termsadmin","
 function view(){const h=location.hash.slice(1);return VIEWS[h]?h:"company"}
 function counts(){
   const fy=completeness().pct===100;
-  const n={f:fy?"New":"Locked",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
@@ -1378,6 +1402,7 @@ function render(){
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
+  if(!/^Candidate CTX-/.test(S.cand.user))S.cand.user="Candidate CTX-4127";$("#partners").hidden=S.mode==="admin"||v==="welcome";
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
