@@ -269,7 +269,7 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .deckwrap{position:relative;touch-action:pan-y;transition:transform .3s ease,opacity .3s ease;cursor:grab;user-select:none;-webkit-user-select:none}
 .deckwrap.out-r{transform:translateX(70%) rotate(8deg);opacity:0}
 .deckwrap.out-l{transform:translateX(-70%) rotate(-8deg);opacity:0}
-.deckwrap .pcard{max-height:min(680px,calc(100dvh - 290px));overflow-y:auto;overscroll-behavior:contain}
+
 .stamp{position:absolute;top:22px;padding:4px 12px;border:3px solid currentColor;border-radius:10px;font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.03em;text-transform:uppercase;opacity:0;pointer-events:none;z-index:3;background:rgba(0,0,0,.35)}
 .stamp.yes{left:22px;color:var(--good);transform:rotate(-10deg)}
 .stamp.no{right:22px;color:var(--bad);transform:rotate(10deg)}
@@ -782,13 +782,13 @@ function bindDeck(x,next){
     (keep?yes:no).style.opacity=1;card.classList.add(keep?"out-r":"out-l");counts();save();setTimeout(next,280)};
   deckGo=go;
   app.querySelectorAll("[data-dk]").forEach(b=>b.onclick=()=>go(b.dataset.dk==="1"));
-  let sx=null,sy=0,dx=0;
-  card.addEventListener("pointerdown",e=>{if(e.button||$("#coach"))return;sx=e.clientX;sy=e.clientY;dx=0;card.setPointerCapture(e.pointerId);card.style.transition="none"});
-  card.addEventListener("pointermove",e=>{if(sx===null)return;dx=e.clientX-sx;card.style.transform=`translateX(${dx}px) rotate(${dx/28}deg)`;yes.style.opacity=Math.max(0,Math.min(1,dx/110));no.style.opacity=Math.max(0,Math.min(1,-dx/110))});
+  let sx=null,sy=0,dx=0,lock=null;
+  card.addEventListener("pointerdown",e=>{if(e.button||$("#coach"))return;sx=e.clientX;sy=e.clientY;dx=0;if(e.pointerType!=="touch")card.setPointerCapture(e.pointerId);card.style.transition="none"});
+  card.addEventListener("pointermove",e=>{if(sx===null)return;if(e.pointerType==="touch"&&lock!=="x"){dx=0;return}dx=e.clientX-sx;card.style.transform=`translateX(${dx}px) rotate(${dx/28}deg)`;yes.style.opacity=Math.max(0,Math.min(1,dx/110));no.style.opacity=Math.max(0,Math.min(1,-dx/110))});
   const end=()=>{if(sx===null)return;sx=null;card.style.transition="";if(Math.abs(dx)>100)go(dx>0);else{card.style.transform="";yes.style.opacity=0;no.style.opacity=0}};
   card.addEventListener("pointerup",end);card.addEventListener("pointercancel",end);
   /* iOS: stop the page from panning while a card is being swiped sideways */
-  let tx=0,ty=0,lock=null;
+  let tx=0,ty=0;
   card.addEventListener("touchstart",e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY;lock=null},{passive:true});
   card.addEventListener("touchmove",e=>{const t=e.touches[0],ddx=t.clientX-tx,ddy=t.clientY-ty;if(lock===null&&(Math.abs(ddx)>6||Math.abs(ddy)>6))lock=Math.abs(ddx)>Math.abs(ddy)?"x":"y";if(lock==="x"&&e.cancelable)e.preventDefault()},{passive:false});
 }
