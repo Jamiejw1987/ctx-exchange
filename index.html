@@ -70,7 +70,14 @@ header.compact nav.tabs a{padding-block:8px}
 .logo .mark{height:40px;padding:0 9px;border-radius:11px;background:#000;border:1px solid var(--line);color:#fff;display:flex;align-items:center;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.01em}
 .logo .mark em{font-style:normal;color:#1A69F4}
 .logo b{display:block;font-family:var(--display);font-size:20px;font-weight:700;line-height:1.05}
-.logo b em{font-style:normal;color:var(--brand-2)}
+.logo b em{font-style:normal;color:#D9BE85}
+.logo .sub{display:none!important}
+.logo .side{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand-2);font-weight:600;margin-top:4px}
+body.pro{--brand:#A7AFB8;--brand-2:#C3CAD1;--brand-ink:#121417;--accent:#A7AFB8;--accent-soft:#1A1D21;--navy:#1C2024}
+body.pro .tag.hit{box-shadow:inset 0 0 0 1px rgba(167,175,184,.55)}
+body.pro .tag.kw.hit{border-color:rgba(167,175,184,.55)}
+body.pro .tsteps li::before{box-shadow:inset 0 0 0 1px rgba(167,175,184,.45)}
+body.pro .tagbox .tags:focus-within{box-shadow:0 0 0 3px rgba(167,175,184,.2)}
 .logo .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:300;letter-spacing:.02em}
 .seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px}
 .seg button{border:0;background:transparent;padding:7px 14px;border-radius:8px;font-weight:700;font-size:13px;color:var(--muted);cursor:pointer}
@@ -114,7 +121,7 @@ textarea{resize:vertical;min-height:90px}
 .btn:hover{filter:brightness(1.08)}
 .btn.line{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
 .btn.quiet{background:transparent;color:var(--brand-2);padding:8px 10px}
-.btn.good{background:var(--good);color:#fff}
+.btn.good{background:var(--brand);color:var(--brand-ink)}
 .btn.sm{padding:7px 12px;font-size:13px;border-radius:8px}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -393,17 +400,17 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 <div class="orb a" aria-hidden="true"></div><div class="orb b" aria-hidden="true"></div>
 <header>
   <div class="wrap hbar">
-    <a class="logo" href="#company" aria-label="Consumer Talent Exchange home"><span class="mark">CT<em>X</em></span><span><b>Consumer Talent <em>Exchange</em></b><span class="sub">by Consumer Talent Group · Your Success Story</span></span></a>
+    <a class="logo" href="#company" aria-label="Consumer Talent Exchange home"><span class="mark">CT<em>X</em></span><span><b>Consumer Talent <em>Exchange</em></b><span class="side" id="sideLbl">For hiring teams</span><span class="sub">by Consumer Talent Group · Your Success Story</span></span></a>
     <div class="seg" role="group" aria-label="View as">
       <button type="button" id="mClient" aria-pressed="true">I'm hiring</button>
-      <button type="button" id="mCand" aria-pressed="false">I'm a candidate</button>
+      <button type="button" id="mCand" aria-pressed="false">I'm a professional</button>
       <button type="button" id="mAdmin" aria-pressed="false">Consumer Talent</button>
     </div>
   </div>
   <div class="wrap"><nav class="tabs" id="tabs"></nav></div>
 </header>
 <div id="sc">
-<div class="demo"><div class="wrap" id="demoTxt">Demo version · all candidates and companies are fictional samples</div></div>
+<div class="demo"><div class="wrap" id="demoTxt">Demo version · all professionals and companies are fictional samples</div></div>
 <main class="wrap" id="app"></main>
 <section id="partners" class="wrap partners" aria-label="Your Consumer Talent partners">
   <span class="kicker">Your Consumer Talent partners</span>
@@ -436,7 +443,7 @@ const REGIONS=["National","Northeast","Midwest","South","Southeast","Southwest",
 const RETAIL=["Costco","Kroger","Walmart","Target","Sprouts","Whole Foods","Albertsons","Publix","Sam's Club","CVS","Convenience","E-commerce"];
 const CATS=["Salty snacks","Confectionery","Ambient & pantry","Better-for-you","Protein snacks","Bakery"];
 const BANDS=[...new Set(DATA.map(p=>p.band))].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
-DATA.forEach((p,i)=>{p.user="Candidate CTX-"+(1201+i*7)});
+DATA.forEach((p,i)=>{p.user="Ref CTX-"+(1201+i*7)});
 const refOf=u=>String(u).replace(/^Candidate /,"Ref ");
 const fitWord=s=>s>=85?"Exceptional fit":s>=70?"Strong fit":"Good fit";
 let POOL=DATA.filter(p=>!p.reserve);
@@ -623,7 +630,7 @@ function profileCard(p,{match=null,hits=[],why=[],prefFit=false,mine=false,kwHit
     ${p.kw&&p.kw.length?`<div><div class="sublabel">Sectors and keywords</div><div class="row" style="gap:6px">${p.kw.map(k=>`<span class="tag kw ${kwHits.some(x=>x.toLowerCase()===k.toLowerCase())?"hit":""}">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.skills?`<div><div class="sublabel">Strengths</div><div class="row" style="gap:6px">${p.skills.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.edu?`<div class="meta3"><span>${esc(p.edu)}</span><span>${esc(p.work)}</span><span>${esc(p.relocate)}</span><span>${esc(p.travel)}</span></div>`:""}
-    <div class="anon">${lockIcon}<span>${mine?"Your name, employer and contact details stay hidden until you accept an introduction.":"Name and employer hidden until the candidate accepts your introduction."}</span></div>
+    <div class="anon">${lockIcon}<span>${mine?"Your name, employer and contact details stay hidden until you accept an introduction.":"Name and employer hidden until they accept your introduction."}</span></div>
   </article>`;
 }
 
@@ -632,8 +639,8 @@ function vCompany(){
   const co=S.company;const rr=()=>{vCompany();counts()};
   const apRet=addPick("apRet","retailers",co,STORES,"Add a store, e.g. H-E-B",rr),apReg=addPick("apReg","regions",co,PLACESUG,"Add a state or area, e.g. Texas",rr);
   app.innerHTML=`
-  <div class="pagehead"><span class="kicker">Company profile</span><h1>Tell candidates who you are and who you need</h1>
-    <p class="muted">This is what candidates see before they agree to meet you. Complete it to receive your curated For you picks.</p></div>
+  <div class="pagehead"><span class="kicker">Company profile</span><h1>Tell professionals who you are and who you need</h1>
+    <p class="muted">This is what professionals see before they agree to meet you. Complete it to receive your curated For you picks.</p></div>
   <div class="cols">
     <form class="card" id="coForm">
       <div class="section"><h3>About the company</h3>
@@ -655,11 +662,11 @@ function vCompany(){
       </div>
       <div class="section"><h3>Who you're hiring <span>Tick every level you'd consider</span></h3>
         ${levelPicks("levels",co.levels)}
-        <div class="row" style="justify-content:space-between;align-items:baseline"><div class="field" style="margin:0">Open vacancies <small>Candidates see these when you request an introduction.</small></div></div>
+        <div class="row" style="justify-content:space-between;align-items:baseline"><div class="field" style="margin:0">Open vacancies <small>Professionals see these when you request an introduction.</small></div></div>
         <div class="vacs">${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):`<p class="muted small">No vacancies yet.</p>`}</div>
         <div><button type="button" class="btn line sm" id="addRole">+ Add a vacancy</button></div>
       </div>
-      <div class="section"><h3>What you're looking for <span>We match these against candidates' keywords</span></h3>
+      <div class="section"><h3>What you're looking for <span>We match these against professionals' keywords</span></h3>
         <div class="field">Sectors and keywords <small>Type your own, like RTD, plant-based or club channel, or pick from the list.</small>${tagField("kwCo",co.kw)}</div>
       </div>
       <div class="section"><h3>Where you sell</h3>
@@ -667,7 +674,7 @@ function vCompany(){
         <div class="field">Territories <small>Tick broad regions, or add specific states, provinces or metro areas.</small>${picks("regions",withCustom(REGIONS,co.regions),co.regions)}${apReg.html}</div>
       </div>
       <div class="section"><h3>Privacy</h3>
-        <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Candidates see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo until you both agree to reveal.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
+        <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Professionals see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo until you both agree to reveal.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
         <div class="protect">${lockIcon}<span><b>Your own employees can't see you, and you can't see them.</b> Anyone who works at ${esc(co.name||"your company")}, or has asked to be hidden from you, is left out of your results automatically, and they can't see your company either.</span></div>
       </div>
       <div class="section"><h3>Your contact</h3>
@@ -677,7 +684,7 @@ function vCompany(){
     </form>
     <div class="sticky stack">
       <div class="card stack" style="gap:8px">${(()=>{const {pct,checks}=completeness();return `<div class="row" style="justify-content:space-between"><b>Profile ${pct}% complete</b>${pct===100?`<a class="btn sm" href="#foryou">See your picks</a>`:`<span class="muted small">${checks.filter(c=>!c[1]).length} to go</span>`}</div><div class="meterbar"><i style="width:${pct}%"></i></div><span class="muted small">${pct===100?"Your For you list is live.":`Next: ${esc(checks.find(c=>!c[1])[0].toLowerCase())}. Complete your profile to unlock For you.`}</span>`})()}</div>
-      <div class="previewlabel">What candidates see${co.anon?" until you reveal":""}</div>
+      <div class="previewlabel">What professionals see${co.anon?" until you reveal":""}</div>
       <div class="cover" id="cover"></div>
       <div class="card stack" style="gap:6px"><b class="num">${visible().length} members · ${visible().filter(c=>score(c).score>=70).length} strong matches</b><span class="muted small">Members scoring 70% or more against your profile today. This updates as you edit.</span><a class="btn line sm" href="#pool" style="align-self:flex-start">Browse the talent pool</a></div>
     </div>
@@ -696,7 +703,7 @@ function vCompany(){
   $("#addRole").onclick=()=>roleForm(null);
   bindTags("kwCo",co.kw,()=>{vCompany();counts()});
   bindTags("secCo",co.cats,()=>{vCompany();counts()},SECTORS);
-  $("#f_anon").onchange=e=>{co.anon=e.target.checked;save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);toast(co.anon?"You're anonymous to candidates until you reveal":"Candidates can now see your company name")};
+  $("#f_anon").onchange=e=>{co.anon=e.target.checked;save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);toast(co.anon?"You're anonymous to professionals until you reveal":"Professionals can now see your company name")};
   $("#f_logo").onchange=e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{const m=1400/Math.max(img.width,img.height);const c=document.createElement("canvas");c.width=Math.round(img.width*Math.min(1,m));c.height=Math.round(img.height*Math.min(1,m));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
     cropLogo(c.toDataURL("image/jpeg",.9),url=>{co.logoSrc=c.toDataURL("image/jpeg",.85);co.logo=url;save();vCompany();toast("Logo saved")})};img.onerror=()=>toast("That file couldn't be read. Try a PNG or JPG.");img.src=rd.result};rd.readAsDataURL(f)};
   const adj=$("#adjLogo");if(adj)adj.onclick=()=>cropLogo(co.logoSrc,url=>{co.logo=url;save();vCompany();toast("Logo updated")});
@@ -843,7 +850,7 @@ function vShortlist(){
     <p class="muted">Both sides stay anonymous until you both agree to reveal. A fee applies only when you hire.</p></div>
   <div class="cols"><div class="list">${items.length?items.map(x=>{const st=x.i?x.i.stage:0;return `<div class="item">
       <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div>
-        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">Request introduction</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?`<span class="tag new">Waiting for candidate</span>`:`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
+        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">Request introduction</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?`<span class="tag new">Waiting for their reply</span>`:`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
       <div class="steps">${STEPS.map((s,i)=>`<div class="${i<=st?"on":""}">${s}</div>`).join("")}</div>
       ${st>=3?`<div class="protect">${lockIcon}<span><b>Protected introduction ${esc(x.i.ref)}.</b> Our fee applies to any hire of this person by ${esc(S.company.name||"your company")} or an associated company until <b>${fmtDay(plus12(new Date(x.i.revealedAt||x.i.at)))}</b>.</span></div>`:""}
     </div>`}).join(""):`<div class="empty"><h2>Your shortlist is empty</h2><p class="muted">Shortlist people from For you, Discover or the Talent pool.</p><a class="btn" href="#foryou">See who's picked for you</a></div>`}</div>
@@ -870,7 +877,7 @@ function startIntro(id){if(TASTER){openInvite("intro");return}
 const REPLIES=["That sounds interesting. How big is the team I'd be joining?","Thanks, that's helpful. What's driving the hire right now?","Good to know. I'm open to a first conversation if the role fits.","Appreciate the detail. Is the role remote or based near HQ?"];
 function vChats(){
   const ids=Object.keys(S.intros).filter(k=>S.intros[k].stage>=2&&POOL.some(p=>p.id===k));
-  if(!ids.length){app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Your conversations</h1></div><div class="empty"><h2>No conversations yet</h2><p class="muted">When a candidate accepts your introduction, you can chat here in confidence.</p><a class="btn" href="#shortlist">Go to your shortlist</a></div>`;return}
+  if(!ids.length){app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Your conversations</h1></div><div class="empty"><h2>No conversations yet</h2><p class="muted">When a professional accepts your introduction, you can chat here in confidence.</p><a class="btn" href="#shortlist">Go to your shortlist</a></div>`;return}
   if(!ids.includes(S.activeChat))S.activeChat=ids[0];
   const id=S.activeChat,c=POOL.find(p=>p.id===id),i=S.intros[id],st=i.stage;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Conversations</span><h1>Chats, reveals and interviews</h1><p class="muted">Everything runs through the Exchange, so both sides stay protected and nothing gets lost.</p></div>
@@ -964,7 +971,7 @@ function termsHTML(){
     <ol>
       <li>You will not try to identify, contact or approach any candidate outside the Exchange, or ask anyone else to, until identities are revealed.</li>
       <li>Chats, reveals, interview scheduling and offers run through the Exchange, and Consumer Talent is copied on offers.</li>
-      <li>Candidates on the Exchange have also agreed to tell us if a company contacts them directly or makes them an offer.</li>
+      <li>Professionals on the Exchange have also agreed to tell us if a company contacts them directly or makes them an offer.</li>
       <li>Our time-stamped Exchange records are accepted by both parties as evidence of introduction.</li>
     </ol>
     <h4>4. Payment</h4>
@@ -1000,7 +1007,7 @@ function vTerms(){
   const d=S.deal;d.co=S.company.name;
   const status=termsOK()?(d.status==="agreed"?["Custom terms agreed","hit"]:["Standard terms signed","hit"]):d.status==="pending"?["Your proposal is with Consumer Talent","new"]:d.status==="countered"?["Consumer Talent sent a counter-offer","new"]:d.status==="declined"?["Your proposal was declined","new"]:["Not agreed yet","tag"];
   app.innerHTML=`<div class="pagehead"><span class="kicker">Terms</span><h1>Terms of engagement</h1>
-    <p class="muted">Terms only apply when you reveal a candidate's identity, and a fee is only due if you hire. If our standard terms don't work for you, propose your own or upload yours.</p></div>
+    <p class="muted">Terms only apply when you reveal a professional's identity, and a fee is only due if you hire. If our standard terms don't work for you, propose your own or upload yours.</p></div>
   <div class="cols"><div class="stack">
     <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Your status</h2><span class="tag ${status[1]}">${status[0]}</span></div>
       ${d.status==="countered"?`<p>We've reviewed your proposal and come back with this:</p>${cmpTable(d.counter,STD,"Our counter")}<div class="row"><button class="btn" id="accC">Accept counter-offer</button><button class="btn line" id="decC">Decline</button></div>`:""}
@@ -1036,7 +1043,7 @@ function miniCard(x){return `<button class="mini ${S.shortlist.includes(x.c.id)?
 const FY={mode:"grid"};
 function vForYou(){
   const {checks,pct}=completeness(),co=S.company;
-  if(pct<100){app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Finish your profile to unlock picks</h1><p class="muted">Once your profile is complete, we hand-pick candidates for each of your roles and keep the list fresh as new members join.</p></div>
+  if(pct<100){app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Finish your profile to unlock picks</h1><p class="muted">Once your profile is complete, we hand-pick professionals for each of your roles and keep the list fresh as new members join.</p></div>
     <div class="card stack" style="max-width:640px"><div class="row" style="justify-content:space-between"><b>Profile ${pct}% complete</b><span class="muted small">${checks.filter(c=>!c[1]).length} to go</span></div><div class="meterbar"><i style="width:${pct}%"></i></div>
       <ul class="why">${checks.map(([k,ok])=>`<li class="${ok?"":"todo"}">${esc(k)}</li>`).join("")}</ul>
       <div><a class="btn" href="#company">Complete my profile</a></div></div>`;return}
@@ -1078,7 +1085,7 @@ function vAlerts(){
   $("#aSim").onclick=simulate;
 }
 function simulate(){
-  const base=RESERVE[S.feed.length%RESERVE.length];const c={...base,id:base.id+"_"+S.feed.length,user:"Candidate CTX-"+(5001+S.feed.length),isNew:true,prefStage:"ANY",prefCats:["Protein snacks","Salty snacks"],kw:["Protein","Club channel",...base.kw.slice(0,2)].filter((v,i,a)=>a.indexOf(v)===i),active:"Joined just now"};POOL.unshift(c);
+  const base=RESERVE[S.feed.length%RESERVE.length];const c={...base,id:base.id+"_"+S.feed.length,user:"Ref CTX-"+(5001+S.feed.length),isNew:true,prefStage:"ANY",prefCats:["Protein snacks","Salty snacks"],kw:["Protein","Club channel",...base.kw.slice(0,2)].filter((v,i,a)=>a.indexOf(v)===i),active:"Joined just now"};POOL.unshift(c);
   const sc=score(c).score,t=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
   const ch=[S.alerts.email&&"email",S.alerts.sms&&"text"].filter(Boolean).join(" and ");
   if(sc>=S.alerts.min&&ch){S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Sent by ${ch}${S.alerts.freq!=="instant"?" in your next summary":""}.`});toast(`New ${fitWord(sc).toLowerCase()} joined. Alert sent by ${ch}.`)}
@@ -1231,10 +1238,10 @@ function vInvites(){
       ${l.link&&l.status<3?`<div class="muted small">Link <span style="color:var(--ink)">${l.link}</span> sent ${esc(l.sent)}. Expires in 72 hours and works once.</div>`:""}
     </div>`).join("")}</div></div>`};
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Invites</span><h1>Turn interest into sign-ups</h1>
-    <p class="muted">When a candidate or company registers interest, send them a magic link. One tap signs them in and takes them straight to building their profile. No passwords.</p></div>
+    <p class="muted">When a professional or company registers interest, send them a magic link. One tap signs them in and takes them straight to building their profile. No passwords.</p></div>
   <div class="grid3" style="margin-bottom:18px">${[["Registered interest",L.length],["Links sent",n(1)],["Profiles complete",n(3)]].map(([k,v])=>`<div class="card"><div class="muted small">${k}</div><div class="num" style="font-family:var(--display);font-size:34px;font-weight:600">${v}</div></div>`).join("")}</div>
   <div class="card" style="margin-bottom:18px"><div class="toggle" style="border:0;padding:0"><div><b>Send magic links automatically</b><p class="muted small">Anyone who registers interest gets their link straight away, by email and text.</p></div><label class="switch"><input type="checkbox" id="auto" ${S.autoSend?"checked":""} aria-label="Send magic links automatically"><span></span></label></div></div>
-  <div class="cols">${block("cand","Candidates",`${L.filter(l=>l.type==="cand").length} people`)}${block("client","Companies",`${L.filter(l=>l.type==="client").length} companies`)}</div>
+  <div class="cols">${block("cand","Professionals",`${L.filter(l=>l.type==="cand").length} people`)}${block("client","Companies",`${L.filter(l=>l.type==="client").length} companies`)}</div>
   <form class="card stack" id="addLead" style="margin-top:18px"><h2>Add someone who registered interest</h2>
     <div class="grid3"><label class="field">Type<select id="nl_t"><option value="cand">Candidate</option><option value="client">Company</option></select></label>
       <label class="field">Full name<input type="text" id="nl_n" required placeholder="e.g. Jenna Carter"></label>
@@ -1417,7 +1424,7 @@ function render(){
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
-  if(!/^Candidate CTX-/.test(S.cand.user))S.cand.user="Candidate CTX-4127";$("#partners").hidden=S.mode==="admin"||v==="welcome";
+  if(!/^Ref CTX-/.test(S.cand.user))S.cand.user="Ref CTX-4127";document.body.classList.toggle("pro",S.mode==="cand");$("#sideLbl").textContent=S.mode==="cand"?"For professionals":S.mode==="admin"?"Team view":"For hiring teams";$("#partners").hidden=S.mode==="admin"||v==="welcome";
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
@@ -1433,7 +1440,7 @@ load();
 window.addEventListener("hashchange",render);
 render();
 if(TASTER){
-  $("#demoTxt").textContent="Taster · the candidates and companies you'll see are fictional samples";
+  $("#demoTxt").textContent="Taster · the professionals and companies you'll see are fictional samples";
   const seenKey=STORE+"-seen";let seen=false;try{seen=!!localStorage.getItem(seenKey)}catch(e){}
   const W=TASTER==="client"?{h:"Try the Consumer Talent Exchange",p:"Private introductions to senior food and snacking leaders across North America. Here's a two-minute taster.",steps:[["Tell us about your company","Add your name, a one-line pitch and a role you're hiring."],["See who we'd put forward","Your For you picks unlock as soon as your profile's ready."],["Shortlist the people you'd like to meet","Browse the pool, or swipe through your strongest fits."]],go:"Start with my company",to:"company"}
    :{h:"Try the Consumer Talent Exchange",p:"Be seen by the food and snacking brands hiring senior talent, without your name or employer ever being shown. Here's a two-minute taster.",steps:[["Build your anonymous profile","Your role, your wins and the brands you'd move for."],["See exactly what companies see","Your name, employer and contact details stay hidden."],["Review companies that want to meet you","Accept or decline introductions in confidence."]],go:"Build my profile",to:"candidate"};
