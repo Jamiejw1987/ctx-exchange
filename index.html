@@ -630,7 +630,7 @@ function vCompany(){
       </div>
       <div class="section"><h3>Privacy</h3>
         <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Candidates see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo until you both agree to reveal.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
-        <div class="protect">${lockIcon}<span><b>Your own employees can't see you, and you can't see them.</b> Anyone who works at ${esc(co.name)}, or has asked to be hidden from you, is removed from your results automatically. ${POOL.length-visible().length?`${POOL.length-visible().length} members are hidden right now.`:""}</span></div>
+        <div class="protect">${lockIcon}<span><b>Your own employees can't see you, and you can't see them.</b> Anyone who works at ${esc(co.name)}, or has asked to be hidden from you, is left out of your results automatically, and they can't see your company either.</span></div>
       </div>
       <div class="section"><h3>Your contact</h3>
         <div class="grid2"><label class="field">Name<input type="text" id="f_contact" value="${esc(co.contact)}"></label><label class="field">Job title<input type="text" id="f_contactTitle" value="${esc(co.contactTitle)}"></label></div>
@@ -682,7 +682,7 @@ function vPool(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Talent pool</span><h1>${visible().length} senior food and snacking professionals across North America</h1>
     <p class="muted">Every member is vetted for the North American food sector. Browsing is free, and profiles stay anonymous until you both agree to reveal.</p></div>
   <div class="row" style="gap:8px;margin-bottom:16px">${GROUPS.map(([g,ls])=>{const n=visible().filter(c=>ls.includes(c.lvl)).length;return `<button class="pick radio" data-grp="${esc(g)}" aria-pressed="${PF.grp===g}">${g} <span class="badge num">${n}</span></button>`}).join("")}<button class="pick radio" data-grp="all" aria-pressed="${PF.grp==="all"}">Everyone <span class="badge num">${visible().length}</span></button></div>
-  ${POOL.length-visible().length?`<div class="protect" style="margin-bottom:14px">${lockIcon}<span><b>${POOL.length-visible().length} members are hidden from you</b> because they currently work at ${esc(S.company.name)} or asked not to be shown to you. They can't see your company either.</span></div>`:""}
+  <div class="protect" style="margin-bottom:14px">${lockIcon}<span><b>Your own team is never shown here.</b> Anyone who works at ${esc(S.company.name)}, or has asked not to be shown to you, is left out of these results. They can't see your company either.</span></div>
   <div class="filters">
     <input type="text" class="q" id="pfq" placeholder="Search: Costco, Amazon, RGM, protein, S&OP..." value="${esc(PF.q)}" aria-label="Search the talent pool">
     <select id="pfl" aria-label="Level"><option value="all">All levels</option>${lvOpts.map(l=>`<option value="${l}" ${PF.lvl===l?"selected":""}>${LEVELS[l]}</option>`).join("")}</select>
