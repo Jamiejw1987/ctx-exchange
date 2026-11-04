@@ -1910,11 +1910,12 @@ const sbSet=a=>{try{a?localStorage.setItem(SB_AUTH,JSON.stringify(a)):localStora
 async function sbToken(){let a=sbGet();if(!a)return null;if(Date.now()<a.exp-60000)return a.access_token;
   const r=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:a.refresh_token})});
   if(!r.ok){sbSet(null);return null}const j=await r.json();a={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email||a.email};sbSet(a);return a.access_token}
-const WLF={side:"all",sector:"all",q:""};let WL=null,WLerr="";
+const WLF={st:"all",side:"all",sector:"all",q:""};
+const wlActions=x=>{const st=x.status||"pending";return `<div class="row" style="width:100%;gap:8px">${st==="pending"?`<button class="btn sm" data-wla="${x.id}:approved">Approve</button><button class="btn line sm" data-wla="${x.id}:declined">Decline</button>`:`<span class="tag ${st==="approved"?"hit":""}">${st==="approved"?"Approved":"Declined"}</span><button class="btn quiet sm" data-wla="${x.id}:pending">Undo</button>`}</div>`};let WL=null,WLerr="";
 async function loadWL(){WLerr="";try{const t=await sbToken();if(!t){WL=null;return}
   const r=await fetch(SB_URL+"/rest/v1/waitlist?select=*&order=created_at.desc&limit=5000",{headers:{apikey:SB_KEY,Authorization:"Bearer "+t}});
   if(!r.ok){WLerr=r.status===401?"Your login has expired. Sign in again.":"Couldn't load the waiting list ("+r.status+").";if(r.status===401)sbSet(null);WL=null;return}
-  WL=await r.json();try{const seen=+localStorage.getItem("ctx-wl-seen")||0;S.wlNew=WL.filter(x=>new Date(x.created_at).getTime()>seen).length;localStorage.setItem("ctx-wl-seen",String(Date.now()))}catch(e){}}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
+  WL=await r.json();S.wlNew=WL.filter(x=>(x.status||"pending")==="pending").length;}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
 function vWaitlist(){const a=sbGet();
   if(!a){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Everyone who's joined the waiting list from the landing page or the tasters. Sign in to see them.</p></div>
     <form class="card stack" id="sbF" style="max-width:420px" novalidate><h2>Team sign-in</h2>
@@ -1929,26 +1930,32 @@ function vWaitlist(){const a=sbGet();
         sbSet({access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email});await loadWL();vWaitlist();counts()}
       catch(x){err.textContent="Couldn't reach the database. Check your connection.";err.style.display="block";b.disabled=false;b.textContent="Sign in"}};return}
   if(WL===null&&!WLerr){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Loading...</p></div>`;loadWL().then(()=>{if(view()==="waitlist"){vWaitlist();counts()}});return}
-  const rows=(WL||[]).filter(x=>(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
+  const rows=(WL||[]).filter(x=>(WLF.st==="all"||(x.status||"pending")===WLF.st)&&(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
   const all=WL||[],nC=all.filter(x=>x.side==="client").length,nP=all.filter(x=>x.side==="pro").length,wk=all.filter(x=>Date.now()-new Date(x.created_at)<7*864e5).length;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Signed in as ${esc(a.email||"")}. <a href="#" id="sbOut">Sign out</a></p></div>
   <div class="stack" style="max-width:860px;gap:16px">
     ${WLerr?`<div class="alert warn"><span>${esc(WLerr)}</span></div>`:""}
-    <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${wk}</b><span>This week</span></div></div>
+    <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${all.filter(x=>(x.status||"pending")==="pending").length}</b><span>To review</span></div></div>
     <div class="card stack">
-      <div class="row" style="gap:8px"><select id="wlS" aria-label="Side"><option value="all">Everyone</option><option value="client" ${WLF.side==="client"?"selected":""}>Hiring teams</option><option value="pro" ${WLF.side==="pro"?"selected":""}>Professionals</option></select>
+      <div class="row" style="gap:8px"><select id="wlT" aria-label="Status"><option value="all">Any status</option><option value="pending" ${WLF.st==="pending"?"selected":""}>To review</option><option value="approved" ${WLF.st==="approved"?"selected":""}>Approved</option><option value="declined" ${WLF.st==="declined"?"selected":""}>Declined</option></select><select id="wlS" aria-label="Side"><option value="all">Everyone</option><option value="client" ${WLF.side==="client"?"selected":""}>Hiring teams</option><option value="pro" ${WLF.side==="pro"?"selected":""}>Professionals</option></select>
         <select id="wlC" aria-label="Sector"><option value="all">Food and drink</option><option ${WLF.sector==="Food"?"selected":""}>Food</option><option ${WLF.sector==="Drink"?"selected":""}>Drink</option></select>
         <button class="btn line sm" id="wlR" type="button">Refresh</button><button class="btn line sm" id="wlX" type="button">Download CSV</button></div>
       <input type="search" id="wlQ" placeholder="Search a name, company or email" value="${esc(WLF.q)}">
       <div class="reg">${rows.length?rows.map(x=>`<div class="r"><div class="mi"><b>${esc(x.name)} <span class="tag" style="margin-left:4px">${x.side==="client"?"Hiring":"Professional"}</span></b>
         <span>${x.side==="client"?`${esc(x.role||"")}${x.role&&x.company?" · ":""}${esc(x.company||"")}`:`${esc(x.title||"")}${x.title&&x.region?" · ":""}${esc(x.region||"")}`} · ${esc(SECTOR_LABEL[x.sector]||x.sector||"")}</span>
         <span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a>${x.linkedin?` · <a href="${esc(/^https?:/.test(x.linkedin)?x.linkedin:"https://"+x.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`:""}</span>
-        ${x.hiring?`<span>Hiring: ${esc(x.hiring)}</span>`:""}</div><span class="muted small" style="text-align:right">${fmt(new Date(x.created_at))}<br>${x.source==="taster"?"After the taster":"Landing page"}</span></div>`).join(""):`<p class="muted">${all.length?"No matches.":"No sign-ups yet. They'll appear here as soon as people join."}</p>`}</div></div></div>`;
+        ${x.hiring?`<span>Hiring: ${esc(x.hiring)}</span>`:""}</div><span class="muted small" style="text-align:right">${fmt(new Date(x.created_at))}<br>${x.source==="taster"?"After the taster":"Landing page"}</span>${wlActions(x)}</div>`).join(""):`<p class="muted">${all.length?"No matches.":"No sign-ups yet. They'll appear here as soon as people join."}</p>`}</div></div></div>`;
   $("#sbOut").onclick=e=>{e.preventDefault();sbSet(null);WL=null;vWaitlist()};
   $("#wlS").onchange=e=>{WLF.side=e.target.value;vWaitlist()};$("#wlC").onchange=e=>{WLF.sector=e.target.value;vWaitlist()};
   $("#wlQ").oninput=e=>{WLF.q=e.target.value;const pos=e.target.selectionStart;vWaitlist();const el=$("#wlQ");el.focus();el.setSelectionRange(pos,pos)};
   $("#wlR").onclick=()=>{WL=null;vWaitlist()};
-  $("#wlX").onclick=()=>{const cols=["created_at","side","name","email","company","role","title","region","sector","hiring","linkedin","source"];
+  $("#wlT").onchange=e=>{WLF.st=e.target.value;vWaitlist()};
+  app.querySelectorAll("[data-wla]").forEach(b=>b.onclick=async()=>{const [id,st]=b.dataset.wla.split(":");b.disabled=true;
+    try{const t=await sbToken();const r=await fetch(SB_URL+"/rest/v1/waitlist?id=eq."+id,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:"Bearer "+t,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify({status:st})});
+      const j=r.ok?await r.json():[];if(!r.ok||!j.length){toast("Couldn't update. Run the latest SQL in Supabase.");b.disabled=false;return}
+      const x=WL.find(y=>String(y.id)===id);if(x)x.status=st;S.wlNew=WL.filter(y=>(y.status||"pending")==="pending").length;const y0=SC.scrollTop;vWaitlist();(SC.scrollTop=y0);counts();
+      toast(st==="approved"?"Approved":st==="declined"?"Declined":"Moved back to review")}catch(e){toast("Couldn't reach the database");b.disabled=false}});
+  $("#wlX").onclick=()=>{const cols=["created_at","status","side","name","email","company","role","title","region","sector","hiring","linkedin","source"];
     const csv=[cols.join(","),...rows.map(x=>cols.map(c=>`"${String(x[c]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
     const u=URL.createObjectURL(new Blob([csv],{type:"text/csv"})),l=document.createElement("a");l.href=u;l.download="ctx-waiting-list.csv";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)};
 }
@@ -1984,6 +1991,7 @@ if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
 load();
 $("#bell").onclick=openBell;
+if(!TASTER&&sbGet())loadWL().then(()=>counts());
 window.addEventListener("hashchange",render);
 render();
 if(TASTER){

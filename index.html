@@ -300,7 +300,7 @@ section,#top{scroll-margin-top:72px}
     $("#w_try").href=s==="client"?"client/":"professionals/"};
   form.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>setSide(b.dataset.s));
   document.querySelectorAll("a[data-side]").forEach(a=>a.addEventListener("click",()=>setSide(a.dataset.side)));
-  form.addEventListener("input",()=>$("#w_err").style.display="none");
+  form.addEventListener("input",()=>{const e=$("#w_err");e.style.display="none";e.textContent="Add your name, a valid email and tick the box to continue."});
   try{const q=new URLSearchParams(location.search);if(q.get("from")==="taster"){fromTaster=true;const set=(id,v)=>{if(v&&$("#"+id))$("#"+id).value=v};
     setSide(q.get("side")==="pro"?"pro":"client");set("w_n",q.get("n"));set("w_c",q.get("c"));set("w_r",q.get("r"));set("w_h",q.get("h"));set("w_t",q.get("t"));
     const g=q.get("g");if(g&&[...$("#w_g").options].some(o=>o.text===g))$("#w_g").value=g;const sc=q.get("s");if(sc)$("#w_s").value=sc;
@@ -316,11 +316,11 @@ section,#top{scroll-margin-top:72px}
       :["Founding membership request: professional","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Current title: ${v("w_t")}`,`Region: ${v("w_g")}`,`Sector: ${sec}`,`LinkedIn: ${v("w_l")}`];
     const subj=side==="client"?`CTX founding member: ${v("w_n")}${v("w_c")?", "+v("w_c"):""}`:`CTX founding member: ${v("w_n")} (professional)`;
     const go=$("#w_go");go.disabled=true;go.textContent="Sending...";
-    const done=ok=>{form.style.display="none";$("#wdone").style.display="flex";
-      if(ok){$("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"Jamie or Connor will be in touch personally, in confidence. Your details are never shared with any company.";$("#wd_f").hidden=true}
-      else location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`};
+    const done=()=>{form.style.display="none";$("#wdone").style.display="flex";
+      $("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"Jamie or Connor will be in touch personally, in confidence. Your details are never shared with any company.";$("#wd_f").hidden=true};
+    const fail=m=>{go.disabled=false;go.textContent="Request founding membership";const e=$("#w_err");e.innerHTML=`We couldn't save your request just now. Please try again, or email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a>.${m?` <span style="opacity:.7">(${m.replace(/[<>&]/g,"")})</span>`:""}`;e.style.display="block"};
     fetch(SB_URL+"/rest/v1/waitlist",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(row)})
-      .then(r=>done(r.ok)).catch(()=>done(false))};
+      .then(async r=>{if(r.ok)return done();let m="Error "+r.status;try{const j=await r.json();m=j.message||j.hint||m}catch(e){}fail(m)}).catch(()=>fail("No connection"))};
 })();
 </script>
 </body>
