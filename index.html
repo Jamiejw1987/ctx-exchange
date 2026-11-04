@@ -264,6 +264,7 @@ section,#top{scroll-margin-top:72px}
     <form id="wl" novalidate>
       <div class="seg" role="group" aria-label="I am"><button type="button" data-s="client" aria-pressed="true">I'm hiring</button><button type="button" data-s="pro" aria-pressed="false">I'm open to a move</button></div>
       <div style="display:flex;flex-direction:column;gap:14px">
+        <p class="fine" id="w_note" hidden>We've brought across what you set up in the taster. Check it and add anything that's missing.</p>
         <div class="grid2"><label class="f">Full name<input type="text" id="w_n" autocomplete="name" required></label><label class="f"><span id="lbl_e">Work email</span><input type="email" id="w_e" autocomplete="email" required></label></div>
         <div class="grid2 only-client"><label class="f">Company<input type="text" id="w_c" autocomplete="organization"></label><label class="f">Your role<input type="text" id="w_r" autocomplete="organization-title" placeholder="VP People"></label></div>
         <div class="grid2 only-pro" hidden><label class="f">Current title<input type="text" id="w_t" autocomplete="organization-title" placeholder="National Account Manager"></label><label class="f">Region<select id="w_g"><option>Northeast</option><option>Midwest</option><option>South</option><option>Southeast</option><option>Southwest</option><option>West</option><option>Mountain West</option><option>Canada</option><option>Mexico</option><option>National</option></select></label></div>
@@ -299,6 +300,10 @@ section,#top{scroll-margin-top:72px}
   form.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>setSide(b.dataset.s));
   document.querySelectorAll("a[data-side]").forEach(a=>a.addEventListener("click",()=>setSide(a.dataset.side)));
   form.addEventListener("input",()=>$("#w_err").style.display="none");
+  try{const q=new URLSearchParams(location.search);if(q.get("from")==="taster"){const set=(id,v)=>{if(v&&$("#"+id))$("#"+id).value=v};
+    setSide(q.get("side")==="pro"?"pro":"client");set("w_n",q.get("n"));set("w_c",q.get("c"));set("w_r",q.get("r"));set("w_h",q.get("h"));set("w_t",q.get("t"));
+    const g=q.get("g");if(g&&[...$("#w_g").options].some(o=>o.text===g))$("#w_g").value=g;const sc=q.get("s");if(sc)$("#w_s").value=sc;
+    $("#w_note").hidden=false;history.replaceState(null,"",location.pathname+"#join");setTimeout(()=>document.getElementById("join").scrollIntoView({behavior:"instant",block:"start"}),60)}}catch(e){}
   form.onsubmit=e=>{e.preventDefault();const v=id=>$("#"+id).value.trim();
     if(v("w_n").length<2||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("w_e"))||!$("#w_ok").checked){$("#w_err").style.display="block";return}
     const sec=$("#w_s").options[$("#w_s").selectedIndex].text;

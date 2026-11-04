@@ -295,6 +295,9 @@ body.taster .bell{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
 #tbar .btn{flex:none}
 body.taster #tbar{display:flex}
+#tbar .tbhome{color:var(--ink);text-decoration:none;font-weight:600;white-space:nowrap}
+#tbar .tbtxt{flex:1;min-width:0}
+@media (max-width:420px){#tbar .tbtxt{display:none}}
 body.taster .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 body.taster .seg{display:none}
 .tsteps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:st}
@@ -486,7 +489,7 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
   </div>
 </section>
 </div>
-<div id="tbar"><span>Taster. What you enter stays on this device.</span><button type="button" class="btn sm" data-invite>Request your invitation</button></div>
+<div id="tbar"><a href="#" id="tbHome" class="tbhome">← Exchange</a><span class="tbtxt">Taster · nothing you enter is shared</span><button type="button" class="btn sm" data-invite>Become a founding member</button></div>
 <div id="layer"></div>
 
 <script>
@@ -1921,7 +1924,7 @@ function render(){
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
   Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
@@ -1934,6 +1937,7 @@ $("#bell").onclick=openBell;
 window.addEventListener("hashchange",render);
 render();
 if(TASTER){
+  $("#tbHome").href=/\/(client|professionals)\/?(index\.html)?$/.test(location.pathname)?"../":"./";
   $("#demoTxt").textContent="Taster · the professionals and companies you'll see are fictional samples";
   const seenKey=STORE+"-seen";let seen=false;try{seen=!!localStorage.getItem(seenKey)}catch(e){}
   const W=TASTER==="client"?{k:"For hiring teams",h:"Find your next senior hire",p:"Private introductions to senior food and drink leaders across North America. Here's a two-minute taster.",steps:[["Tell us about your company","Add your name, a one-line pitch and a role you're hiring."],["See who we'd put forward","Your For you picks unlock as soon as your profile's ready."],["Shortlist the people you'd like to meet","Browse the pool, or swipe through your strongest fits."]],go:"Start with my company",to:"company"}
@@ -1945,28 +1949,24 @@ if(TASTER){
     <button class="btn" id="twGo" style="justify-content:center">${W.go}</button></div></div>`;
     $("#twGo").onclick=()=>{try{localStorage.setItem(seenKey,"1")}catch(e){}layer.innerHTML="";location.hash=W.to}}
 }
-function openInvite(why){
-  const cl=TASTER!=="candidate",co=S.company,p=S.cand;
-  layer.innerHTML=`<div class="scrim" id="ivS"><form class="modal" id="ivF" role="dialog" aria-modal="true" aria-labelledby="ivT" style="max-width:460px" novalidate>
-    <div class="stack" style="gap:6px"><span class="kicker">Request your invitation</span><h2 id="ivT">${why==="intro"?"Introductions open with your invitation":cl?"Let's find your next senior hire":"Let's find your next move"}</h2>
-    <p class="muted">${cl?"We'll set up your company on the Exchange and walk you through your first picks.":"We'll review your profile with you in confidence and add you as a member."}</p></div>
-    <label class="field">Your name<input type="text" id="iv_n" autocomplete="name" required></label>
-    <label class="field">Work email<input type="email" id="iv_e" autocomplete="email" required></label>
-    ${cl?`<label class="field">Company<input type="text" id="iv_c" value="${esc(co.name)}" autocomplete="organization"></label><label class="field">Your role<input type="text" id="iv_r" autocomplete="organization-title" placeholder="VP People"></label>`
-        :`<label class="field">Current title<input type="text" id="iv_r" value="${esc(LEVELS[p.lvl]||"")}" autocomplete="organization-title"></label>`}
-    <label class="field">Phone <small class="muted" style="font-weight:400">Optional</small><input type="tel" id="iv_p" autocomplete="tel"></label>
-    <p class="small" id="iv_err" style="color:var(--bad);display:none">Add your name and a valid email.</p>
-    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="ivX">Not now</button><button class="btn" type="submit">Send request</button></div></form></div>`;
-  $("#ivX").onclick=()=>layer.innerHTML="";
-  $("#ivF").onsubmit=e=>{e.preventDefault();const v=id=>{const el=$("#"+id);return el?el.value.trim():""};
-    const n=v("iv_n"),em=v("iv_e");if(!n||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$("#iv_err").style.display="block";return}
-    const lines=cl?[`Name: ${n}`,`Email: ${em}`,`Company: ${v("iv_c")}`,`Role: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Pitch: ${co.tagline}`,`Hiring: ${co.roles.map(r=>r.title).filter(Boolean).join("; ")}`,`Shortlisted in taster: ${S.shortlist.length}`,`Authorised to agree terms: ${co.auth?"Yes ("+co.auth.name+", "+co.auth.title+")":"Not confirmed"}`]
-      :[`Name: ${n}`,`Email: ${em}`,`Current title: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Region: ${p.region}`,`Headline: ${p.headline}`,...(p.cv?["",`CV: ${p.cv.name} (attached)`]:[])];
-    const subj=`CTX invitation request: ${n}${cl&&v("iv_c")?", "+v("iv_c"):""}`;
-    location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`;
-    $("#ivF").innerHTML=`<div class="stack" style="gap:8px"><span class="kicker">Nearly there</span><h2>Press send in your email app</h2><p class="muted">We've written the email for you.${!cl&&p.cv?` Attach your CV, ${esc(p.cv.name)}, before you send it.`:""} If it didn't open, email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and we'll take it from there.</p></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="ivD">Back to the taster</button></div>`;
-    $("#ivD").onclick=()=>layer.innerHTML=""};
-}
+const HOME=/\/(client|professionals)\/?(index\.html)?$/.test(location.pathname)?"../":"./";
+function joinURL(){const q=new URLSearchParams();q.set("from","taster");
+  if(TASTER==="candidate"){const p=S.cand;q.set("side","pro");if(LEVELS[p.lvl])q.set("t",LEVELS[p.lvl]);if(p.region)q.set("g",p.region);if(p.sector)q.set("s",p.sector)}
+  else{const co=S.company;q.set("side","client");if(co.name)q.set("c",co.name);if(co.contact)q.set("n",co.contact);if(co.contactTitle)q.set("r",co.contactTitle);if(co.sector)q.set("s",co.sector);const roles=co.roles.map(r=>r.title).filter(Boolean).join(", ");if(roles)q.set("h",roles)}
+  return HOME+"?"+q.toString()+"#join"}
+function openInvite(why){if(!TASTER){toast("Sign-up is on the landing page");return}location.href=joinURL()}
+function nudge(){if(!TASTER)return;let seen=false;try{seen=!!localStorage.getItem(STORE+"-nudged")}catch(e){}if(seen||$("#twGo"))return;
+  if(layer.innerHTML){setTimeout(nudge,6000);return}
+  try{localStorage.setItem(STORE+"-nudged","1")}catch(e){}
+  const pro=TASTER==="candidate";
+  layer.innerHTML=`<div class="scrim" id="ngS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ngT" style="max-width:440px;align-self:end">
+    <div class="stack" style="gap:6px"><span class="kicker">Founding members</span><h2 id="ngT">Like what you see?</h2>
+      <p class="muted">${pro?"Join as a founding member and we'll be in touch personally before the Exchange opens. It's free, and your employer will never see you.":"Join as a founding member and we'll set up your company before the Exchange opens, with your first picks ready on day one."}</p></div>
+    <div class="stack" style="gap:8px"><a class="btn" href="${joinURL()}" style="justify-content:center">Become a founding member</a><button type="button" class="btn line" id="ngX" style="justify-content:center">Keep exploring</button></div></div></div>`;
+  $("#ngX").onclick=()=>layer.innerHTML="";$("#ngS").onclick=e=>{if(e.target.id==="ngS")layer.innerHTML=""}}
+let nudgeArmed=false;
+function nudgeCheck(){if(!TASTER||nudgeArmed)return;const done=TASTER==="candidate"?(Object.keys(S.interest||{}).length>=1||S.creqs.some(r=>r.status!=="new")):(S.shortlist.length>=2);if(done){nudgeArmed=true;setTimeout(nudge,1400)}}
+if(TASTER)setTimeout(()=>{nudgeArmed=true;nudge()},150000);
 document.addEventListener("click",e=>{const t=e.target.closest("[data-invite]");if(t){e.preventDefault();openInvite()}});
 </script>
 
