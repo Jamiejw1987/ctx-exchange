@@ -283,6 +283,13 @@ body.taster .bell{display:none}
 .reg .r{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .reg .r:last-child{border-bottom:0}.reg .r .mi{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.reg .r .mi span{font-size:12.5px;color:var(--muted)}
 @media (max-width:600px){.pstats b{font-size:20px}}
+.fbcard{align-self:stretch;border:1px solid rgba(200,169,106,.5);background:var(--accent-soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.fbcard b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-2)}
+.closedbar{border:1px dashed var(--line);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--muted);text-align:center;margin:0 16px 16px}
+.fbgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:600px){.fbgrid{grid-template-columns:1fr}}
+.fbside{background:var(--soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.fbside .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -1007,20 +1014,20 @@ function vChats(){
     <div class="thread">
       <div class="thead">
         <div class="line1" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(st>=3?c.name:c.user)}</b><div class="muted small">${LEVELS[c.lvl]} · ${esc(c.region)} · Ref ${esc(i.ref)}</div></div>
-          <div class="row">${st===2?`<button class="btn sm" id="bReveal">Reveal identities</button>`:""}${st>=3&&st<5?`<button class="btn sm" id="bIv">Schedule interview</button><button class="btn line sm" id="bOffer">Report an offer</button>`:""}<button class="btn quiet sm" id="bProf">View profile</button></div></div>
+          <div class="row">${st===2?`<button class="btn sm" id="bReveal">Reveal identities</button>`:""}${st>=3&&st<5?`<button class="btn sm" id="bIv">Schedule interview</button><button class="btn line sm" id="bOffer">Report an offer</button>`:""}<button class="btn line sm" id="bFb">${i.fb&&i.fb.client?"Edit feedback":"Give feedback"}</button><button class="btn quiet sm" id="bProf">View profile</button></div></div>
         <div class="steps">${STEPS.map((s,k)=>`<div class="${k<=st?"on":""}">${s}</div>`).join("")}</div>
         ${st<3?`<div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Names, employers, emails, phone numbers and links are blocked until you both agree to reveal. ${termsOK()?"Your terms are in place, so you can reveal whenever you're both ready.":`You'll need agreed terms before revealing. ${TASTER?`<a href="#" data-invite>Ask us about terms</a>`:`<a href="#terms">Review terms</a>`}`}</span></div>`:""}
         ${st===5?`<div class="reveal"><span class="name">Placed</span><span>${esc(i.offer.summary)}</span></div>`:""}
       </div>
-      <div class="msgs" id="msgs">${i.msgs.map(m=>m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}</b>`:`Waiting for ${esc(c.user)} to pick a time:`}</span>${m.booked?"":`<div class="row">${m.opts.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`
+      <div class="msgs" id="msgs">${i.msgs.map(m=>m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}</b>`:`Waiting for ${esc(c.user)} to pick a time:`}</span>${m.booked?"":`<div class="row">${m.opts.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`
         :`<div class="m ${m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(st>=3?c.name.split(" ")[0]:c.user)}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
-      <form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="${st<3?"Message anonymously...":"Write a message..."}" aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>
+      ${i.closed?`<div class="closedbar">${i.closed.by==="client"?"You went separate ways.":"They decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="${st<3?"Message anonymously...":"Write a message..."}" aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}
     </div>
   </div>`;
   const box=$("#msgs");box.scrollTop=box.scrollHeight;
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.activeChat=b.dataset.t;vChats()});
-  $("#bProf").onclick=()=>openProfile(id);
-  $("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
+  $("#bProf").onclick=()=>openProfile(id);$("#bFb").onclick=()=>clientFeedback(id);
+  if($("#cmp"))$("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
     if(st<3&&CONTACT_RE.test(v)){i.msgs.push({f:"sys",t:"Message not sent. Contact details and links are shared automatically once you both agree to reveal.",at:tnow()});logEvent(`Blocked a message containing contact details to ${c.user}`,S.company.contact);vChats();return}
     i.msgs.push({f:"me",t:v,at:tnow()});save();vChats();
     setTimeout(()=>{i.msgs.push({f:"them",t:REPLIES[i.msgs.length%REPLIES.length],at:tnow()});save();if(view()==="chats"&&S.activeChat===id)vChats()},1600)});
@@ -1036,6 +1043,60 @@ function doReveal(id){
     i.msgs.push({f:"ct",t:`I've sent ${c.name.split(" ")[0]}'s full CV to ${S.company.contact}. When you're ready, use "Schedule interview" and we'll handle the invites from here.`,at:tnow()});
     logEvent(`Identity revealed: ${c.user} is ${c.name} (${i.ref})`,"Consumer Talent");save();counts();if(view()==="chats")vChats();toast(`${c.name} agreed. Identities revealed.`)},1800);
 }
+/* ---------- feedback ---------- */
+const FB_CLIENT={rates:["Strong fit","Good fit","Not sure","Not a fit"],next:{interview:"Arrange another interview",offer:"Make an offer",part:"Go separate ways",undecided:"Not decided yet"}};
+const FB_PRO={rates:["Really interested","Interested","Not sure","Not for me"],next:{continue:"Keep talking or interview",part:"Go separate ways",undecided:"Not decided yet"}};
+function linkedReq(id){return S.creqs.find(r=>r.intro===id)}
+function fbForm({who,title,sub,prev,nextOpts,onSave}){const F={fbRate:(prev&&prev.rating)||"",fbNext:(prev&&prev.next)||"undecided"};const cfg=who==="client"?FB_CLIENT:FB_PRO;
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="fbF" role="dialog" aria-modal="true" aria-labelledby="fbT" style="max-width:520px" novalidate>
+    <div class="stack" style="gap:6px"><span class="kicker">Feedback</span><h2 id="fbT">${esc(title)}</h2><p class="muted small">${esc(sub)}</p></div>
+    <div class="field">How did it go?${picks("fbRate",cfg.rates,F.fbRate,{radio:true})}</div>
+    <label class="field">Private notes for Consumer Talent <small>Only Consumer Talent sees this. Be as candid as you like.</small><textarea id="fbP" style="min-height:80px">${esc((prev&&prev.priv)||"")}</textarea></label>
+    <label class="field">Feedback to share with them <small>Optional. Kind and constructive works best.</small><textarea id="fbS" style="min-height:70px">${esc((prev&&prev.shared)||"")}</textarea></label>
+    <label class="check"><input type="checkbox" id="fbX" ${prev&&prev.share?"checked":""}><span>Share this feedback with them</span></label>
+    <div class="field">What next?${picks("fbNext",nextOpts,F.fbNext,{radio:true,label:k=>cfg.next[k]})}</div>
+    <p class="small" id="fbE" style="color:var(--bad);display:none">Choose how it went.</p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="fbC">Cancel</button><button class="btn" type="submit">Save feedback</button></div></form></div>`;
+  bindPicks(layer,F,k=>{layer.querySelectorAll(`[data-group="${k}"] .pick`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.val===F[k])));if(k==="fbRate")$("#fbE").style.display="none"});
+  $("#fbC").onclick=()=>layer.innerHTML="";
+  $("#fbF").onsubmit=e=>{e.preventDefault();if(!F.fbRate){$("#fbE").style.display="block";return}
+    const shared=$("#fbS").value.trim();onSave({rating:F.fbRate,priv:$("#fbP").value.trim(),shared,share:!!shared&&$("#fbX").checked,next:F.fbNext,at:Date.now()});layer.innerHTML=""}}
+function clientFeedback(id){const c=POOL.find(p=>p.id===id),i=S.intros[id],st=i.stage,co=S.company,who=st>=3?c.name:refOf(c.user);
+  const nextOpts=st>=3&&st<5?["interview","offer","part","undecided"]:["interview","part","undecided"];
+  fbForm({who:"client",title:`How did it go with ${who}?`,sub:st>=3?"After your conversation or interview.":"Choosing to arrange an interview will ask them to reveal identities first.",prev:i.fb&&i.fb.client,nextOpts,
+    onSave:f=>{i.fb=i.fb||{};i.fb.client={...f,by:co.contact};const r=linkedReq(id);const coName=co.anon?coDisplay(co):co.name||"The company";
+      logEvent(`Feedback recorded on ${refOf(c.user)}: ${f.rating}${f.share?" (shared)":""}`,co.contact);
+      notify("admin",`New feedback from ${co.name||"a client"} on ${c.name}: ${f.rating}`,"feedback");
+      if(f.share&&r&&S.cthreads[r.id]){S.cthreads[r.id].push({f:"fb",from:coName,t:f.shared,at:tnow()});notify("cand",`${coName} shared feedback with you`,"messages")}
+      if(f.next==="part"){i.closed={by:"client",at:Date.now()};i.msgs.push({f:"sys",t:`You've decided to go separate ways. ${f.share?"Your feedback has been shared. ":""}Thanks for using the Exchange.`,at:tnow()});
+        if(r&&S.cthreads[r.id]){r.closed="company";S.cthreads[r.id].push({f:"sys",t:`${coName} has decided not to take this forward. Your identity stays private.`,at:tnow()});notify("cand",`${coName} has decided not to take this forward`,"messages")}
+        notify("admin",`${co.name||"A client"} went separate ways with ${c.name}`,"feedback")}
+      save();counts();vChats();toast(f.share?"Feedback saved and shared":"Feedback saved");
+      if(f.next==="interview")setTimeout(()=>st>=3?scheduleIv(id):(termsOK()?doReveal(id):openTermsGate(()=>doReveal(id))),250);
+      if(f.next==="offer")setTimeout(()=>reportOffer(id),250)}})}
+function proFeedback(rid){const r=S.creqs.find(x=>x.id===rid),co=reqCo(r),coName=coDisplay(co),msgs=S.cthreads[rid],p=S.cand;
+  fbForm({who:"pro",title:`How did it go with ${coName}?`,sub:"Your private notes help us find you the right role.",prev:r.fb,nextOpts:["continue","part","undecided"],
+    onSave:f=>{r.fb=f;const i=r.intro?S.intros[r.intro]:null,c=r.intro?POOL.find(x=>x.id===r.intro):null;if(i){i.fb=i.fb||{};i.fb.pro=f}
+      logEvent(`Professional feedback on ${r.co}: ${f.rating}${f.share?" (shared)":""}`,"Professional");
+      notify("admin",`New feedback from ${refOf(p.user)} on ${r.co}: ${f.rating}`,"feedback");
+      const tag=c?refOf(c.user):refOf(p.user);
+      if(f.share&&i){i.msgs.push({f:"fb",from:tag,t:f.shared,at:tnow()});notify("client",`${tag} shared feedback with you`,"chats")}
+      if(f.next==="part"){r.closed="pro";msgs.push({f:"sys",t:`You've decided to go separate ways. ${f.share?"Your feedback has been shared. ":""}The company still won't learn who you are.`,at:tnow()});
+        if(i){i.closed={by:"pro",at:Date.now()};i.msgs.push({f:"sys",t:`${tag} has decided not to take this forward.`,at:tnow()});notify("client",`${tag} has decided not to take this forward`,"chats")}
+        notify("admin",`${refOf(p.user)} went separate ways with ${r.co}`,"feedback")}
+      if(f.next==="continue"&&i){i.msgs.push({f:"sys",t:`${tag} would like to keep talking or arrange an interview.`,at:tnow()});notify("client",`${tag} would like to keep talking or arrange an interview`,"chats")}
+      save();counts();vCandMsgs();toast(f.share?"Feedback saved and shared":"Feedback saved")}})}
+function fbSide(f,label){if(!f)return `<div class="fbside"><span class="lbl">${label}</span><span class="muted">No feedback yet</span></div>`;const nx=Object.assign({},FB_CLIENT.next,FB_PRO.next)[f.next]||"";
+  return `<div class="fbside"><span class="lbl">${label}</span><b>${esc(f.rating)}</b><span class="muted small">${fmt(new Date(f.at))}${nx?` · Next: ${esc(nx)}`:""}</span>
+    ${f.priv?`<span class="lbl" style="margin-top:4px">Private to you</span><span>${esc(f.priv)}</span>`:""}
+    ${f.shared?`<span class="lbl" style="margin-top:4px">${f.share?"Shared with the other side":"Written but not shared"}</span><span>${esc(f.shared)}</span>`:""}</div>`}
+function vFeedback(){const co=S.company;
+  const rows=[...Object.entries(S.intros).filter(([k,i])=>i.fb&&(i.fb.client||i.fb.pro)&&POOL.some(p=>p.id===k)).map(([k,i])=>{const c=POOL.find(p=>p.id===k);return {at:Math.max((i.fb.client||{}).at||0,(i.fb.pro||{}).at||0),title:`${co.name||"Client"} ↔ ${c.name}`,sub:`${refOf(c.user)} · ${esc(i.role||LEVELS[c.lvl])} · ${i.ref}`,cl:i.fb.client,pr:i.fb.pro,closed:i.closed}}),
+    ...S.creqs.filter(r=>r.fb&&!r.intro).map(r=>({at:r.fb.at,title:`${r.co} ↔ ${refOf(S.cand.user)}`,sub:esc(r.role),cl:null,pr:r.fb,closed:r.closed?{by:r.closed}:null}))].sort((a,b)=>b.at-a.at);
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Feedback</span><h1>Feedback from both sides</h1><p class="muted">Each side's private notes come only to you. Anything they chose to share with the other side is marked.</p></div>
+  <div class="list" style="max-width:860px">${rows.length?rows.map(x=>`<div class="item"><div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(x.title)}</b><div class="muted small">${x.sub}</div></div>${x.closed?`<span class="tag">Separate ways · ${x.closed.by==="client"||x.closed.by==="company"?"client's decision":"professional's decision"}</span>`:`<span class="tag hit">Still active</span>`}</div>
+    <div class="fbgrid">${fbSide(x.cl,"Client")}${fbSide(x.pr,"Professional")}</div></div>`).join(""):`<div class="empty"><h2>No feedback yet</h2><p class="muted">After a conversation or interview, both sides can leave feedback. It lands here.</p></div>`}</div>`}
+
 function nextDays(){const out=[];const d=new Date();while(out.length<3){d.setDate(d.getDate()+1);if(d.getDay()%6)out.push(new Date(d))}return out}
 function scheduleIv(id){
   const c=POOL.find(p=>p.id===id),i=S.intros[id],ds=nextDays(),hrs=[10,14,16];
@@ -1391,15 +1452,17 @@ function vCandMsgs(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Messages</span><h1>Chats and interviews</h1><p class="muted">You're shown as <b>${esc(p.user)}</b>. Your name, employer and contact details stay hidden until you agree to reveal.</p></div>
   <div class="chat"><div class="threads">${ids.map(k=>{const rr=S.creqs.find(x=>x.id===k),cc=reqCo(rr);return `<button class="thr ${k===r.id?"on":""}" data-t="${k}"><b>${esc(coDisplay(cc))}</b><div class="muted small">${esc(rr.role)}</div></button>`}).join("")}</div>
     <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${esc(r.role)} · ${esc(r.base)}</div></div></div>
-      <div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Contact details and links are blocked until you both agree to reveal. ${esc(p.current||"Your employer")} can never see your profile.</span></div></div>
-      <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar.`:"Pick the time that suits you:"}</span>${m.booked?"":`<div class="row">${m.opts.map((o,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(o)}</button>`).join("")}</div><span class="muted small">None of these work? Just reply and say when you're free.</span>`}</div>`
+      <div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Contact details and links are blocked until you both agree to reveal. ${esc(p.current||"Your employer")} can never see your profile.</span></div>
+      <div class="row"><button class="btn line sm" id="bFb">${r.fb?"Edit feedback":"Give feedback"}</button></div></div>
+      <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar.`:"Pick the time that suits you:"}</span>${m.booked?"":`<div class="row">${m.opts.map((o,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(o)}</button>`).join("")}</div><span class="muted small">None of these work? Just reply and say when you're free.</span>`}</div>`
         :`<div class="m ${m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(coDisplay(co))}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
-      <form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="Message anonymously..." aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form></div></div>`;
+      ${r.closed?`<div class="closedbar">${r.closed==="pro"?"You went separate ways.":"The company decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="Message anonymously..." aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}</div></div>`;
   const box=$("#msgs");box.scrollTop=box.scrollHeight;
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.t;vCandMsgs()});
   app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.pick.split(":").map(Number);const m=msgs[k];m.booked=m.opts[j];
     msgs.push({f:"sys",t:`Interview booked for ${m.booked}. Calendar invites sent. The video room opens here 10 minutes before.`,at:tnow()});save();vCandMsgs();toast("Interview booked")});
-  $("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
+  $("#bFb").onclick=()=>proFeedback(r.id);
+  if($("#cmp"))$("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
     if(CONTACT_RE.test(v)){msgs.push({f:"sys",t:"Message not sent. Contact details and links are shared automatically once you both agree to reveal.",at:tnow()});vCandMsgs();return}
     msgs.push({f:"me",t:v,at:tnow()});save();vCandMsgs();
     setTimeout(()=>{msgs.push({f:"them",t:"Thanks, that's really helpful. Looking forward to speaking.",at:tnow()});save();if(view()==="messages")vCandMsgs()},1600)});
@@ -1809,10 +1872,10 @@ function vProtect(){
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["intros","Introductions","v"],["protect","Protection","x"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const ADMIN_TABS=[["dash","Dashboard"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){bellCount();
@@ -1821,7 +1884,7 @@ function counts(){bellCount();
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
