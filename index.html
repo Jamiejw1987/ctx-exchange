@@ -948,20 +948,28 @@ function startIntro(id){if(TASTER){openInvite("intro");return}
     notify("admin",`${co.name||"A client"} wants an introduction to ${refOf(c.user)} (${LEVELS[c.lvl]}) for ${S.intros[id].role}`,"intros");
     layer.innerHTML="";save();counts();if(view()==="shortlist")vShortlist();toast("Request sent to Consumer Talent for review")};
 }
+function currentCo(c){const n=(c.career||[]).find(x=>x.now);return n?n.co:"Current employer on file"}
 function vIntros(){
   const co=S.company,rows=Object.entries(S.intros).filter(([k,i])=>i.review&&POOL.some(p=>p.id===k)).map(([k,i])=>({k,i,c:POOL.find(p=>p.id===k)})).sort((a,b)=>(a.i.review==="pending"?0:1)-(b.i.review==="pending"?0:1)||b.i.at-a.i.at);
   const lab={pending:["Needs review","new"],approved:["Sent to professional","hit"],declined:["Declined","tag"],accepted:["Accepted · chatting","hit"],passed:["Professional declined","tag"]};
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Introductions</span><h1>Introduction requests</h1><p class="muted">Every request from a client comes here first. Approve it and the professional gets a notification in the app. Decline it and the client is told, with your reason.</p></div>
   <div class="list" style="max-width:760px">${rows.length?rows.map(({k,i,c})=>{const st=i.review==="approved"&&i.stage>=2?"accepted":i.review;return `<div class="item">
-    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(co.name||"Client")} → ${esc(refOf(c.user))}</b><div class="muted small">${esc(i.ref)} · requested by ${esc(i.by||co.contact)} · ${fmt(new Date(i.at))}</div></div><span class="tag ${lab[st][1]}">${lab[st][0]}</span></div>
+    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(co.name||"Client")} → ${esc(c.name)}</b><div class="muted small">${esc(i.ref)} · requested by ${esc(i.by||co.contact)} · ${fmt(new Date(i.at))}</div></div><span class="tag ${lab[st][1]}">${lab[st][0]}</span></div>
     <div class="rq"><span class="lbl">Role</span><b>${esc(i.role)}${i.base?` · ${esc(i.base)}`:""}</b>
-      <span class="lbl" style="margin-top:4px">Professional</span><span>${esc(LEVELS[c.lvl])} · ${esc(c.region)} · ${esc(c.band)}</span><span class="muted">${esc(c.headline)}</span>
+      <span class="lbl" style="margin-top:4px">Professional <span class="tag" style="font-size:10.5px;text-transform:none;letter-spacing:0;margin-left:4px">Only Consumer Talent sees the name</span></span><b style="font-size:15px">${esc(c.name)}</b><span>${esc(LEVELS[c.lvl])} · ${esc(currentCo(c))} · ${esc(c.base||c.region)}</span><span class="muted">${esc(c.band)} · ${esc(c.headline)}</span>
+      <div><button type="button" class="btn line sm" data-full="${k}">View full profile</button></div>
       ${i.note?`<span class="lbl" style="margin-top:4px">Client's note</span><span>${esc(i.note)}</span>`:""}
       ${i.ctNote?`<span class="lbl" style="margin-top:4px">${i.review==="declined"?"Your reason":"Your note to the professional"}</span><span>${esc(i.ctNote)}</span>`:""}</div>
     ${i.review==="pending"?`<label class="field">Note <small>Optional. Goes to the professional if you approve, or to the client if you decline.</small><textarea data-ctn="${k}" style="min-height:60px"></textarea></label>
       <div class="row"><button class="btn" data-ok="${k}">Approve and send</button><button class="btn line" data-dec="${k}">Decline</button></div>`:""}
   </div>`}).join(""):`<div class="empty"><h2>No requests yet</h2><p class="muted">When a client asks to meet someone, it lands here for you to review.</p></div>`}</div>`;
   const note=k=>{const t=app.querySelector(`[data-ctn="${k}"]`);return t?t.value.trim():""};
+  app.querySelectorAll("[data-full]").forEach(b=>b.onclick=()=>{const c=POOL.find(p=>p.id===b.dataset.full),i=S.intros[b.dataset.full];
+    layer.innerHTML=`<div class="scrim" id="fpS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="fpT" style="max-width:600px;padding:18px">
+      <div class="rq"><span class="lbl">Private · Consumer Talent only</span><h2 id="fpT" style="margin:0">${esc(c.name)}</h2><span>${esc(LEVELS[c.lvl])} at ${esc(currentCo(c))} · ${esc(c.base||c.region)}</span><span class="muted small">${esc(refOf(c.user))} · ${esc(c.yrs)} years in the industry · ${esc(c.notice||"")}</span></div>
+      ${profileCard(c,{})}
+      <div class="row" style="justify-content:flex-end">${i&&i.review==="pending"?`<button class="btn line" id="fpX">Back to request</button>`:`<button class="btn" id="fpX">Close</button>`}</div></div></div>`;
+    $("#fpX").onclick=()=>layer.innerHTML="";$("#fpS").onclick=e=>{if(e.target.id==="fpS")layer.innerHTML=""}});
   app.querySelectorAll("[data-ok]").forEach(b=>b.onclick=()=>{const k=b.dataset.ok,i=S.intros[k],c=POOL.find(p=>p.id===k);i.review="approved";i.ctNote=note(k);i.approvedAt=Date.now();
     const qid="qi_"+k;S.creqs=S.creqs.filter(r=>r.id!==qid&&!(r.id==="q1"&&r.status==="new"));S.creqs.unshift({id:qid,intro:k,co:co.name||"A food brand",role:i.role,base:i.base||"",stage:co.stage,hq:co.hq,why:i.ctNote||co.why||co.tagline,status:"new"});
     logEvent(`Consumer Talent approved the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");
