@@ -248,6 +248,14 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .doc .terms *{color:#1B1A17}.doc .cite,.doc .muted{color:#6E685D!important}
 .sentto{display:flex;flex-direction:column;gap:6px}.sentto li{display:flex;gap:8px;align-items:center;font-size:13.5px}.sentto li::before{content:"✓";color:var(--brand-2);font-weight:800}
 @media print{body{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}body.printing>*:not(#layer){display:none!important}body.printing #layer .scrim{position:static;background:none;padding:0;display:block}body.printing #layer .modal{max-height:none;overflow:visible;box-shadow:none;background:#fff;padding:0}body.printing #layer .noprint{display:none!important}body.printing .doc{background:#fff}}
+.mem{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.mem:last-child{border-bottom:0}
+.mem .av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--accent-soft);color:var(--brand-2);font-weight:700;font-size:13.5px}
+.mem .mi{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.mem .mi b{font-size:14.5px}.mem .mi span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.mem .ma{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.depts{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:600px){.mem{flex-wrap:wrap}.mem .ma{width:100%;padding-left:52px;justify-content:flex-start}}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -509,7 +517,7 @@ const S={
     tagline:"High-protein baked crisps, now in 9,000 doors.",
     about:"Northfield makes high-protein baked crisps sold across club, grocery and natural. We raised a growth round in 2025 and are building our first national sales team.",
     why:"Equity for senior hires, a founder who came up through sales, and real budget behind Costco and Kroger expansion.",
-    contact:"Dana Whitfield",contactTitle:"VP People",logo:"",anon:false,auth:{name:"Dana Whitfield",title:"VP People",at:"Nov 3, 2026"},
+    contact:"Dana Whitfield",contactTitle:"VP People",logo:"",anon:false,members:[{id:"m1",name:"Dana Whitfield",title:"VP People",email:"dana@northfieldsnacks.com",dept:"People and HR",role:"Admin",status:"Active",at:"Oct 28, 2026"},{id:"m2",name:"Marcus Lee",title:"VP of Sales",email:"marcus@northfieldsnacks.com",dept:"Sales",role:"Hiring manager",status:"Active",at:"Oct 30, 2026"},{id:"m3",name:"Priya Shah",title:"Marketing Director",email:"priya@northfieldsnacks.com",dept:"Marketing",role:"Hiring manager",status:"Invited",at:"Nov 3, 2026"}],auth:{name:"Dana Whitfield",title:"VP People",at:"Nov 3, 2026"},
     kw:["Protein","Better-for-you","Club channel","Clean label","PE-backed"]},
   autoSend:false,welcome:null,activeChat:null,cthreads:{},cthread:null,
   deal:{id:"nf",status:"none"},
@@ -1540,12 +1548,63 @@ function vCompanies(){
     save();const y=SC.scrollTop;vCompanies();(SC.scrollTop=y)});
 }
 
+/* ---------------- company team ---------------- */
+const DEPTS=["Sales","Marketing","People and HR","Finance","Operations","E-commerce","Leadership"];
+const ROLES={"Admin":"Manages the account, team and terms","Hiring manager":"Browses, shortlists and chats for their roles","Viewer":"Can view shortlists and conversations"};
+function teamMembers(){const co=S.company;if(!co.members)co.members=[];
+  if(!co.members.length&&co.contact.trim())return [{id:"me",name:co.contact,title:co.contactTitle,email:co.email||"",dept:"Leadership",role:"Admin",status:"Active",at:"Today",me:true}];return co.members}
+function vTeam(){
+  const co=S.company,list=teamMembers(),ag=S.agreement,signed=termsOK();
+  const byDept=DEPTS.map(d=>[d,list.filter(m=>m.dept===d).length]).filter(x=>x[1]);
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Team</span><h1>${esc(co.name||"Your company")} on the Exchange</h1>
+    <p class="muted">Invite colleagues from any department to browse, shortlist and chat for their own roles. Everyone works under one company account and one set of terms.</p></div>
+  <div class="cols"><div class="stack">
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Your team</h2><span class="tag">${list.filter(m=>m.status==="Active").length} active${list.some(m=>m.status==="Invited")?` · ${list.filter(m=>m.status==="Invited").length} invited`:""}</span></div>
+      ${byDept.length?`<div class="depts">${byDept.map(([d,n])=>`<span class="tag">${esc(d)} · ${n}</span>`).join("")}</div>`:""}
+      <div>${list.length?list.map(m=>`<div class="mem"><span class="av">${esc(initials(m.name)||"?")}</span><div class="mi"><b>${esc(m.name)}${m.me?" (you)":""}</b><span>${esc(m.title||"")}${m.title?" · ":""}${esc(m.dept)} · ${esc(m.role)}</span><span>${esc(m.email)}</span></div>
+        <div class="ma">${m.status==="Invited"?`<span class="tag new">Invited</span>`:`<span class="tag hit">Active</span>`}${m.role!=="Admin"||list.filter(x=>x.role==="Admin").length>1?`<button class="btn quiet sm" data-rmm="${m.id}" aria-label="Remove ${esc(m.name)}">Remove</button>`:""}</div></div>`).join(""):`<p class="muted">Add your name on the Company profile first, then invite your colleagues.</p>`}</div>
+    </div>
+    <form class="card stack" id="invF" novalidate><h2>Invite a colleague</h2>
+      <div class="grid2"><label class="field">Name<input type="text" id="in_n" autocomplete="off"></label><label class="field">Work email<input type="email" id="in_e" autocomplete="off" placeholder="name@${esc((co.site||"company.com").replace(/^https?:\/\/(www\.)?/,""))}"></label>
+        <label class="field">Job title<input type="text" id="in_t" autocomplete="off"></label><label class="field">Department<select id="in_d">${DEPTS.map(d=>`<option>${d}</option>`).join("")}</select></label></div>
+      <div class="field">Access${picks("inviteRole",Object.keys(ROLES),S.inviteRole||"Hiring manager",{radio:true})}<small class="muted" style="font-weight:400">${esc(ROLES[S.inviteRole||"Hiring manager"])}</small></div>
+      <p class="small" id="in_err" style="color:var(--bad);display:none"></p>
+      <div><button class="btn" type="submit">Send invite</button></div></form>
+  </div>
+  <div class="sticky stack">
+    <div class="card stack" style="gap:8px"><h3>One set of terms for everyone</h3>
+      <p class="small">${signed?`${ag?`Signed copy <b>${esc(ag.ref)}</b>, signed by ${esc(ag.by.name)}, covers`:"Your agreed terms cover"} every colleague you invite. Nobody needs to sign again.`:`When your company agrees terms, they'll cover every colleague you invite. Only someone authorised to sign needs to do it, once.`}</p>
+      <p class="small muted">Introductions made by any team member count as introductions to ${esc(co.name||"your company")} and its associated companies.</p></div>
+    <div class="protect">${lockIcon}<span><b>Professionals never see your team list.</b> Only your colleagues and Consumer Talent can see who's on your account.</span></div>
+  </div></div>`;
+  bindPicks(app,S,()=>{const y=SC.scrollTop,keep=["in_n","in_e","in_t","in_d"].map(i=>$("#"+i).value);vTeam();["in_n","in_e","in_t","in_d"].forEach((i,k)=>$("#"+i).value=keep[k]);(SC.scrollTop=y)});
+  app.querySelectorAll("[data-rmm]").forEach(b=>b.onclick=()=>{const m=co.members.find(x=>x.id===b.dataset.rmm);co.members=co.members.filter(x=>x.id!==b.dataset.rmm);if(m)logEvent(`Removed ${m.name} (${m.dept}) from the company account`,co.contact);save();vTeam();toast("Removed from your team")});
+  $("#invF").onsubmit=e=>{e.preventDefault();const v=i=>$("#"+i).value.trim(),err=$("#in_err");const n=v("in_n"),em=v("in_e");
+    if(n.length<2||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent="Add their name and a valid work email.";err.style.display="block";return}
+    if(teamMembers().some(m=>m.email.toLowerCase()===em.toLowerCase())){err.textContent="They're already on your team.";err.style.display="block";return}
+    if(!co.members.length&&co.contact.trim())co.members=teamMembers().map(m=>({...m,id:"m"+Date.now(),me:undefined}));
+    const m={id:"m"+Date.now()+Math.random().toString(36).slice(2,5),name:n,email:em,title:v("in_t"),dept:v("in_d"),role:S.inviteRole||"Hiring manager",status:"Invited",at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})};
+    co.members.push(m);logEvent(`Invited ${m.name} (${m.dept}, ${m.role}) to the company account`,co.contact);save();vTeam();toast(`Invite sent to ${m.email}`)};
+}
+const CLIENT_ACCOUNTS=[
+ {co:"Harbor & Pine Confectionery",terms:"Custom terms requested",members:[["Grant Fischer","CEO","Leadership","Admin","Active"],["Hannah Ortiz","Head of Talent","People and HR","Admin","Active"],["Luis Romero","National Sales Director","Sales","Hiring manager","Active"]]},
+ {co:"Sunridge Pantry Foods",terms:"Custom terms agreed",members:[["Erin Kowalski","CCO","Leadership","Admin","Active"],["Jordan Blake","VP Marketing","Marketing","Hiring manager","Active"],["Mei Chen","Director of E-commerce","E-commerce","Hiring manager","Active"],["Owen Price","Finance Business Partner","Finance","Viewer","Invited"]]}];
+function vClients(){
+  const co=S.company,live={co:co.name||"Northfield Snack Co.",terms:termsOK()?(S.agreement?`Signed · ${S.agreement.ref}`:"Terms agreed"):"Not signed yet",members:teamMembers().map(m=>[m.name,m.title,m.dept,m.role,m.status])};
+  const all=[live,...CLIENT_ACCOUNTS];
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Clients</span><h1>Client accounts</h1><p class="muted">Everyone on each client account, by department. Each company's terms cover all of its members.</p></div>
+  <div class="list" style="max-width:860px">${all.map(a=>`<div class="item">
+    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(a.co)}</b><div class="muted small">${a.members.length} member${a.members.length===1?"":"s"} · ${[...new Set(a.members.map(m=>m[2]))].length} department${[...new Set(a.members.map(m=>m[2]))].length===1?"":"s"}</div></div><span class="tag ${/Signed|agreed/.test(a.terms)?"hit":"new"}">${esc(a.terms)}</span></div>
+    <div>${a.members.map(m=>`<div class="mem"><span class="av">${esc(initials(m[0]))}</span><div class="mi"><b>${esc(m[0])}</b><span>${esc(m[1]||"")}${m[1]?" · ":""}${esc(m[2])} · ${esc(m[3])}</span></div><div class="ma"><span class="tag ${m[4]==="Active"?"hit":"new"}">${esc(m[4])}</span></div></div>`).join("")}</div>
+  </div>`).join("")}</div>`;
+}
+
 /* ---------------- routing ---------------- */
-const VIEWS={dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
-const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["alerts","Alerts"]];
+const VIEWS={team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
-const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
+const ADMIN_TABS=[["dash","Dashboard"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){
   const fy=completeness().pct===100;
@@ -1553,7 +1612,7 @@ function counts(){
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
@@ -1567,7 +1626,7 @@ function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
-if(TASTER==="client"){Object.assign(S.company,{auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
+if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
 load();
 window.addEventListener("hashchange",render);
