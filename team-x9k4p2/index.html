@@ -234,6 +234,8 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .cvbox .meta{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
 .cvbox .meta b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cvbox .meta span{font-size:12.5px;color:var(--muted)}
+.authbox{border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;background:var(--soft)}
+.authbox.on{border-color:rgba(200,169,106,.55);background:var(--accent-soft)}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -495,7 +497,7 @@ const S={
     tagline:"High-protein baked crisps, now in 9,000 doors.",
     about:"Northfield makes high-protein baked crisps sold across club, grocery and natural. We raised a growth round in 2025 and are building our first national sales team.",
     why:"Equity for senior hires, a founder who came up through sales, and real budget behind Costco and Kroger expansion.",
-    contact:"Dana Whitfield",contactTitle:"VP People",logo:"",anon:false,
+    contact:"Dana Whitfield",contactTitle:"VP People",logo:"",anon:false,auth:{name:"Dana Whitfield",title:"VP People",at:"Nov 3, 2026"},
     kw:["Protein","Better-for-you","Club channel","Clean label","PE-backed"]},
   autoSend:false,welcome:null,activeChat:null,cthreads:{},cthread:null,
   deal:{id:"nf",status:"none"},
@@ -688,8 +690,13 @@ function vCompany(){
         <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Professionals see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo until you both agree to reveal.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
         <div class="protect">${lockIcon}<span><b>Your own employees can't see you, and you can't see them.</b> Anyone who works at ${esc(co.name||"your company")}, or has asked to be hidden from you, is left out of your results automatically, and they can't see your company either.</span></div>
       </div>
-      <div class="section"><h3>Your contact</h3>
-        <div class="grid2"><label class="field">Name<input type="text" id="f_contact" value="${esc(co.contact)}"></label><label class="field">Job title<input type="text" id="f_contactTitle" value="${esc(co.contactTitle)}"></label></div>
+      <div class="section"><h3>Your contact <span>Required</span></h3>
+        <div class="grid2"><label class="field">Name<input type="text" id="f_contact" value="${esc(co.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="f_contactTitle" value="${esc(co.contactTitle)}" autocomplete="organization-title"></label></div>
+        <div class="authbox ${co.auth?"on":""}">
+          <label class="check"><input type="checkbox" id="f_auth" ${co.auth?"checked":""}><span><b>I'm authorised to agree terms of business on behalf of ${esc(co.name||"my company")} and its associated companies.</b></span></label>
+          <p class="muted small" id="authNote">${co.auth?`Confirmed by ${esc(co.auth.name)}${co.auth.title?", "+esc(co.auth.title):""} on ${esc(co.auth.at)}. This is kept on your activity record.`:"Add your name and job title above, then tick to confirm. If someone else signs agreements for your company, ask them to complete this step."}</p>
+        </div>
+        <p class="small" id="authErr" style="color:var(--bad);display:none"></p>
         <div class="row"><button class="btn" type="submit">Save and see matches</button><button type="button" class="btn quiet" id="reset">Reset demo</button></div>
       </div>
     </form>
@@ -720,7 +727,11 @@ function vCompany(){
   const adj=$("#adjLogo");if(adj)adj.onclick=()=>cropLogo(co.logoSrc,url=>{co.logo=url;save();vCompany();toast("Logo updated")});
   const rl=$("#rmLogo");if(rl)rl.onclick=()=>{co.logo="";co.logoSrc="";save();vCompany()};
   $("#reset").onclick=()=>{try{localStorage.removeItem(STORE)}catch(e){}location.hash="company";location.reload()};
-  $("#coForm").addEventListener("submit",e=>{e.preventDefault();save();location.hash="discover"});
+  const authErr=m=>{const el=$("#authErr");el.textContent=m;el.style.display=m?"block":"none"};
+  $("#f_auth").onchange=e=>{if(e.target.checked){if(co.contact.trim().length<3||!co.contactTitle.trim()){e.target.checked=false;authErr("Add your name and job title first.");return}
+      co.auth={name:co.contact.trim(),title:co.contactTitle.trim(),at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})};logEvent(`Authority to agree terms confirmed by ${co.auth.name}, ${co.auth.title}`,co.auth.name);toast("Authority confirmed")}
+    else{co.auth=null}authErr("");save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);counts()};
+  $("#coForm").addEventListener("submit",e=>{e.preventDefault();if(!co.auth){authErr("Tick to confirm you're authorised to agree terms for your company.");$("#f_auth").closest(".authbox").scrollIntoView({block:"center",behavior:"smooth"});return}save();location.hash="discover"});
 }
 
 const PF={q:"",grp:"all",lvl:"all",region:"all",stage:"all",open:"all",sort:"match",shown:24,mode:"grid"};
@@ -997,7 +1008,7 @@ function openTermsGate(onDone){
     ${termsHTML()}
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
     <div class="grid2"><label class="field">Full name<input type="text" id="sName" value="${esc(S.company.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="sTitle" value="${esc(S.company.contactTitle)}"></label></div>
-    <label class="check"><input type="checkbox" id="sAuth"><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
+    <label class="check"><input type="checkbox" id="sAuth" ${S.company.auth&&S.company.auth.name===S.company.contact?"checked":""}><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
     <div class="row"><button class="btn" id="sGo" disabled>Sign and reveal</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
   </div></div>`;
@@ -1044,7 +1055,7 @@ function vTerms(){
 }
 
 /* ---------- For you ---------- */
-function completeness(){const co=S.company;const checks=TASTER?[["Company name",!!co.name.trim()],["One-line pitch",co.tagline.trim().length>10],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your sectors",co.cats.length>0]]:[["Company logo",!!co.logo],["One-line pitch",co.tagline.trim().length>10],["About us",co.about.trim().length>60],["Why join now",co.why.trim().length>30],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your sectors",co.cats.length>0],["Key retailers",co.retailers.length>0],["Territories",co.regions.length>0],["Three or more sectors and keywords",co.kw.length>=3],["Your contact",!!co.contact.trim()]];
+function completeness(){const co=S.company;const checks=TASTER?[["Company name",!!co.name.trim()],["One-line pitch",co.tagline.trim().length>10],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your sectors",co.cats.length>0],["Authority to agree terms",!!co.auth]]:[["Company logo",!!co.logo],["One-line pitch",co.tagline.trim().length>10],["About us",co.about.trim().length>60],["Why join now",co.why.trim().length>30],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your sectors",co.cats.length>0],["Key retailers",co.retailers.length>0],["Territories",co.regions.length>0],["Three or more sectors and keywords",co.kw.length>=3],["Your contact",!!co.contact.trim()],["Authority to agree terms",!!co.auth]];
   return {checks,pct:Math.round(checks.filter(c=>c[1]).length/checks.length*100)}}
 function miniCard(x){return `<button class="mini ${S.shortlist.includes(x.c.id)?"kept":""}" data-open="${x.c.id}">
   <div class="t"><div><div class="u">${LEVELS[x.c.lvl]}</div><div class="l">${esc(x.c.region)} · ${esc(refOf(x.c.user))}</div></div></div>
@@ -1520,7 +1531,7 @@ function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
-if(TASTER==="client"){Object.assign(S.company,{name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
+if(TASTER==="client"){Object.assign(S.company,{auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
 load();
 window.addEventListener("hashchange",render);
@@ -1552,7 +1563,7 @@ function openInvite(why){
   $("#ivX").onclick=()=>layer.innerHTML="";
   $("#ivF").onsubmit=e=>{e.preventDefault();const v=id=>{const el=$("#"+id);return el?el.value.trim():""};
     const n=v("iv_n"),em=v("iv_e");if(!n||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$("#iv_err").style.display="block";return}
-    const lines=cl?[`Name: ${n}`,`Email: ${em}`,`Company: ${v("iv_c")}`,`Role: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Pitch: ${co.tagline}`,`Hiring: ${co.roles.map(r=>r.title).filter(Boolean).join("; ")}`,`Shortlisted in taster: ${S.shortlist.length}`]
+    const lines=cl?[`Name: ${n}`,`Email: ${em}`,`Company: ${v("iv_c")}`,`Role: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Pitch: ${co.tagline}`,`Hiring: ${co.roles.map(r=>r.title).filter(Boolean).join("; ")}`,`Shortlisted in taster: ${S.shortlist.length}`,`Authorised to agree terms: ${co.auth?"Yes ("+co.auth.name+", "+co.auth.title+")":"Not confirmed"}`]
       :[`Name: ${n}`,`Email: ${em}`,`Current title: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Region: ${p.region}`,`Headline: ${p.headline}`,...(p.cv?["",`CV: ${p.cv.name} (attached)`]:[])];
     const subj=`CTX invitation request: ${n}${cl&&v("iv_c")?", "+v("iv_c"):""}`;
     location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`;
