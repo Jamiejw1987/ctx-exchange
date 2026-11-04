@@ -236,6 +236,18 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .cvbox .meta span{font-size:12.5px;color:var(--muted)}
 .authbox{border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;background:var(--soft)}
 .authbox.on{border-color:rgba(200,169,106,.55);background:var(--accent-soft)}
+.doc{background:#FBFAF7;color:#1B1A17;border-radius:12px;padding:22px 20px;font-size:13px;line-height:1.55;display:flex;flex-direction:column;gap:12px}
+.doc h3{color:#1B1A17;font-size:18px}.doc h4{margin:6px 0 2px;color:#1B1A17;font-size:14px}
+.doc .dmeta{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}.doc .dmeta dt{color:#6E685D}.doc .dmeta dd{margin:0;font-weight:600}
+.doc table{border-collapse:collapse;width:100%}.doc td{padding:5px 0;border-bottom:1px solid #E6E1D7}
+.doc .sig{border-top:1px solid #CFC8BA;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12.5px}
+.doc .sig>div{min-width:0;overflow-wrap:anywhere}
+@media (max-width:600px){.doc .sig{grid-template-columns:1fr}}
+.doc .sig b{display:block;font-size:15px;font-family:"Brush Script MT","Segoe Script",cursive;font-weight:400}
+.doc .terms{max-height:none;overflow:visible;border:0;padding:0;background:none;color:#1B1A17}
+.doc .terms *{color:#1B1A17}.doc .cite,.doc .muted{color:#6E685D!important}
+.sentto{display:flex;flex-direction:column;gap:6px}.sentto li{display:flex;gap:8px;align-items:center;font-size:13.5px}.sentto li::before{content:"✓";color:var(--brand-2);font-weight:800}
+@media print{body{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}body.printing>*:not(#layer){display:none!important}body.printing #layer .scrim{position:static;background:none;padding:0;display:block}body.printing #layer .modal{max-height:none;overflow:visible;box-shadow:none;background:#fff;padding:0}body.printing #layer .noprint{display:none!important}body.printing .doc{background:#fff}}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -1008,17 +1020,39 @@ function openTermsGate(onDone){
     ${termsHTML()}
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
     <div class="grid2"><label class="field">Full name<input type="text" id="sName" value="${esc(S.company.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="sTitle" value="${esc(S.company.contactTitle)}"></label></div>
+    <label class="field">Work email <small>We'll send your signed copy here</small><input type="email" id="sEmail" value="${esc(S.company.email||S.alerts.email_to||"")}" autocomplete="email"></label>
     <label class="check"><input type="checkbox" id="sAuth" ${S.company.auth&&S.company.auth.name===S.company.contact?"checked":""}><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
     <div class="row"><button class="btn" id="sGo" disabled>Sign and reveal</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
   </div></div>`;
   let read=false;const box=$("#termsBox");
-  const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&$("#sAuth").checked&&$("#sRead").checked)};
+  const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim())&&$("#sAuth").checked&&$("#sRead").checked)};
   box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
-  ["sName","sTitle"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
+  ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
   $("#sX").onclick=()=>layer.innerHTML="";$("#sAlt").onclick=()=>layer.innerHTML="";
-  $("#sGo").onclick=()=>{S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);layer.innerHTML="";save();toast("Terms signed");onDone&&onDone()};
+  $("#sGo").onclick=()=>{S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
+function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  return `<div class="doc" id="printDoc"><div><span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A7A55;font-weight:700">Consumer Talent Exchange</span><h3>Signed terms of engagement</h3></div>
+    <dl class="dmeta"><dt>Reference</dt><dd>${esc(a.ref)}</dd><dt>Client</dt><dd>${esc(a.co||"Client")} and its associated companies</dd><dt>Supplier</dt><dd>Consumer Talent Group</dd><dt>Basis</dt><dd>${esc(a.kind)}</dd><dt>Signed</dt><dd>${esc(when)}</dd></dl>
+    <div><h4>Fees</h4><table><tr><td>Salary up to $99,999</td><td style="text-align:right"><b>${T.t1}%</b></td></tr><tr><td>$100,000 to $199,999</td><td style="text-align:right"><b>${T.t2}%</b></td></tr><tr><td>$200,000 plus</td><td style="text-align:right"><b>${T.t3}%</b></td></tr><tr><td>Free replacement period</td><td style="text-align:right"><b>${T.repl} weeks</b></td></tr><tr><td>Payment terms</td><td style="text-align:right"><b>${T.pay} days</b></td></tr></table></div>
+    ${termsHTML().replace('id="termsBox" tabindex="0"','')}
+    <div class="sig"><div><span class="muted">Signed for the client</span><b>${esc(a.by.name)}</b>${esc(a.by.name)}, ${esc(a.by.title)}<br>${esc(a.by.email||"")}</div><div><span class="muted">For Consumer Talent Group</span><b>Jamie Wood</b>Jamie Wood, Founder and CEO<br>jamie@consumer-talent.com</div></div>
+  </div>`}
+function showAgreement(a,{fresh=false}={}){const to=[a.by.email,...a.cc].filter(Boolean);
+  layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="agT" style="max-width:640px">
+    <div class="stack noprint" style="gap:8px"><span class="kicker">${fresh?"Terms signed":"Signed copy"}</span><h2 id="agT">${fresh?"You're all set to reveal":"Your signed terms"}</h2>
+      <p class="muted">${fresh?"A signed copy has been emailed to:":"Emailed on signing to:"}</p><ul class="sentto" style="margin:0;padding:0;list-style:none">${to.map(e=>`<li>${esc(e)}</li>`).join("")}</ul></div>
+    <details class="noprint"><summary class="small" style="cursor:pointer;font-weight:600">Preview the email</summary><div class="msg" style="margin-top:8px"><div class="mh"><b>Consumer Talent Exchange</b> · To ${esc(to.join(", "))}<br>Subject: Your signed terms with Consumer Talent (${esc(a.ref)})</div><div class="mb"><p>Hi ${esc((a.by.name||"").split(" ")[0])},</p><p>Thanks for signing. Your signed terms of engagement for ${esc(a.co||"your company")} are attached as a PDF, reference ${esc(a.ref)}.</p><p>You can now reveal identities with any professional you're talking to on the Exchange. A fee is only due if you hire.</p><p>Jamie Wood<br>Founder and CEO, Consumer Talent</p><p class="muted small">Attachment: ${esc(a.ref)}.pdf</p></div></div></details>
+    ${agreementDoc(a)}
+    <div class="row noprint" style="justify-content:flex-end"><button class="btn line" id="agP">Save or print</button><button class="btn" id="agX">${fresh?"Continue":"Close"}</button></div>
+  </div></div>`;
+  $("#agP").onclick=()=>{document.body.classList.add("printing");window.print();setTimeout(()=>document.body.classList.remove("printing"),400)};
+  return new Promise(r=>{$("#agX").onclick=()=>{layer.innerHTML="";r()}})}
+function issueAgreement(kind,tiersAt,by,onDone){
+  const a={ref:"CTX-AGR-"+String(Date.now()).slice(-6),kind,co:S.company.name,tiers:tiersAt,by,cc:["jamie@consumer-talent.com","connor@consumer-talent.com"],at:by.at||Date.now()};
+  S.agreement=a;logEvent(`Signed copy ${a.ref} emailed to ${[by.email,...a.cc].filter(Boolean).join(", ")}`,"Consumer Talent");save();
+  showAgreement(a,{fresh:true}).then(()=>{toast("Signed copy sent");onDone&&onDone()})}
 const tierRow=(o)=>`${o.t1}% / ${o.t2}% / ${o.t3}%`;
 function cmpTable(p,base=STD,label="Proposed"){return `<div class="scrollx"><table class="cmp"><thead><tr><th></th><th>Standard</th><th>${label}</th></tr></thead><tbody>
   <tr><td>Fee: under $100k / $100–200k / $200k+</td><td class="num">${tierRow(base)}</td><td class="num"><b>${tierRow(p)}</b></td></tr>
@@ -1037,6 +1071,7 @@ function vTerms(){
       ${d.status==="agreed"?cmpTable(d.final,STD,"Agreed"):""}
       ${d.status==="declined"?`<p class="muted">We weren't able to agree that proposal. You can sign our standard terms or send a new proposal.</p>`:""}
       ${!termsOK()&&d.status!=="pending"&&d.status!=="countered"?`<div class="row"><button class="btn" id="signStd">Sign standard terms</button></div>`:""}
+      ${termsOK()&&S.agreement?`<div class="protect">${lockIcon}<span><b>Signed copy ${esc(S.agreement.ref)}</b> emailed to ${esc([S.agreement.by.email,...S.agreement.cc].filter(Boolean).join(", "))}.</span></div><div class="row"><button class="btn line sm" id="viewAg">View signed copy</button></div>`:""}
     </div>
     ${!termsOK()&&d.status!=="pending"?`<form class="card stack" id="propF"><h2>Propose different terms</h2><p class="muted small">Tell us what works for you. Consumer Talent will accept, counter or decline, usually within a day.</p>
       <div class="grid3"><label class="field">Fee under $100k (%)<input type="number" id="pt1" min="5" max="50" value="${(d.proposed||STD).t1}"></label><label class="field">Fee $100–200k (%)<input type="number" id="pt2" min="5" max="50" value="${(d.proposed||STD).t2}"></label><label class="field">Fee $200k+ (%)<input type="number" id="pt3" min="5" max="50" value="${(d.proposed||STD).t3}"></label>
@@ -1047,7 +1082,8 @@ function vTerms(){
   </div>
   <div class="sticky"><div class="previewlabel">Our standard terms</div>${termsHTML().replace('id="termsBox"','')}</div></div>`;
   const ss=$("#signStd");if(ss)ss.onclick=()=>openTermsGate(()=>vTerms());
-  const ac=$("#accC");if(ac)ac.onclick=()=>{d.final=d.counter;d.status="agreed";logEvent(`Counter-offer accepted: ${tierRow(d.final)}`,S.company.contact);save();vTerms();toast("Terms agreed")};
+  const va=$("#viewAg");if(va)va.onclick=()=>showAgreement(S.agreement);
+  const ac=$("#accC");if(ac)ac.onclick=()=>{d.final=d.counter;d.status="agreed";logEvent(`Counter-offer accepted: ${tierRow(d.final)}`,S.company.contact);issueAgreement("Agreed custom terms",{...d.final},{name:S.company.contact,title:S.company.contactTitle,email:S.company.email||S.alerts.email_to,at:Date.now()},()=>vTerms())};
   const dc=$("#decC");if(dc)dc.onclick=()=>{d.status="declined";save();vTerms()};
   const pf=$("#propF");if(pf)pf.addEventListener("submit",e=>{e.preventDefault();const f=$("#pfile").files[0];
     d.proposed={t1:+$("#pt1").value,t2:+$("#pt2").value,t3:+$("#pt3").value,repl:+$("#prepl").value,pay:+$("#ppay").value,file:f?f.name:"",notes:$("#pnotes").value.trim()};
@@ -1525,9 +1561,9 @@ function render(){
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest}))}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};
+  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
