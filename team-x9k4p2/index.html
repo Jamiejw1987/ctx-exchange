@@ -256,6 +256,22 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .mem .ma{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .depts{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:600px){.mem{flex-wrap:wrap}.mem .ma{width:100%;padding-left:52px;justify-content:flex-start}}
+.bell{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 14px);width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;z-index:3}
+.bell svg{width:19px;height:19px}
+.bell i{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center}
+.bell i:empty{display:none}
+body.taster .bell{display:none}
+.nlist{display:flex;flex-direction:column}
+.nitem{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid var(--line);text-align:left;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;cursor:pointer;width:100%}
+.nitem:last-child{border-bottom:0}
+.nitem .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:none;background:transparent}
+.nitem.unread .dot{background:var(--brand)}
+.nitem .nt{flex:1;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.4}
+.nitem .nt span{font-size:12px;color:var(--muted)}
+.nitem.unread .nt b{color:var(--ink)}
+.rq{display:flex;flex-direction:column;gap:6px;background:var(--soft);border-radius:12px;padding:12px 14px;font-size:13.5px}
+.rq .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+@media (max-width:600px){header .logo{justify-content:flex-start!important;padding-right:48px}}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -430,6 +446,7 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 
 <div class="orb a" aria-hidden="true"></div><div class="orb b" aria-hidden="true"></div>
 <header>
+  <button type="button" class="bell" id="bell" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><i id="bellN"></i></button>
   <div class="wrap hbar">
     <a class="logo" href="#company" aria-label="Consumer Talent Exchange home"><span class="mark">CT<em>X</em></span><span><b>Consumer Talent <em>Exchange</em></b><span class="side" id="sideLbl">For hiring teams</span><span class="sub">by Consumer Talent Group · Your Success Story</span></span></a>
     <div class="seg" role="group" aria-label="View as">
@@ -540,7 +557,7 @@ const S={
     hl:["Won 3 new national items at Kroger in 2025","Cut trade spend 12% while growing volume","Managed two broker partners across the Midwest"],
     retailers:["Kroger","Costco","Target"],prefStage:"SME",prefCats:["Salty snacks","Better-for-you","Protein snacks"],
     dream:"Northfield, protein snack brands, PE-backed scale-ups",kw:["Better-for-you","Protein","Chips","Club channel","Clean label","RTD"],hide:"Crunchly Foods",agreed:false},
-  interest:{},
+  interest:{},notes:[],
   creqs:[
     {id:"q1",co:"Northfield Snack Co.",role:"National Account Manager, Kroger",base:"$130–150k + bonus",stage:"SME",hq:"Chicago, IL",why:"Equity for senior hires and a founder who came up through sales.",status:"new"},
     {id:"q2",co:"Harbor & Pine Confectionery",role:"National Account Director",base:"$150–170k + bonus",stage:"EST",hq:"Hershey, PA",why:"A 90-year-old brand relaunching with a new commercial team.",status:"new"}]
@@ -892,7 +909,7 @@ function vShortlist(){
     <p class="muted">Both sides stay anonymous until you both agree to reveal. A fee applies only when you hire.</p></div>
   <div class="cols"><div class="list">${items.length?items.map(x=>{const st=x.i?x.i.stage:0;return `<div class="item">
       <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div>
-        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">Request introduction</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?`<span class="tag new">Waiting for their reply</span>`:`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
+        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">Request introduction</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?(x.i.review==="pending"?`<span class="tag new">With Consumer Talent for review</span>`:x.i.review==="declined"?`<span class="tag">Not taken forward</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:x.i.review==="passed"?`<span class="tag">They declined</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:`<span class="tag new">Sent to them · waiting for their reply</span>`):`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
       <div class="steps">${STEPS.map((s,i)=>`<div class="${i<=st?"on":""}">${s}</div>`).join("")}</div>
       ${st>=3?`<div class="protect">${lockIcon}<span><b>Protected introduction ${esc(x.i.ref)}.</b> Our fee applies to any hire of this person by ${esc(S.company.name||"your company")} or an associated company until <b>${fmtDay(plus12(new Date(x.i.revealedAt||x.i.at)))}</b>.</span></div>`:""}
     </div>`}).join(""):`<div class="empty"><h2>Your shortlist is empty</h2><p class="muted">Shortlist people from For you, Discover or the Talent pool.</p><a class="btn" href="#foryou">See who's picked for you</a></div>`}</div>
@@ -904,15 +921,57 @@ function vShortlist(){
   app.querySelectorAll("[data-chat]").forEach(b=>b.onclick=()=>{S.activeChat=b.dataset.chat;location.hash="chats"});
   app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.shortlist=S.shortlist.filter(i=>i!==b.dataset.rm);delete S.decided[b.dataset.rm];counts();save();vShortlist()});
 }
+function notify(to,t,go){S.notes.unshift({id:"n"+Date.now()+Math.random().toString(36).slice(2,5),to,t,go,at:Date.now(),read:false});bellCount()}
+function sideKey(){return S.mode==="cand"?"cand":S.mode==="admin"?"admin":"client"}
+function bellCount(){const el=$("#bellN");if(el){const n=(S.notes||[]).filter(x=>x.to===sideKey()&&!x.read).length;el.textContent=n?String(n):""}}
+function openBell(){const k=sideKey(),list=(S.notes||[]).filter(x=>x.to===k);
+  layer.innerHTML=`<div class="scrim" id="nS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="nT" style="max-width:480px;align-self:start;margin-top:56px">
+    <div class="row" style="justify-content:space-between"><h2 id="nT">Notifications</h2>${list.some(x=>!x.read)?`<button class="btn quiet sm" id="nAll">Mark all read</button>`:""}</div>
+    <div class="nlist">${list.length?list.slice(0,30).map(x=>`<button class="nitem ${x.read?"":"unread"}" data-n="${x.id}"><span class="dot"></span><span class="nt"><b>${esc(x.t)}</b><span>${fmt(new Date(x.at))}</span></span></button>`).join(""):`<p class="muted">Nothing new. Updates about your introductions will appear here.</p>`}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn line" id="nX">Close</button></div></div></div>`;
+  $("#nX").onclick=()=>layer.innerHTML="";$("#nS").onclick=e=>{if(e.target.id==="nS")layer.innerHTML=""};
+  const na=$("#nAll");if(na)na.onclick=()=>{list.forEach(x=>x.read=true);save();bellCount();openBell()};
+  app.ownerDocument.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{const x=S.notes.find(n=>n.id===b.dataset.n);x.read=true;save();bellCount();layer.innerHTML="";if(x.go&&location.hash!=="#"+x.go)location.hash=x.go;else render()})}
+function introRole(c){const co=S.company;return co.roles.find(r=>r.lvl===c.lvl)||co.roles[0]||{title:LEVELS[c.lvl],base:""}}
 function startIntro(id){if(TASTER){openInvite("intro");return}
-  const c=POOL.find(p=>p.id===id);
-  S.intros[id]={stage:1,ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[]};
-  logEvent(`Requested introduction to ${c.user} (${S.intros[id].ref})`,S.company.contact);save();vShortlist();toast("Introduction requested. We'll let you know when they reply.");
-  setTimeout(()=>{const i=S.intros[id];i.stage=2;
-    i.msgs.push({f:"ct",t:`Good news: ${c.user} has accepted your introduction. You can chat here anonymously. Contact details are hidden until you both agree to reveal. I'm here if you need anything. Jamie, Consumer Talent`,at:tnow()});
-    i.msgs.push({f:"them",t:`Hi, thanks for reaching out. I'd love to hear more about the ${(S.company.roles.find(r=>r.lvl===c.lvl)||{title:LEVELS[c.lvl]}).title} role and what the next 12 months look like for the business.`,at:tnow()});
-    logEvent(`${c.user} accepted the introduction. Anonymous chat opened`,"Candidate");save();counts();
-    if(view()==="shortlist")vShortlist();toast(`${c.user} accepted. Your conversation is open.`)},2200);
+  const c=POOL.find(p=>p.id===id),co=S.company,def=introRole(c);
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
+    <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
+      <p class="muted small">Consumer Talent reviews every request, usually within a few hours, then sends it to them. You'll get a notification here at each step.</p></div>
+    <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")||`<option value="">${esc(LEVELS[c.lvl])}</option>`}</select></label>
+    <label class="field">Why them? <small>Optional. Shared with Consumer Talent, not with the professional.</small><textarea id="riW" style="min-height:70px" placeholder="Strong Kroger experience, and we need someone to lead the Midwest."></textarea></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="riX">Cancel</button><button class="btn" type="submit">Send request</button></div></form></div>`;
+  $("#riX").onclick=()=>layer.innerHTML="";
+  $("#riF").onsubmit=e=>{e.preventDefault();const r=co.roles.find(x=>x.id===$("#riR").value)||def;
+    S.intros[id]={stage:1,review:"pending",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[],role:r.title||LEVELS[c.lvl],base:r.base||"",note:$("#riW").value.trim(),by:co.contact||"Your team"};
+    logEvent(`Requested introduction to ${refOf(c.user)} for ${S.intros[id].role} (${S.intros[id].ref})`,co.contact);
+    notify("admin",`${co.name||"A client"} wants an introduction to ${refOf(c.user)} (${LEVELS[c.lvl]}) for ${S.intros[id].role}`,"intros");
+    layer.innerHTML="";save();counts();if(view()==="shortlist")vShortlist();toast("Request sent to Consumer Talent for review")};
+}
+function vIntros(){
+  const co=S.company,rows=Object.entries(S.intros).filter(([k,i])=>i.review&&POOL.some(p=>p.id===k)).map(([k,i])=>({k,i,c:POOL.find(p=>p.id===k)})).sort((a,b)=>(a.i.review==="pending"?0:1)-(b.i.review==="pending"?0:1)||b.i.at-a.i.at);
+  const lab={pending:["Needs review","new"],approved:["Sent to professional","hit"],declined:["Declined","tag"],accepted:["Accepted · chatting","hit"],passed:["Professional declined","tag"]};
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Introductions</span><h1>Introduction requests</h1><p class="muted">Every request from a client comes here first. Approve it and the professional gets a notification in the app. Decline it and the client is told, with your reason.</p></div>
+  <div class="list" style="max-width:760px">${rows.length?rows.map(({k,i,c})=>{const st=i.review==="approved"&&i.stage>=2?"accepted":i.review;return `<div class="item">
+    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(co.name||"Client")} → ${esc(refOf(c.user))}</b><div class="muted small">${esc(i.ref)} · requested by ${esc(i.by||co.contact)} · ${fmt(new Date(i.at))}</div></div><span class="tag ${lab[st][1]}">${lab[st][0]}</span></div>
+    <div class="rq"><span class="lbl">Role</span><b>${esc(i.role)}${i.base?` · ${esc(i.base)}`:""}</b>
+      <span class="lbl" style="margin-top:4px">Professional</span><span>${esc(LEVELS[c.lvl])} · ${esc(c.region)} · ${esc(c.band)}</span><span class="muted">${esc(c.headline)}</span>
+      ${i.note?`<span class="lbl" style="margin-top:4px">Client's note</span><span>${esc(i.note)}</span>`:""}
+      ${i.ctNote?`<span class="lbl" style="margin-top:4px">${i.review==="declined"?"Your reason":"Your note to the professional"}</span><span>${esc(i.ctNote)}</span>`:""}</div>
+    ${i.review==="pending"?`<label class="field">Note <small>Optional. Goes to the professional if you approve, or to the client if you decline.</small><textarea data-ctn="${k}" style="min-height:60px"></textarea></label>
+      <div class="row"><button class="btn" data-ok="${k}">Approve and send</button><button class="btn line" data-dec="${k}">Decline</button></div>`:""}
+  </div>`}).join(""):`<div class="empty"><h2>No requests yet</h2><p class="muted">When a client asks to meet someone, it lands here for you to review.</p></div>`}</div>`;
+  const note=k=>{const t=app.querySelector(`[data-ctn="${k}"]`);return t?t.value.trim():""};
+  app.querySelectorAll("[data-ok]").forEach(b=>b.onclick=()=>{const k=b.dataset.ok,i=S.intros[k],c=POOL.find(p=>p.id===k);i.review="approved";i.ctNote=note(k);i.approvedAt=Date.now();
+    const qid="qi_"+k;S.creqs=S.creqs.filter(r=>r.id!==qid&&!(r.id==="q1"&&r.status==="new"));S.creqs.unshift({id:qid,intro:k,co:co.name||"A food brand",role:i.role,base:i.base||"",stage:co.stage,hq:co.hq,why:i.ctNote||co.why||co.tagline,status:"new"});
+    logEvent(`Consumer Talent approved the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");
+    notify("client",`Consumer Talent approved your introduction to ${refOf(c.user)}. We've sent it to them.`,"shortlist");
+    notify("cand",`${co.anon?coDisplay(co):co.name||"A company"} would like to speak with you about ${i.role}`,"introductions");
+    save();counts();vIntros();toast("Approved. The professional has been notified.")});
+  app.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const k=b.dataset.dec,i=S.intros[k],c=POOL.find(p=>p.id===k);i.review="declined";i.ctNote=note(k);
+    logEvent(`Consumer Talent declined the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");
+    notify("client",`Consumer Talent didn't take forward your introduction to ${refOf(c.user)}${i.ctNote?`: ${i.ctNote}`:"."}`,"shortlist");
+    save();counts();vIntros();toast("Declined. The client has been told.")});
 }
 
 /* ---------- client conversations ---------- */
@@ -1247,6 +1306,15 @@ function vProfile(){
   $("#pf").addEventListener("submit",e=>{e.preventDefault();if(anonChecks(p).length){toast("Fix the highlighted details before saving");return}save();toast("Profile saved. Matching companies will see it from today.")});
 }
 function fmtSize(b){return b>=1048576?(b/1048576).toFixed(1)+"MB":Math.max(1,Math.round(b/1024))+"KB"}
+function linkAccept(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.stage=2;i.acceptedAt=Date.now();
+  i.msgs.push({f:"ct",t:`Good news: ${refOf(c.user)} has accepted your introduction. You can chat here anonymously. Contact details are hidden until you both agree to reveal. I'm here if you need anything. Jamie, Consumer Talent`,at:tnow()});
+  logEvent(`${refOf(c.user)} accepted the introduction. Anonymous chat opened`,"Professional");
+  notify("client",`${refOf(c.user)} accepted your introduction. Your conversation is open.`,"chats");
+  notify("admin",`${refOf(c.user)} accepted ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
+function linkDecline(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.review="passed";
+  logEvent(`${refOf(c.user)} declined the introduction`,"Professional");
+  notify("client",`${refOf(c.user)} has decided not to take this one forward. Their identity stays private.`,"shortlist");
+  notify("admin",`${refOf(c.user)} declined ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
 function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
 function vRequests(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
@@ -1259,12 +1327,12 @@ function vRequests(){
     ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept and start chatting</button><button class="btn line" data-no="${r.id}">Not for me</button></div>`:
       r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
   </div>`}).join("")}</div>`;
-  app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>{const r=S.creqs.find(x=>x.id===b.dataset.yes);r.status="yes";const co=reqCo(r);
+  app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>{const r=S.creqs.find(x=>x.id===b.dataset.yes);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
     S.cthreads[r.id]=[{f:"ct",t:`You accepted ${coDisplay(co)}'s introduction. Chat here anonymously. They won't see your name or employer unless you both agree to reveal. Jamie, Consumer Talent`,at:tnow()},
       {f:"them",t:`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`,at:tnow()},
       {f:"iv",fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact,opts:nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);return d.toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}),booked:null}];
     S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")});
-  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{S.creqs.find(r=>r.id===b.dataset.no).status="no";save();vRequests();counts();toast("Declined. The company won't see who you are.")});
+  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{const rr=S.creqs.find(r=>r.id===b.dataset.no);rr.status="no";if(rr.intro)linkDecline(rr);save();vRequests();counts();toast("Declined. The company won't see who you are.")});
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.go});
 }
 function vCandMsgs(){
@@ -1600,19 +1668,19 @@ function vClients(){
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const ADMIN_TABS=[["dash","Dashboard"],["intros","Introductions","v"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
-function counts(){
+function counts(){bellCount();
   const fy=completeness().pct===100;
-  const n={f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
@@ -1620,15 +1688,16 @@ function render(){
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null}))}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;
+  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
 if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
 load();
+$("#bell").onclick=openBell;
 window.addEventListener("hashchange",render);
 render();
 if(TASTER){
