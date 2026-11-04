@@ -757,7 +757,7 @@ function vCompany(){
         <div class="field">Territories <small>Tick broad regions, or add specific states, provinces or metro areas.</small>${picks("regions",withCustom(REGIONS,co.regions),co.regions)}${apReg.html}</div>
       </div>
       <div class="section"><h3>Privacy</h3>
-        <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Professionals see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo until you both agree to reveal.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
+        <div class="toggle" style="padding:0;border:0"><div><b>Stay anonymous until you reveal</b><p class="muted small">Professionals browsing see "${esc(coDisplay({...co,anon:true}))}" instead of your name and logo. When you request an introduction, we always show them your name, so they can tell us if they've met you before.</p></div><label class="switch"><input type="checkbox" id="f_anon" ${co.anon?"checked":""} aria-label="Stay anonymous until you reveal"><span></span></label></div>
         <div class="protect">${lockIcon}<span><b>Your own employees can't see you, and you can't see them.</b> Anyone who works at ${esc(co.name||"your company")}, or has asked to be hidden from you, is left out of your results automatically, and they can't see your company either.</span></div>
       </div>
       <div class="section"><h3>Your contact <span>Required</span></h3>
@@ -972,7 +972,7 @@ function startIntro(id){if(TASTER){openInvite("intro");return}
   const c=POOL.find(p=>p.id===id),co=S.company,def=introRole(c);
   layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
     <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
-      <p class="muted small">Consumer Talent reviews every request, usually within a few hours, then sends it to them. You'll get a notification here at each step.</p></div>
+      <p class="muted small">Consumer Talent reviews every request, usually within a few hours, then sends it to them. They'll see your company name and confirm whether they've interviewed with you before. You'll get a notification here at each step.</p></div>
     <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")||`<option value="">${esc(LEVELS[c.lvl])}</option>`}</select></label>
     <label class="field">Why them? <small>Optional. Shared with Consumer Talent, not with the professional.</small><textarea id="riW" style="min-height:70px" placeholder="Strong Kroger experience, and we need someone to lead the Midwest."></textarea></label>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="riX">Cancel</button><button class="btn" type="submit">Send request</button></div></form></div>`;
@@ -994,6 +994,7 @@ function vIntros(){
       <span class="lbl" style="margin-top:4px">Professional <span class="tag" style="font-size:10.5px;text-transform:none;letter-spacing:0;margin-left:4px">Only Consumer Talent sees the name</span></span><b style="font-size:15px">${esc(c.name)}</b><span>${esc(LEVELS[c.lvl])} · ${esc(currentCo(c))} · ${esc(c.base||c.region)}</span><span class="muted">${esc(c.band)} · ${esc(c.headline)}</span>
       <div><button type="button" class="btn line sm" data-full="${k}">View full profile</button></div>
       ${i.note?`<span class="lbl" style="margin-top:4px">Client's note</span><span>${esc(i.note)}</span>`:""}
+      ${i.prior?`<span class="lbl" style="margin-top:4px">Previous interview</span>${i.prior.prior==="Yes"?`<span style="color:var(--warn)"><b>Yes, ${esc(i.prior.whenLabel)}.</b> ${i.prior.want==="Yes"?"Wants to speak again. Check the fee position before reveal.":"Didn't want to speak again."}</span>`:`<span>No. Confirmed by the professional on ${fmtDay(new Date(i.prior.at))}.</span>`}`:i.review==="approved"?`<span class="lbl" style="margin-top:4px">Previous interview</span><span class="muted">Waiting for the professional's answer</span>`:""}
       ${i.ctNote?`<span class="lbl" style="margin-top:4px">${i.review==="declined"?"Your reason":"Your note to the professional"}</span><span>${esc(i.ctNote)}</span>`:""}</div>
     ${i.review==="pending"?`<label class="field">Note <small>Optional. Goes to the professional if you approve, or to the client if you decline.</small><textarea data-ctn="${k}" style="min-height:60px"></textarea></label>
       <div class="row"><button class="btn" data-ok="${k}">Approve and send</button><button class="btn line" data-dec="${k}">Decline</button></div>`:""}
@@ -1155,6 +1156,7 @@ function termsHTML(){
       <li>A candidate counts as introduced by Consumer Talent from the first time you <b>view their anonymous profile</b>, shortlist them, message them or receive any of their details, whichever comes first. <span class="cite">(Terms 2.2)</span></li>
       <li>Each introduction lasts <b>12 months from your most recent interaction</b> with that candidate, including views, messages and interviews. <span class="cite">(Terms 2.2)</span></li>
       <li>This applies even if you later identify or find the candidate yourself, through LinkedIn, another agency, a referral or any other route, and whether or not we are the effective cause of the hire. <span class="cite">(Terms 2.2)</span></li>
+      <li>When you request an introduction, the professional sees your company name and confirms whether they've interviewed with you before. Previous contact is only taken into account if it's declared at that point. <span class="cite">(Terms 2.2)</span></li>
     </ol>
     <h4>2. When our fee is due</h4>
     <ol>
@@ -1433,7 +1435,7 @@ function moveForm(kind){const p=S.cand;
     save();layer.innerHTML="";vProfile();toast(kind==="pause"?"Your profile is paused":"Thanks for letting us know")}}
 function fmtSize(b){return b>=1048576?(b/1048576).toFixed(1)+"MB":Math.max(1,Math.round(b/1024))+"KB"}
 function linkAccept(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.stage=2;i.acceptedAt=Date.now();
-  i.msgs.push({f:"ct",t:`Good news: ${refOf(c.user)} has accepted your introduction. You can chat here anonymously. Contact details are hidden until you both agree to reveal. I'm here if you need anything. Jamie, Consumer Talent`,at:tnow()});
+  i.msgs.push({f:"ct",t:`Good news: ${refOf(c.user)} has accepted your introduction.${i.prior&&i.prior.prior==="No"?" They've confirmed they haven't interviewed with you before, so this is a protected introduction.":""} You can chat here anonymously. Contact details are hidden until you both agree to reveal. I'm here if you need anything. Jamie, Consumer Talent`,at:tnow()});
   logEvent(`${refOf(c.user)} accepted the introduction. Anonymous chat opened`,"Professional");
   notify("client",`${refOf(c.user)} accepted your introduction. Your conversation is open.`,"chats");
   notify("admin",`${refOf(c.user)} accepted ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
@@ -1441,23 +1443,52 @@ function linkDecline(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro)
   logEvent(`${refOf(c.user)} declined the introduction`,"Professional");
   notify("client",`${refOf(c.user)} has decided not to take this one forward. Their identity stays private.`,"shortlist");
   notify("admin",`${refOf(c.user)} declined ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
-function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
+function priorCheck(rid,onAccept){const r=S.creqs.find(x=>x.id===rid),co=reqCo(r),F={pq1:"",pq3:""};
+  const draw=()=>{const yes=F.pq1==="Yes";
+    layer.innerHTML=`<div class="scrim"><form class="modal" id="pcF" role="dialog" aria-modal="true" aria-labelledby="pcT" style="max-width:480px" novalidate>
+      <div class="row" style="flex-wrap:nowrap;gap:12px">${coLogo(co)}<div class="stack" style="gap:2px"><span class="kicker">Introduction request</span><h2 id="pcT" style="margin:0">${esc(co.name)}</h2><span class="muted small">${esc(r.role)}${r.base?" · "+esc(r.base):""}</span></div></div>
+      <p class="muted small">Three quick questions before you respond. ${esc(co.name)} still won't learn who you are unless you both agree to reveal.</p>
+      <div class="field">1. Have you interviewed with ${esc(co.name)} before?${picks("pq1",["Yes","No"],F.pq1,{radio:true})}</div>
+      ${yes?`<label class="field">2. When was it? <small>The month is fine if you're not sure of the date.</small><input type="month" id="pcW" max="${new Date().toISOString().slice(0,7)}" value="${esc(F.when||"")}"></label>`:""}
+      <div class="field">${yes?"3":"2"}. Would you like to speak with them ${yes?"again":"about this role"}?${picks("pq3",["Yes","No"],F.pq3,{radio:true})}</div>
+      <label class="check"><input type="checkbox" id="pcOk" ${F.ok?"checked":""}><span>My answers are accurate. Consumer Talent keeps them on the introduction record.</span></label>
+      <p class="small" id="pcE" style="color:var(--bad);display:none"></p>
+      <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="pcX">Cancel</button><button class="btn" type="submit">Continue</button></div></form></div>`;
+    bindPicks(layer,F,()=>{const w=$("#pcW");if(w)F.when=w.value;F.ok=$("#pcOk").checked;draw()});
+    $("#pcX").onclick=()=>layer.innerHTML="";
+    $("#pcF").onsubmit=e=>{e.preventDefault();const err=m=>{const x=$("#pcE");x.textContent=m;x.style.display="block"};const w=$("#pcW");if(w)F.when=w.value;
+      if(!F.pq1)return err("Tell us whether you've interviewed with them before.");
+      if(yes&&!F.when)return err("Tell us roughly when you interviewed with them.");
+      if(!F.pq3)return err("Tell us whether you'd like to speak with them.");
+      if(!$("#pcOk").checked)return err("Tick to confirm your answers are accurate.");
+      const whenLabel=F.when?new Date(F.when+"-01T12:00:00").toLocaleDateString([], {month:"long",year:"numeric"}):"";
+      const decl={prior:F.pq1,when:F.when||"",whenLabel,want:F.pq3,at:Date.now()};r.prior=decl;const i=r.intro?S.intros[r.intro]:null,c=r.intro?POOL.find(x=>x.id===r.intro):null;if(i)i.prior=decl;
+      const tag=c?refOf(c.user):refOf(S.cand.user);
+      logEvent(F.pq1==="Yes"?`${tag} declared a previous interview with ${co.name} in ${whenLabel}`:`${tag} confirmed no previous interview with ${co.name}`,"Professional");
+      if(F.pq1==="Yes")notify("admin",`${tag} says they interviewed with ${co.name} in ${whenLabel}${F.pq3==="Yes"?" and would like to speak again. Check the fee position before reveal.":" and doesn't want to speak again."}`,"intros");
+      layer.innerHTML="";
+      if(F.pq3==="Yes"){onAccept(rid);return}
+      r.status="no";if(r.intro)linkDecline(r);save();counts();vRequests();toast(`Declined. ${co.name} won't learn who you are.`)}};
+  draw()}
+function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage,anon:false}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
 function vRequests(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
   <div class="list" style="max-width:760px">${S.creqs.map(r=>{const co=reqCo(r);return `<div class="item">
     <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
       ${r.status==="new"?`<span class="tag new">New request</span>`:r.status==="yes"?`<span class="tag hit">You accepted</span>`:`<span class="tag">Declined</span>`}</div>
+    ${r.prior?`<p class="muted small">${r.prior.prior==="Yes"?`You told us you interviewed with them in ${esc(r.prior.whenLabel)}.`:"You confirmed you haven't interviewed with them before."}</p>`:""}
     <div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>
     <p class="small">${esc(r.why)}</p>
     ${co.anon?`<div class="protect">${lockIcon}<span>This company has chosen to stay anonymous until you both agree to reveal.</span></div>`:""}
-    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept and start chatting</button><button class="btn line" data-no="${r.id}">Not for me</button></div>`:
+    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Respond</button><button class="btn line" data-no="${r.id}">Not for me</button></div>`:
       r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
   </div>`}).join("")}</div>`;
-  app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>{const r=S.creqs.find(x=>x.id===b.dataset.yes);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
+  const acceptReq=yid=>{const r=S.creqs.find(x=>x.id===yid);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
     S.cthreads[r.id]=[{f:"ct",t:`You accepted ${coDisplay(co)}'s introduction. Chat here anonymously. They won't see your name or employer unless you both agree to reveal. Jamie, Consumer Talent`,at:tnow()},
       {f:"them",t:`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`,at:tnow()},
       {f:"iv",fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact,opts:nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);return d.toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}),booked:null}];
-    S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")});
+    S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")};
+  app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.yes,acceptReq));
   app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{const rr=S.creqs.find(r=>r.id===b.dataset.no);rr.status="no";if(rr.intro)linkDecline(rr);save();vRequests();counts();toast("Declined. The company won't see who you are.")});
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.go});
 }
