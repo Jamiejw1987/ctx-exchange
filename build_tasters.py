@@ -1,7 +1,7 @@
 """Builds the client/ and professionals/ taster pages from index.html.
-Run after any change to index.html:  python3 build_tasters.py"""
+Run after any change to app.html:  python3 build_tasters.py"""
 import json, os
-src = open("index.html", encoding="utf8").read()
+src = open("app.html", encoding="utf8").read()
 taster_line = next(l for l in src.splitlines() if l.startswith("const TASTER="))
 base = json.load(open("manifest.webmanifest"))
 for folder, side, name in [("client", "client", "CTX for hiring teams"), ("professionals", "candidate", "CTX for professionals")]:

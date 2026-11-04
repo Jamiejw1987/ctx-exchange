@@ -1,5 +1,5 @@
 // Network-first so updates show straight away; falls back to cache offline.
-const C="ctx-v19";
+const C="ctx-v20";
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;
