@@ -1903,20 +1903,70 @@ function vProtect(){
   counts();
 }
 
+/* ---------------- waiting list (Supabase) ---------------- */
+const SB_URL="https://tqndlcgeiksdzvzswoaa.supabase.co",SB_KEY="sb_publishable_dJXzPHxlz0IMK3FnBrwxAQ_x3xFTjp7",SB_AUTH="ctx-sb-auth";
+const sbGet=()=>{try{return JSON.parse(localStorage.getItem(SB_AUTH)||"null")}catch(e){return null}};
+const sbSet=a=>{try{a?localStorage.setItem(SB_AUTH,JSON.stringify(a)):localStorage.removeItem(SB_AUTH)}catch(e){}};
+async function sbToken(){let a=sbGet();if(!a)return null;if(Date.now()<a.exp-60000)return a.access_token;
+  const r=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:a.refresh_token})});
+  if(!r.ok){sbSet(null);return null}const j=await r.json();a={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email||a.email};sbSet(a);return a.access_token}
+const WLF={side:"all",sector:"all",q:""};let WL=null,WLerr="";
+async function loadWL(){WLerr="";try{const t=await sbToken();if(!t){WL=null;return}
+  const r=await fetch(SB_URL+"/rest/v1/waitlist?select=*&order=created_at.desc&limit=5000",{headers:{apikey:SB_KEY,Authorization:"Bearer "+t}});
+  if(!r.ok){WLerr=r.status===401?"Your login has expired. Sign in again.":"Couldn't load the waiting list ("+r.status+").";if(r.status===401)sbSet(null);WL=null;return}
+  WL=await r.json();try{const seen=+localStorage.getItem("ctx-wl-seen")||0;S.wlNew=WL.filter(x=>new Date(x.created_at).getTime()>seen).length;localStorage.setItem("ctx-wl-seen",String(Date.now()))}catch(e){}}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
+function vWaitlist(){const a=sbGet();
+  if(!a){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Everyone who's joined the waiting list from the landing page or the tasters. Sign in to see them.</p></div>
+    <form class="card stack" id="sbF" style="max-width:420px" novalidate><h2>Team sign-in</h2>
+      <label class="field">Email<input type="email" id="sb_e" autocomplete="username" value="jamie@consumer-talent.com"></label>
+      <label class="field">Password<input type="password" id="sb_p" autocomplete="current-password"></label>
+      <p class="small" id="sb_err" style="color:var(--bad);display:none"></p>
+      <div><button class="btn" type="submit">Sign in</button></div>
+      <p class="muted small">Only jamie@ and connor@consumer-talent.com can see the list.</p></form>`;
+    $("#sbF").onsubmit=async e=>{e.preventDefault();const err=$("#sb_err");err.style.display="none";const b=e.target.querySelector("button");b.disabled=true;b.textContent="Signing in...";
+      try{const r=await fetch(SB_URL+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({email:$("#sb_e").value.trim(),password:$("#sb_p").value})});
+        const j=await r.json();if(!r.ok){err.textContent=j.error_description||j.msg||"Those details didn't work.";err.style.display="block";b.disabled=false;b.textContent="Sign in";return}
+        sbSet({access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email});await loadWL();vWaitlist();counts()}
+      catch(x){err.textContent="Couldn't reach the database. Check your connection.";err.style.display="block";b.disabled=false;b.textContent="Sign in"}};return}
+  if(WL===null&&!WLerr){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Loading...</p></div>`;loadWL().then(()=>{if(view()==="waitlist"){vWaitlist();counts()}});return}
+  const rows=(WL||[]).filter(x=>(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
+  const all=WL||[],nC=all.filter(x=>x.side==="client").length,nP=all.filter(x=>x.side==="pro").length,wk=all.filter(x=>Date.now()-new Date(x.created_at)<7*864e5).length;
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Signed in as ${esc(a.email||"")}. <a href="#" id="sbOut">Sign out</a></p></div>
+  <div class="stack" style="max-width:860px;gap:16px">
+    ${WLerr?`<div class="alert warn"><span>${esc(WLerr)}</span></div>`:""}
+    <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${wk}</b><span>This week</span></div></div>
+    <div class="card stack">
+      <div class="row" style="gap:8px"><select id="wlS" aria-label="Side"><option value="all">Everyone</option><option value="client" ${WLF.side==="client"?"selected":""}>Hiring teams</option><option value="pro" ${WLF.side==="pro"?"selected":""}>Professionals</option></select>
+        <select id="wlC" aria-label="Sector"><option value="all">Food and drink</option><option ${WLF.sector==="Food"?"selected":""}>Food</option><option ${WLF.sector==="Drink"?"selected":""}>Drink</option></select>
+        <button class="btn line sm" id="wlR" type="button">Refresh</button><button class="btn line sm" id="wlX" type="button">Download CSV</button></div>
+      <input type="search" id="wlQ" placeholder="Search a name, company or email" value="${esc(WLF.q)}">
+      <div class="reg">${rows.length?rows.map(x=>`<div class="r"><div class="mi"><b>${esc(x.name)} <span class="tag" style="margin-left:4px">${x.side==="client"?"Hiring":"Professional"}</span></b>
+        <span>${x.side==="client"?`${esc(x.role||"")}${x.role&&x.company?" · ":""}${esc(x.company||"")}`:`${esc(x.title||"")}${x.title&&x.region?" · ":""}${esc(x.region||"")}`} · ${esc(SECTOR_LABEL[x.sector]||x.sector||"")}</span>
+        <span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a>${x.linkedin?` · <a href="${esc(/^https?:/.test(x.linkedin)?x.linkedin:"https://"+x.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`:""}</span>
+        ${x.hiring?`<span>Hiring: ${esc(x.hiring)}</span>`:""}</div><span class="muted small" style="text-align:right">${fmt(new Date(x.created_at))}<br>${x.source==="taster"?"After the taster":"Landing page"}</span></div>`).join(""):`<p class="muted">${all.length?"No matches.":"No sign-ups yet. They'll appear here as soon as people join."}</p>`}</div></div></div>`;
+  $("#sbOut").onclick=e=>{e.preventDefault();sbSet(null);WL=null;vWaitlist()};
+  $("#wlS").onchange=e=>{WLF.side=e.target.value;vWaitlist()};$("#wlC").onchange=e=>{WLF.sector=e.target.value;vWaitlist()};
+  $("#wlQ").oninput=e=>{WLF.q=e.target.value;const pos=e.target.selectionStart;vWaitlist();const el=$("#wlQ");el.focus();el.setSelectionRange(pos,pos)};
+  $("#wlR").onclick=()=>{WL=null;vWaitlist()};
+  $("#wlX").onclick=()=>{const cols=["created_at","side","name","email","company","role","title","region","sector","hiring","linkedin","source"];
+    const csv=[cols.join(","),...rows.map(x=>cols.map(c=>`"${String(x[c]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
+    const u=URL.createObjectURL(new Blob([csv],{type:"text/csv"})),l=document.createElement("a");l.href=u;l.download="ctx-waiting-list.csv";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)};
+}
+
 /* ---------------- routing ---------------- */
-const VIEWS={feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const ADMIN_TABS=[["dash","Dashboard"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){bellCount();
   const fy=completeness().pct===100;
-  const n={x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");

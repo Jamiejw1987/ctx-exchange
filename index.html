@@ -277,9 +277,9 @@ section,#top{scroll-margin-top:72px}
       </div>
     </form>
     <div class="done" id="wdone" role="status">
-      <span class="kicker">Nearly there</span><h3>Press send in your email app</h3>
-      <p class="muted">We've written your request for you. As soon as it reaches us, Jamie or Connor will be in touch personally.</p>
-      <p class="fine">If nothing opened, email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and we'll take it from there.</p>
+      <span class="kicker" id="wd_k">Nearly there</span><h3 id="wd_h">Press send in your email app</h3>
+      <p class="muted" id="wd_p">We've written your request for you. As soon as it reaches us, Jamie or Connor will be in touch personally.</p>
+      <p class="fine" id="wd_f">If nothing opened, email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and we'll take it from there.</p>
       <div class="ctas"><a class="btn line sm" id="w_try" href="client/" target="_blank" rel="noopener">Explore the taster while you wait</a></div>
     </div>
   </div>
@@ -290,7 +290,8 @@ section,#top{scroll-margin-top:72px}
 
 <script>
 (()=>{
-  const $=s=>document.querySelector(s),form=$("#wl");let side="client";
+  const SB_URL="https://tqndlcgeiksdzvzswoaa.supabase.co",SB_KEY="sb_publishable_dJXzPHxlz0IMK3FnBrwxAQ_x3xFTjp7";
+  const $=s=>document.querySelector(s),form=$("#wl");let side="client",fromTaster=false;
   const setSide=s=>{side=s;form.classList.toggle("pro",s==="pro");
     form.querySelectorAll("[data-s]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.s===s)));
     form.querySelectorAll(".only-client").forEach(e=>e.hidden=s!=="client");form.querySelectorAll(".only-pro").forEach(e=>e.hidden=s!=="pro");
@@ -300,19 +301,26 @@ section,#top{scroll-margin-top:72px}
   form.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>setSide(b.dataset.s));
   document.querySelectorAll("a[data-side]").forEach(a=>a.addEventListener("click",()=>setSide(a.dataset.side)));
   form.addEventListener("input",()=>$("#w_err").style.display="none");
-  try{const q=new URLSearchParams(location.search);if(q.get("from")==="taster"){const set=(id,v)=>{if(v&&$("#"+id))$("#"+id).value=v};
+  try{const q=new URLSearchParams(location.search);if(q.get("from")==="taster"){fromTaster=true;const set=(id,v)=>{if(v&&$("#"+id))$("#"+id).value=v};
     setSide(q.get("side")==="pro"?"pro":"client");set("w_n",q.get("n"));set("w_c",q.get("c"));set("w_r",q.get("r"));set("w_h",q.get("h"));set("w_t",q.get("t"));
     const g=q.get("g");if(g&&[...$("#w_g").options].some(o=>o.text===g))$("#w_g").value=g;const sc=q.get("s");if(sc)$("#w_s").value=sc;
     $("#w_note").hidden=false;history.replaceState(null,"",location.pathname+"#join");setTimeout(()=>document.getElementById("join").scrollIntoView({behavior:"instant",block:"start"}),60)}}catch(e){}
   form.onsubmit=e=>{e.preventDefault();const v=id=>$("#"+id).value.trim();
     if(v("w_n").length<2||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("w_e"))||!$("#w_ok").checked){$("#w_err").style.display="block";return}
     const sec=$("#w_s").options[$("#w_s").selectedIndex].text;
+    const row={side,name:v("w_n"),email:v("w_e"),sector:$("#w_s").value,source:fromTaster?"taster":"landing",
+      company:side==="client"?v("w_c")||null:null,role:side==="client"?v("w_r")||null:null,hiring:side==="client"?v("w_h")||null:null,
+      title:side==="pro"?v("w_t")||null:null,region:side==="pro"?v("w_g")||null:null,linkedin:side==="pro"?v("w_l")||null:null};
     const lines=side==="client"
       ?["Founding membership request: hiring team","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Company: ${v("w_c")}`,`Role: ${v("w_r")}`,`Sector: ${sec}`,`Planning to hire: ${v("w_h")}`]
       :["Founding membership request: professional","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Current title: ${v("w_t")}`,`Region: ${v("w_g")}`,`Sector: ${sec}`,`LinkedIn: ${v("w_l")}`];
     const subj=side==="client"?`CTX founding member: ${v("w_n")}${v("w_c")?", "+v("w_c"):""}`:`CTX founding member: ${v("w_n")} (professional)`;
-    location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`;
-    form.style.display="none";$("#wdone").style.display="flex"};
+    const go=$("#w_go");go.disabled=true;go.textContent="Sending...";
+    const done=ok=>{form.style.display="none";$("#wdone").style.display="flex";
+      if(ok){$("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"Jamie or Connor will be in touch personally, in confidence. Your details are never shared with any company.";$("#wd_f").hidden=true}
+      else location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`};
+    fetch(SB_URL+"/rest/v1/waitlist",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(row)})
+      .then(r=>done(r.ok)).catch(()=>done(false))};
 })();
 </script>
 </body>
