@@ -226,6 +226,14 @@ svg.viz [data-tip]:hover{filter:brightness(1.2)}
 .curated{border-left:3px solid var(--brand);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .curated .sublabel{margin:0}
 .curated .by{font-size:12px;color:var(--muted)}
+.cvbox{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line);border-radius:14px;padding:14px 16px;background:var(--soft)}
+.cvbox.has{border-style:solid;border-color:var(--line);background:var(--surface);flex-wrap:wrap}
+.cvbox .acts{display:flex;gap:6px;width:100%;padding-left:56px}
+.cvbox .meta span,.cvbox .meta b{font-weight:400}.cvbox .meta b{font-weight:600}
+.cvbox .ico{width:42px;height:42px;border-radius:10px;flex:none;display:grid;place-items:center;background:var(--accent-soft);color:var(--brand-2);font-weight:700;font-size:11px;letter-spacing:.04em}
+.cvbox .meta{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.cvbox .meta b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cvbox .meta span{font-size:12.5px;color:var(--muted)}
 .refpill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-weight:600;letter-spacing:.02em}
 .badge:empty{display:none}
 #tbar{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-left,0px));background:#161512;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.35;position:relative;z-index:20}
@@ -632,6 +640,7 @@ function profileCard(p,{match=null,hits=[],why=[],prefFit=false,mine=false,kwHit
     ${p.kw&&p.kw.length?`<div><div class="sublabel">Sectors and keywords</div><div class="row" style="gap:6px">${p.kw.map(k=>`<span class="tag kw ${kwHits.some(x=>x.toLowerCase()===k.toLowerCase())?"hit":""}">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.skills?`<div><div class="sublabel">Strengths</div><div class="row" style="gap:6px">${p.skills.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}</div></div>`:""}
     ${p.edu?`<div class="meta3"><span>${esc(p.edu)}</span><span>${esc(p.work)}</span><span>${esc(p.relocate)}</span><span>${esc(p.travel)}</span></div>`:""}
+    ${p.cv?`<div class="muted small">CV on file with Consumer Talent · shared after reveal</div>`:""}
     <div class="anon">${lockIcon}<span>${mine?"Your name, employer and contact details stay hidden until you accept an introduction.":"Name and employer hidden until they accept your introduction."}</span></div>
   </article>`;
 }
@@ -1138,6 +1147,15 @@ function vProfile(){
         <div class="field">Retailers and channels you sell into <small>Tick the main ones, or add any others.</small>${picks("retailers",withCustom(RETAIL,p.retailers),p.retailers)}${apCRet.html}</div>
         <div class="field">Sectors and keywords <small>Add the categories, trends and buzzwords you know best or want next, like RTD, better-for-you or protein. Type your own or pick from the list.</small>${tagField("kwCand",p.kw)}</div>
       </div>
+      <div class="section"><h3>Your CV <span>Optional</span></h3>
+        <div class="field">Upload your CV <small>Kept private by Consumer Talent. Companies never see it until you've accepted an introduction and agreed to reveal who you are.</small>
+          ${p.cv?`<div class="cvbox has"><span class="ico">${esc((p.cv.name.split(".").pop()||"CV").toUpperCase().slice(0,4))}</span><div class="meta"><b>${esc(p.cv.name)}</b><span>${esc(fmtSize(p.cv.size))} · added ${esc(p.cv.at)}</span></div>
+            <div class="acts">${p.cv.data?`<a class="btn quiet sm" href="${p.cv.data}" download="${esc(p.cv.name)}">View</a>`:""}<label class="btn line sm" for="p_cv">Replace</label><button type="button" class="btn quiet sm" id="cvDel">Remove</button></div></div>`
+          :`<label class="cvbox" for="p_cv" style="cursor:pointer"><span class="ico">CV</span><div class="meta"><b>Add your CV</b><span>PDF or Word, up to 10MB</span></div><span class="btn line sm">Choose file</span></label>`}
+          <input type="file" id="p_cv" class="sr" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <p class="small" id="cvErr" style="color:var(--bad);display:none"></p>
+        </div>
+      </div>
       <div class="section"><h3>Your ideal next company</h3>
         <div class="field">Company stage${picks("prefStage",["SME","EST","ANY"],p.prefStage,{radio:true,label:x=>({SME:"Funded scale-up",EST:"Established brand",ANY:"Either"})[x]})}</div>
         <div class="field">Categories you'd like to work in${picks("prefCats",CATS,p.prefCats)}</div>
@@ -1164,9 +1182,16 @@ function vProfile(){
   bindPicks(app,p,()=>{const y=SC.scrollTop;vProfile();(SC.scrollTop=y)});apCRet.bind();
   bindTags("kwCand",p.kw,vProfile);
   $("#p_agree").onchange=e=>{p.agreed=e.target.checked;prev()};
+  $("#p_cv").onchange=e=>{const f=e.target.files[0];if(!f)return;const err=$("#cvErr");
+    if(!/\.(pdf|docx?)$/i.test(f.name)){err.textContent="Choose a PDF or Word document.";err.style.display="block";return}
+    if(f.size>10*1024*1024){err.textContent="That file is over 10MB. Try a smaller version.";err.style.display="block";return}
+    const done=data=>{p.cv={name:f.name,size:f.size,type:f.type,at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"}),data};save();const y=SC.scrollTop;vProfile();(SC.scrollTop=y);toast("CV added. Only Consumer Talent can see it.")};
+    if(f.size<=1.2*1024*1024){const r=new FileReader();r.onload=()=>done(r.result);r.onerror=()=>done("");r.readAsDataURL(f)}else done("")};
+  const cd=$("#cvDel");if(cd)cd.onclick=()=>{delete p.cv;save();const y=SC.scrollTop;vProfile();(SC.scrollTop=y);toast("CV removed")};
 
   $("#pf").addEventListener("submit",e=>{e.preventDefault();if(anonChecks(p).length){toast("Fix the highlighted details before saving");return}save();toast("Profile saved. Matching companies will see it from today.")});
 }
+function fmtSize(b){return b>=1048576?(b/1048576).toFixed(1)+"MB":Math.max(1,Math.round(b/1024))+"KB"}
 function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
 function vRequests(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
@@ -1528,10 +1553,10 @@ function openInvite(why){
   $("#ivF").onsubmit=e=>{e.preventDefault();const v=id=>{const el=$("#"+id);return el?el.value.trim():""};
     const n=v("iv_n"),em=v("iv_e");if(!n||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$("#iv_err").style.display="block";return}
     const lines=cl?[`Name: ${n}`,`Email: ${em}`,`Company: ${v("iv_c")}`,`Role: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Pitch: ${co.tagline}`,`Hiring: ${co.roles.map(r=>r.title).filter(Boolean).join("; ")}`,`Shortlisted in taster: ${S.shortlist.length}`]
-      :[`Name: ${n}`,`Email: ${em}`,`Current title: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Region: ${p.region}`,`Headline: ${p.headline}`];
+      :[`Name: ${n}`,`Email: ${em}`,`Current title: ${v("iv_r")}`,`Phone: ${v("iv_p")}`,"",`Region: ${p.region}`,`Headline: ${p.headline}`,...(p.cv?["",`CV: ${p.cv.name} (attached)`]:[])];
     const subj=`CTX invitation request: ${n}${cl&&v("iv_c")?", "+v("iv_c"):""}`;
     location.href=`mailto:jamie@consumer-talent.com?cc=connor@consumer-talent.com&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join("\n"))}`;
-    $("#ivF").innerHTML=`<div class="stack" style="gap:8px"><span class="kicker">Nearly there</span><h2>Press send in your email app</h2><p class="muted">We've written the email for you. If it didn't open, email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and we'll take it from there.</p></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="ivD">Back to the taster</button></div>`;
+    $("#ivF").innerHTML=`<div class="stack" style="gap:8px"><span class="kicker">Nearly there</span><h2>Press send in your email app</h2><p class="muted">We've written the email for you.${!cl&&p.cv?` Attach your CV, ${esc(p.cv.name)}, before you send it.`:""} If it didn't open, email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and we'll take it from there.</p></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="ivD">Back to the taster</button></div>`;
     $("#ivD").onclick=()=>layer.innerHTML=""};
 }
 document.addEventListener("click",e=>{const t=e.target.closest("[data-invite]");if(t){e.preventDefault();openInvite()}});
