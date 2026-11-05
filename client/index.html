@@ -702,8 +702,10 @@ function score(c){
   const coS=co.cats.map(x=>x.toLowerCase()),near=a=>b=>{a=a.toLowerCase();return b===a||b.includes(a.split(" ")[0])||a.includes(b.split(" ")[0])};
   const prefFit=(c.prefStage==="ANY"||c.prefStage===stageFam(co.stage))&&[...c.prefCats,...(c.cats||[])].some(x=>coS.some(near(x)));
   if(prefFit){s+=18;why.push("Wants to work for companies like yours")}
-  const ck=(co.kw||[]).map(k=>k.toLowerCase());const kwHits=(c.kw||[]).filter(k=>ck.includes(k.toLowerCase()));
-  if(kwHits.length){s+=Math.min(kwHits.length*6,18);why.push(`Shares your focus: ${kwHits.slice(0,3).join(", ")}`)}
+  const ck=[...(co.kw||[]),...co.roles.flatMap(r=>r.kw||[])].map(k=>k.toLowerCase());const cTerms=[...(c.kw||[]),...(c.skills||[]),...(c.retailers||[]),...(c.cats||[])];
+  const kwHits=[...new Set(cTerms.filter(k=>ck.includes(k.toLowerCase())))];
+  if(kwHits.length){s+=Math.min(kwHits.length*5,20);why.push(`Shares your focus: ${kwHits.slice(0,3).join(", ")}`)}
+  const jr=co.roles.find(r=>r.lvl===c.lvl&&(r.kw||[]).length);if(jr){const jh=cTerms.filter(k=>jr.kw.some(x=>x.toLowerCase()===k.toLowerCase()));if(jh.length>=2){s+=6;why.push(`Matches your ${jr.title||"job"} description: ${[...new Set(jh)].slice(0,3).join(", ")}`)}}
   return {score:Math.min(98,Math.round(s)),why,hits,prefFit,kwHits};
 }
 function queue(){
@@ -768,7 +770,7 @@ function vCompany(){
       <div class="section"><h3>Candidates you're interested in <span>Tick every level you'd consider</span></h3>
         ${levelPicks("levels",co.levels)}
         <div class="row" style="justify-content:space-between;align-items:baseline"><div class="field" style="margin:0">Open vacancies <small>Professionals see these when you request an introduction.</small></div></div>
-        <div class="vacs">${co.always?`<div class="vac" style="border-color:var(--brand)"><div style="min-width:0"><b>Always looking for great talent</b><div class="muted small">Shown on your profile, so people know you're open to the right person</div></div><button type="button" class="x" id="alwaysOff" aria-label="Remove always looking for great talent">×</button></div>`:""}${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):co.always?"":`<p class="muted small">No vacancies right now? You can still show you're open to the right people.</p>`}</div>
+        <div class="vacs">${co.always?`<div class="vac" style="border-color:var(--brand)"><div style="min-width:0"><b>Always looking for great talent</b><div class="muted small">Shown on your profile, so people know you're open to the right person</div></div><button type="button" class="x" id="alwaysOff" aria-label="Remove always looking for great talent">×</button></div>`:""}${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div>${(r.kw||[]).length?`<div class="small" style="margin-top:4px;color:var(--good)">Job description added · ${r.kw.length} keywords for matching</div>`:""}</div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):co.always?"":`<p class="muted small">No vacancies right now? You can still show you're open to the right people.</p>`}</div>
         <div class="row"><button type="button" class="btn line sm" id="addRole">+ Add a vacancy</button>${co.always?"":`<button type="button" class="btn sm" id="alwaysOn">Always looking for great talent</button>`}</div>
       </div>
       <div class="section"><h3>What you're looking for <span>We match these against professionals' keywords</span></h3>
@@ -889,6 +891,19 @@ function openProfile(id){
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&layer.innerHTML&&!$("#termsBox"))layer.innerHTML=""});
 
+let JDV=null;
+const JD_EXTRA=["JBP","joint business plan","RGM","revenue growth management","trade spend","trade promotion","DSD","direct store delivery","broker","distributor","P&L","category management","category captain","shopper marketing","Nielsen","Circana","IRI","SPINS","Retail Link","84.51","Numerator","S&OP","co-man","co-manufacturing","forecasting","pricing","promotions","innovation","new product development","NPD","brand management","media","retail media","Amazon","DTC","e-commerce","CPG","FMCG","food safety","SQF","lean","six sigma","supply chain","procurement","logistics","budget","team leadership","national accounts","key accounts","club","grocery","mass","convenience","natural","foodservice","private label","Canada","Mexico","bilingual","Spanish","French"];
+function jdVocab(){if(JDV)return JDV;const all=[...KW_SUGGEST,...SECTORS,...STORES,...RETAIL,...DATA.flatMap(p=>p.skills||[]),...JD_EXTRA];const m=new Map();all.forEach(t=>{const k=String(t).toLowerCase().trim();if(k.length>1&&!m.has(k))m.set(k,t)});return JDV=[...m.values()].sort((a,b)=>b.length-a.length)}
+function extractKw(text){const t=" "+String(text||"").replace(/\s+/g," ")+" ",out=[],low=new Set();
+  for(const term of jdVocab()){const re=new RegExp("(^|[^A-Za-z0-9])"+term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?=[^A-Za-z0-9]|$)","i");if(re.test(t)&&!low.has(term.toLowerCase())){out.push(term);low.add(term.toLowerCase())}if(out.length>=24)break}
+  return out}
+function loadScript(u){return new Promise((ok,no)=>{if(document.querySelector(`script[src="${u}"]`))return ok();const sc=document.createElement("script");sc.src=u;sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)})}
+async function readJD(file){const n=file.name.toLowerCase();
+  if(/\.(txt|md)$/.test(n)||file.type.startsWith("text/"))return await file.text();
+  if(n.endsWith(".pdf")){await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;let txt="";for(let i=1;i<=Math.min(pdf.numPages,12);i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();txt+=c.items.map(x=>x.str).join(" ")+"\n"}return txt}
+  if(n.endsWith(".docx")){await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");const r=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});return r.value}
+  throw new Error("Use a PDF, Word (.docx) or text file")}
 function roleForm(r){
   const co=S.company,isNew=!r;r=r||{id:"r"+Date.now(),title:"",lvl:co.levels[0]||"NAM",region:"National",base:"",work:"",desc:""};
   layer.innerHTML=`<div class="scrim"><form class="modal" id="rf" role="dialog" aria-modal="true" aria-labelledby="rfT">
@@ -899,10 +914,21 @@ function roleForm(r){
       <label class="field">Base salary <small>Optional</small><input type="text" id="rfBase" value="${esc(r.base)}" placeholder="e.g. $120–140k + bonus"></label>
       <label class="field">Work style<select id="rfWork">${["","Remote","Hybrid","On-site"].map(w=>`<option value="${w}" ${w===r.work?"selected":""}>${w||"Not specified"}</option>`).join("")}</select></label></div>
     <label class="field">About the role <small>Optional</small><textarea id="rfDesc" style="min-height:70px" placeholder="A couple of lines on what the job involves">${esc(r.desc||"")}</textarea></label>
+    <div class="card stack" style="background:var(--soft);gap:10px;padding:14px"><div><b>Job description</b> <span class="muted small">Optional</span><p class="muted small" style="margin-top:2px">Paste it in or upload a file. We pick out the key skills, retailers and categories to find you better matches. It's only used for matching and isn't shown to candidates.</p></div>
+      <div class="row"><label class="btn line sm" for="rfFile">Upload PDF, Word or text</label><input type="file" id="rfFile" class="sr" accept=".pdf,.docx,.txt,.md,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><span class="muted small" id="rfFileName">${r.jdFile?esc(r.jdFile):""}</span></div>
+      <textarea id="rfJD" style="min-height:110px" placeholder="Or paste the job description here">${esc(r.jd||"")}</textarea>
+      <div id="rfKw"></div></div>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="rfX">Cancel</button><button class="btn" type="submit">${isNew?"Add vacancy":"Save changes"}</button></div></form></div>`;
   $("#rfTitle").focus();$("#rfX").onclick=()=>layer.innerHTML="";
+  let kws=[...(r.kw||[])],removed=new Set(),jdFile=r.jdFile||"";
+  const drawKw=()=>{$("#rfKw").innerHTML=kws.length?`<div class="small" style="margin-bottom:6px"><b>Keywords we picked up</b> <span class="muted">(${kws.length}) · tap × to remove any that don't fit</span></div><div class="row" style="gap:6px">${kws.map((k,i)=>`<span class="chip">${esc(k)}<button type="button" data-kx="${i}" aria-label="Remove ${esc(k)}">×</button></span>`).join("")}</div>`:($("#rfJD").value.trim()?`<p class="muted small">No keywords found yet. Add more detail, like retailers, categories or skills.</p>`:"");
+    $("#rfKw").querySelectorAll("[data-kx]").forEach(b=>b.onclick=()=>{removed.add(kws[+b.dataset.kx].toLowerCase());kws.splice(+b.dataset.kx,1);drawKw()})};
+  const scan=()=>{kws=extractKw($("#rfJD").value+" "+$("#rfDesc").value+" "+$("#rfTitle").value).filter(k=>!removed.has(k.toLowerCase()));drawKw()};
+  let tm=null;$("#rfJD").addEventListener("input",()=>{clearTimeout(tm);tm=setTimeout(scan,250)});drawKw();
+  $("#rfFile").onchange=async e=>{const fl=e.target.files[0];if(!fl)return;$("#rfFileName").textContent="Reading "+fl.name+"...";
+    try{const txt=await readJD(fl);$("#rfJD").value=txt.trim();jdFile=fl.name;$("#rfFileName").textContent=fl.name;scan();toast(`Read ${fl.name}`)}catch(err){$("#rfFileName").textContent="";toast(err&&err.message&&err.message.startsWith("Use")?err.message:"Couldn't read that file. Try pasting the text instead.")}};
   $("#rf").addEventListener("submit",e=>{e.preventDefault();
-    Object.assign(r,{title:$("#rfTitle").value.trim(),lvl:$("#rfLvl").value,region:$("#rfReg").value,base:$("#rfBase").value.trim(),work:$("#rfWork").value,desc:$("#rfDesc").value.trim()});
+    Object.assign(r,{title:$("#rfTitle").value.trim(),lvl:$("#rfLvl").value,region:$("#rfReg").value,base:$("#rfBase").value.trim(),work:$("#rfWork").value,desc:$("#rfDesc").value.trim(),jd:$("#rfJD").value.trim(),jdFile,kw:kws});
     if(isNew)co.roles.push(r);if(!co.levels.includes(r.lvl))co.levels.push(r.lvl);
     layer.innerHTML="";save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);counts();toast(isNew?"Vacancy added":"Vacancy updated")});
 }
