@@ -3054,6 +3054,17 @@ function bindIvPro(r,co){
   app.querySelectorAll("[data-ivpsend]").forEach(b=>b.onclick=async()=>{const id=b.dataset.ivpsend,t=(app.querySelector(`[data-ivpfb="${id}"]`)||{}).value||"";if(!t.trim())return toast("Write a few words first");b.disabled=true;
     (L.ivFbDone=L.ivFbDone||{})[id]=1;if(!await ivCall("iv_pro_feedback",{p_iv:id,p_feedback:t.trim()},"Thanks. Sent to Consumer Talent."))delete L.ivFbDone[id];vCandMsgs()})}
 
+/* ---------- company profile: no demo reset; while waiting for approval, saving keeps you on the profile ---------- */
+const _vCompany=vCompany;
+vCompany=function(){_vCompany();
+  const r=$("#reset");if(r)r.remove();
+  const pending=L.company&&L.company.status!=="approved",f=$("#coForm");if(!f||!pending)return;
+  const sb2=f.querySelector("button[type=submit]");if(sb2)sb2.textContent="Save profile";
+  app.querySelectorAll('a[href="#foryou"],a[href="#discover"]').forEach(x=>x.remove());
+  f.addEventListener("submit",e=>{e.preventDefault();e.stopImmediatePropagation();save();
+    toast("Profile saved. We'll let you know as soon as you're approved.")},{capture:true})};
+VIEWS.company=vCompany;
+
 /* ---------- team members for companies ---------- */
 async function vTeamLive(){const co=S.company;
   if(!L.team){app.innerHTML=`<div class="pagehead"><span class="kicker">Team</span><h1>${esc(co.name||"Your company")} on the Exchange</h1></div><p class="muted">Loading your team...</p>`;}
