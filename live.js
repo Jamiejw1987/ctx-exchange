@@ -62,6 +62,8 @@ async function hydrateClient(uid){
   S.decided={};S.shortlist=[];picks.forEach(p=>{S.decided[p.pro_id]=p.decision;if(p.decision==="keep")S.shortlist.push(p.pro_id)});L.snap.picks=J(S.decided);
   S.applies=applies.filter(a=>a.status!=="withdrawn").map(a=>({id:a.id,cid:a.pro_id,role:a.role,note:a.note,at:ago(a.created_at),status:a.status}));L.snap.applies=Object.fromEntries(S.applies.map(a=>[a.id,a.status]));
   S.log=events.map(e=>({at:new Date(e.at),what:e.what,who:e.who}));
+  const tp=(await q(sb.from("support_msgs").select("payload,created_at").eq("topic","Terms proposal").eq("company",co.name).order("id",{ascending:false}).limit(1)))[0];
+  S.deal=!co.terms&&tp&&tp.payload?{status:"pending",proposed:tp.payload,at:tp.created_at}:{status:"none"};
 }
 const CS_SKIP=["dbId","ref","stage","review","at","msgs","role","base","note","by","prior","priorRecent","acceptedAt","closed","fromApply","_ins"];
 function cleanCS(i){const d={};for(const [k,v] of Object.entries(i))if(!CS_SKIP.includes(k))d[k]=v;if(i.stage>=4)d.cstage=i.stage;return d}
@@ -371,6 +373,22 @@ vCompany=function(){_vCompany();
   f.addEventListener("submit",e=>{e.preventDefault();e.stopImmediatePropagation();save();
     toast("Profile saved. We'll let you know as soon as you're approved.")},{capture:true})};
 VIEWS.company=vCompany;
+
+/* ---------- terms page: real proposals; signing goes through a teammate ---------- */
+const _vTerms=vTerms;
+vTerms=function(){_vTerms();
+  app.querySelectorAll('a[href="#sign"],#sigResend,#sigCopy').forEach(x=>x.remove());
+  const sg=$("#sigSend");if(sg){const a=document.createElement("a");a.className="btn line";a.href="#team";a.textContent="Not authorised? Invite the person who signs";sg.replaceWith(a)}
+  const fl=$("#pfile");if(fl){const lab=fl.closest("label");if(lab)lab.innerHTML=`<span>Your own terms document</span><small class="muted" style="font-weight:400">Email it to <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and mention it below.</small>`}
+  const pf=$("#propF");if(pf)pf.addEventListener("submit",async e=>{e.preventDefault();e.stopImmediatePropagation();
+    const n=id=>+($("#"+id).value||0),P={t1:n("pt1"),t2:n("pt2"),t3:n("pt3"),repl:n("prepl"),pay:n("ppay"),notes:$("#pnotes").value.trim()};
+    const b=pf.querySelector("[type=submit]");b.disabled=true;
+    const body=`Proposed terms for ${S.company.name}:\nFee under $100k: ${P.t1}% (standard ${STD.t1}%)\nFee $100-200k: ${P.t2}% (standard ${STD.t2}%)\nFee $200k+: ${P.t3}% (standard ${STD.t3}%)\nReplacement period: ${P.repl} weeks (standard ${STD.repl})\nPayment terms: ${P.pay} days (standard ${STD.pay})${P.notes?"\n\nNotes: "+P.notes:""}`;
+    const {error}=await sb.from("support_msgs").insert({name:S.company.contact||"",email:L.user.email,company:S.company.name,topic:"Terms proposal",body,payload:P});
+    if(error){b.disabled=false;return toast("That didn't send. Please try again.")}
+    S.deal={status:"pending",proposed:P,at:new Date().toISOString()};logEvent(`Proposed different terms: ${P.t1}/${P.t2}/${P.t3}%`,S.company.contact);
+    toast("Sent to Jamie and Connor. They'll reply by email, usually within a day.");vTerms()},{capture:true})};
+VIEWS.terms=vTerms;
 
 /* ---------- team members for companies ---------- */
 async function vTeamLive(){const co=S.company;

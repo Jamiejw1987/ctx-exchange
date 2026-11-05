@@ -47,7 +47,11 @@ create or replace function public.support_notify() returns trigger language plpg
 declare tok text:=private.setting('postmark_token'); rcpt text; who text;
 begin
   who:=coalesce(nullif(new.name,''),new.email,'Someone')||case when coalesce(new.company,'')<>'' then ' ('||new.company||')' else '' end;
-  insert into public.notifications(audience,text,go) values('admin','Message from '||who||': "'||left(new.body,120)||case when length(new.body)>120 then '…' else '' end||'"','dash');
+  if new.topic='Terms proposal' and new.payload is not null then
+    insert into public.notifications(audience,text,go) values('admin','Message from '||who||': terms proposal of '||(new.payload->>'t1')||'/'||(new.payload->>'t2')||'/'||(new.payload->>'t3')||'% fees, '||(new.payload->>'repl')||'-week replacement, '||(new.payload->>'pay')||'-day payment. Reply by email.','clients');
+  else
+    insert into public.notifications(audience,text,go) values('admin','Message from '||who||': "'||left(new.body,120)||case when length(new.body)>120 then '…' else '' end||'"','dash');
+  end if;
   if tok is null then return new; end if;
   for rcpt in select trim(x) from unnest(string_to_array(private.setting('admin_emails'),',')) x loop
     perform net.http_post(url:='https://api.postmarkapp.com/email',
@@ -72,3 +76,8 @@ begin
 end $$;
 drop trigger if exists sync_profile_email on auth.users;
 create trigger sync_profile_email after update of email on auth.users for each row execute function public.sync_profile_email();
+
+-- terms proposals arrive as support messages with the proposed figures attached
+alter table public.support_msgs add column if not exists payload jsonb;
+drop policy if exists sm_own on public.support_msgs;
+create policy sm_own on public.support_msgs for select to authenticated using (user_id=auth.uid());
