@@ -2085,6 +2085,43 @@ const COMPANIES=[
  {id:"k14",signed:false,name:"Coastline Confections",stage:"PUB",hq:"Charlotte, NC",revenue:"$500M+",size:"2,400 people",cats:["Confectionery","Chocolate"],
   tagline:"Publicly traded candy and gum maker with brands in 60,000 stores.",about:"Gum, mints and seasonal chocolate sold through mass, drug, grocery and convenience across North America.",why:"Big brands, big customers, and a commercial team investing in revenue growth management.",roles:[{title:"Key Account Manager, Publix",lvl:"KAM",region:"Southeast",base:"$100–120k + bonus"}]}
 ];
+/* demo only: 200 fictional sample companies so the Companies tabs feel full. Seeded, so the same list every time. */
+(function(){let seed=20261105;const rnd=()=>{seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296},pick=a=>a[Math.floor(rnd()*a.length)],
+  some=(a,n)=>{const c=[...a],o=[];while(o.length<n&&c.length)o.push(c.splice(Math.floor(rnd()*c.length),1)[0]);return o};
+  const A=["Maple","Prairie","Copper","Juniper","Bluebird","Hollow Oak","Sundial","Riverstone","Ironwood","Silver Birch","Wildflower","Granite Peak","Harvest Moon","Saltmarsh","Cobblestone","Driftwood","Larkspur","Foxglove","Red Barn","Tall Pine","Lantern","Morning Field","Brightwater","Old Mill","Sparrow","Cedar Ridge","Blue Heron","Thistle","Wren","Stonebridge","Golden Hour","Hearth","Northwind","Pinecone","Clearbrook","Meadowlark","Ember","Sweetgrass","Highland","Coral","Hawthorn","True North","Bramble","Fireside","Two Rivers","Pebble","Kestrel","Orchard Lane","Lakeshore","Redwood","Sage","Ridgeway","Bayside","Elm Street","Fable","Peregrine","Wild Oat","Haven","Summit","Cypress"];
+  const FN=["Snacks","Foods","Kitchen","Provisions","Bakery","Creamery","Farms","Pantry","Confections","Mills","Snack Co.","Food Co.","Brands","Harvest","Table"],
+    DN=["Brewing","Spirits","Cellars","Beverage Co.","Coffee Roasters","Kombucha","Water Co.","Cider House","Tea Co.","Distilling","Drinks","Sparkling"];
+  const FC=["Salty snacks","Better-for-you","Protein snacks","Confectionery","Chocolate","Bakery","Frozen foods","Dairy","Plant-based","Meat snacks","Condiments & sauces","Pantry staples","Kids snacks","Popcorn","Cereal & granola","Bars","Chips & crisps","Ice cream"],
+    DC=["Craft beer","Spirits","RTD cocktails","Wine","Sparkling & still water","Non-alcoholic","Energy & functional","RTD coffee & tea","Kombucha","Juice","Hard seltzer","Sports drinks"];
+  const CITY=[["Chicago, IL","Midwest"],["Minneapolis, MN","Midwest"],["Columbus, OH","Midwest"],["Cincinnati, OH","Midwest"],["Milwaukee, WI","Midwest"],["Kansas City, MO","Midwest"],["Detroit, MI","Midwest"],["Omaha, NE","Midwest"],["Indianapolis, IN","Midwest"],
+    ["New York, NY","Northeast"],["Brooklyn, NY","Northeast"],["Boston, MA","Northeast"],["Philadelphia, PA","Northeast"],["Hoboken, NJ","Northeast"],["Burlington, VT","Northeast"],["Portland, ME","Northeast"],
+    ["Atlanta, GA","Southeast"],["Charlotte, NC","Southeast"],["Raleigh, NC","Southeast"],["Nashville, TN","Southeast"],["Miami, FL","Southeast"],["Tampa, FL","Southeast"],["Richmond, VA","Southeast"],["Louisville, KY","South"],["New Orleans, LA","South"],
+    ["Austin, TX","Southwest"],["Dallas, TX","Southwest"],["Houston, TX","Southwest"],["San Antonio, TX","Southwest"],["Phoenix, AZ","Southwest"],["Albuquerque, NM","Southwest"],
+    ["Denver, CO","Mountain West"],["Boulder, CO","Mountain West"],["Salt Lake City, UT","Mountain West"],["Boise, ID","Mountain West"],
+    ["Los Angeles, CA","West"],["San Francisco, CA","West"],["San Diego, CA","West"],["Oakland, CA","West"],["Seattle, WA","West"],["Portland, OR","West"],
+    ["Toronto, ON","Canada"],["Vancouver, BC","Canada"],["Montreal, QC","Canada"],["Calgary, AB","Canada"]];
+  const ST={START:{w:22,rev:["$2–5M","$5–10M","$10–20M"],size:[12,45]},CHAL:{w:26,rev:["$20–40M","$40–60M","$60–100M"],size:[40,160]},PEVC:{w:18,rev:["$60–100M","$100–200M","$200–350M"],size:[120,600]},EST:{w:22,rev:["$150–300M","$300–500M","$500M+"],size:[400,2500]},PUB:{w:12,rev:["$500M+","$1B+","$3B+"],size:[1500,12000]}};
+  const stagePick=()=>{let r=rnd()*100;for(const [k,v] of Object.entries(ST)){if((r-=v.w)<0)return k}return "EST"};
+  const TIER=[[["CMO","CCO","CEO","CSO","CFO","COO","PRES"],250,350],[["VPS","VPNA","VPM","VPCI","VPF","VPFPA","VPO","VPSC","VPD"],195,260],[["HOS","SD","RSD","HNA","NAD","HOM","MD","BD","HEC","CID","CATD","FD","OD","PD","HENG"],155,210],[["SNAM","NAM","KAM","RSM","BM","ECM","DMM","MKM","CATM","CIM","RGM","FC","PM","OM","PRM"],100,150],[["ASM","MM","SM","REP","NAE","SMM","MA","ENG"],70,100]];
+  const tierOf=l=>TIER.find(t=>t[0].includes(l)),RET=["Kroger","Walmart","Target","Costco","Albertsons","Publix","H-E-B","Whole Foods","Sprouts","Meijer","Ahold Delhaize","Sam's Club","Amazon","7-Eleven"];
+  const lvlPool=s=>s==="START"?["HOS","RSM","NAM","KAM","BM","MKM","ECM","FC","OM","SM","ASM","REP","HOM","CEO","CCO"]:s==="PUB"||s==="EST"?["NAM","SNAM","KAM","RSD","RSM","ASM","BM","BD","CATM","CATD","RGM","CIM","FD","FC","PM","OM","PRM","ENG","VPS","VPM","MD","DMM","NAE","REP"]:["VPS","HOS","SD","RSD","RSM","NAM","SNAM","KAM","VPM","HOM","BM","BD","HEC","ECM","CATM","RGM","FD","OD","PM","CMO","CCO","CFO","MM"];
+  const used=new Set(COMPANIES.map(k=>k.name)),out=[];
+  for(let n=0;n<200;n++){const drink=rnd()<0.32,sector=drink?"Drink":"Food",stage=stagePick(),st=ST[stage];
+    let name;do{name=pick(A)+" "+pick(drink?DN:FN)}while(used.has(name));used.add(name);
+    const cats=some(drink?DC:FC,rnd()<0.5?1:2),[hq,hqReg]=pick(CITY),anon=rnd()<0.1,signed=rnd()>0.2;
+    const ppl=Math.round(st.size[0]+rnd()*(st.size[1]-st.size[0]));
+    const nRoles=rnd()<0.3?0:1+Math.floor(rnd()*3),lv=some(lvlPool(stage),nRoles);
+    const roles=lv.map((l,j)=>{const t=tierOf(l)||[[],100,140],lo=Math.round((t[1]+rnd()*(t[2]-t[1])*0.6)/5)*5,hi=lo+(lo>=200?30:20),reg=rnd()<0.35?"National":rnd()<0.6?hqReg:pick(["Midwest","Northeast","Southeast","Southwest","West","Mountain West","South"]);
+      const acct=/^(NAM|SNAM|KAM|NAE)$/.test(l)?`, ${pick(RET)}`:/^(RSD|RSM|ASM|MM|SM|REP)$/.test(l)&&reg!=="National"?`, ${reg}`:"";
+      return {title:LEVELS[l]+acct,lvl:l,region:reg,base:`$${lo}–${hi}k + bonus${stage==="START"||stage==="CHAL"?" + equity":""}`}});
+    const c0=cats[0].toLowerCase(),ch=pick(["grocery and club","natural and specialty","mass and grocery","convenience and grocery","DTC and Amazon","on-premise and off-premise","grocery, club and e-commerce"]);
+    out.push({id:"g"+(n+1),sector,name,anon,signed,stage,hq,revenue:pick(st.rev),size:(ppl>=1000?ppl.toLocaleString("en-US"):ppl)+" people",cats,demo:true,
+      tagline:`${pick(["Fast-growing","Founder-led","Award-winning","Family-owned","Category-leading","Challenger","Much-loved","Clean-label"])} ${c0} brand sold through ${ch}.`,
+      about:`${stage==="PUB"?"Publicly traded":stage==="PEVC"?"Investor-backed":stage==="START"?"Early-stage":stage==="EST"?"Established":"Fast-growing"} ${drink?"beverage":"food"} business in ${c0}${cats[1]?" and "+cats[1].toLowerCase():""}, headquartered in ${hq} and selling across ${pick(["the US","the US and Canada","North America","the Midwest and Northeast","the West Coast","the Southeast"])}.`,
+      why:pick(["A clear growth plan and leaders who back their people.","Real investment in the commercial team and room to build.","Big customers, strong brands and a culture that promotes from within.","Equity, autonomy and the chance to shape the playbook.","A new investor and ambitious plans for the next three years.","Stable, profitable and investing in innovation."]),
+      roles})}
+  COMPANIES.push(...out)})();
+
 function coSigned(k){return k.self?termsOK():k.signed!==false}
 function coLive(k){return (k.roles||[]).filter(r=>(r.title||"").trim())}
 function coHiring(k){return coSigned(k)&&!k.anon&&coLive(k).length>0}
