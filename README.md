@@ -17,3 +17,4 @@ The tasters and demo use fictional sample data. The live app uses real accounts 
 - `supabase/interviews.sql`: interview booking (propose times, choose, new times, reschedule, cancel, outcome, private feedback), calendar invite emails with .ics, contact sharing at booking, time zones.
 - `supabase/admin.sql`: admin delete-account, Contact us messages, profile email sync.
 - `supabase/team.sql`: team members for companies (invites by email, join existing company at sign-up, Admin / Hiring manager roles, remove colleagues).
+- `supabase/terms.sql`: custom terms requests (propose, accept/counter/decline, respond to counter, sign agreed terms; signed tiers locked server-side).

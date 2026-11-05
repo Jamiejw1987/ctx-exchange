@@ -62,8 +62,9 @@ async function hydrateClient(uid){
   S.decided={};S.shortlist=[];picks.forEach(p=>{S.decided[p.pro_id]=p.decision;if(p.decision==="keep")S.shortlist.push(p.pro_id)});L.snap.picks=J(S.decided);
   S.applies=applies.filter(a=>a.status!=="withdrawn").map(a=>({id:a.id,cid:a.pro_id,role:a.role,note:a.note,at:ago(a.created_at),status:a.status}));L.snap.applies=Object.fromEntries(S.applies.map(a=>[a.id,a.status]));
   S.log=events.map(e=>({at:new Date(e.at),what:e.what,who:e.who}));
-  const tp=(await q(sb.from("support_msgs").select("payload,created_at").eq("topic","Terms proposal").eq("company",co.name).order("id",{ascending:false}).limit(1)))[0];
-  S.deal=!co.terms&&tp&&tp.payload?{status:"pending",proposed:tp.payload,at:tp.created_at}:{status:"none"};
+  const td=(await q(sb.from("terms_deals").select("*").eq("company_id",co.id).neq("status","withdrawn").order("created_at",{ascending:false}).limit(1)))[0];
+  S.deal=td?{id:td.id,status:td.status,proposed:td.proposed,counter:td.counter,final:td.final,note:td.note,by:td.decided_by,at:td.updated_at}:{status:"none"};
+  if(co.terms&&co.terms.tiers&&co.terms.custom)S.deal={status:"agreed",final:co.terms.tiers};
 }
 const CS_SKIP=["dbId","ref","stage","review","at","msgs","role","base","note","by","prior","priorRecent","acceptedAt","closed","fromApply","_ins"];
 function cleanCS(i){const d={};for(const [k,v] of Object.entries(i))if(!CS_SKIP.includes(k))d[k]=v;if(i.stage>=4)d.cstage=i.stage;return d}
@@ -89,6 +90,8 @@ async function hydrateAdmin(){
   const [cos,mem,profs,pubs,privs,intros,events]=await Promise.all([q(sb.from("companies").select("*").order("created_at",{ascending:false})),q(sb.from("company_members").select("*")),q(sb.from("profiles").select("*")),
     q(sb.from("pro_public").select("*")),q(sb.from("pro_private").select("*")),q(sb.from("intros").select("*")),q(sb.from("events").select("*").order("at").limit(5000))]);
   L.rows={cos,mem,profs,intros,events};L.ivs=await q(sb.from("interviews").select("*").order("created_at"));
+  L.rows.deals=await q(sb.from("terms_deals").select("*").neq("status","withdrawn").order("created_at",{ascending:false}));
+  S.deal={status:"none"};S.dealReqs=L.rows.deals.map(d=>({id:d.id,status:d.status}));
   const pv=Object.fromEntries(privs.map(p=>[p.user_id,p]));
   setArr(POOL,pubs.map(p=>toPool(p,pv[p.user_id])));setArr(DATA,POOL);for(const k in REFID)delete REFID[k];POOL.forEach(p=>REFID[p.user]=p.id);
   const st={approved:"active",suspended:"suspended",requested:"requested",denied:"denied",declined:"denied",pending:"pending"};
@@ -235,7 +238,7 @@ allDeals=function(){const R=L.rows;if(!R.intros)return [];const lastBy={};(R.eve
     let drop=null;if(i.status==="declined")drop={by:"Candidate",why:"Declined the introduction",ago:Math.floor((Date.now()-ago(i.declined_at||i.created_at))/864e5)};
     else if(i.status==="blocked")drop={by:"Consumer Talent",why:"Blocked automatically (their employer)",ago:Math.floor((Date.now()-ago(i.created_at))/864e5)};
     else if(i.closed)drop={by:i.closed.by==="pro"?"Candidate":"Client",why:(i.prior&&i.prior.prior==="Yes"&&cs.priorDecision==="end")?"Interviewed them in the last 6 months":i.closed.by==="pro"?"Decided not to take it forward":"Decided to go separate ways",ago:Math.floor((Date.now()-ago(i.closed.at||i.created_at))/864e5)};
-    const v=cs.offer&&cs.offer.summary?+((cs.offer.summary.match(/Package \$([\d,]+)/)||[0,"0"])[1].replace(/,/g,"")):pkg(c);const R2=rateFor(co.name,null,v);const fee=Math.round(v*R2.pct/100);
+    const v=cs.offer&&cs.offer.summary?+((cs.offer.summary.match(/Package \$([\d,]+)/)||[0,"0"])[1].replace(/,/g,"")):pkg(c);const TT=co.terms&&co.terms.tiers||STD;const R2={pct:v>=200000?TT.t3:v>=100000?TT.t2:TT.t1,custom:!!(co.terms&&co.terms.custom)};const fee=Math.round(v*R2.pct/100);
     const last=Math.floor((Date.now()-(lastBy[i.id]||ago(i.created_at)))/864e5);const alerts=[];if(!drop&&st===2&&last>=7)alerts.push(["warn",`Quiet ${last} days after reveal`]);if(!drop&&st===4)alerts.push(["new","Chase offer decision"]);if(st===5)alerts.push(["hit","Invoice due"]);
     const ivd=(L.ivs||[]).filter(v=>v.intro_id===i.id&&v.starts_at&&(v.status==="booked"||v.status==="held")).map(v=>new Date(v.starts_at).getTime());if(ivd.length&&st<3&&!drop)st=3;
     return {id:i.id,co:co.name,c,st,start:Math.floor((Date.now()-ago(i.created_at))/864e5),last,ivAgo:ivd.length?Math.max(0,Math.floor((Date.now()-Math.max(...ivd))/864e5)):null,live:false,drop,v,pct:R2.pct,custom:R2.custom,fee,wfee:fee,alerts}}).filter(Boolean)};
@@ -385,13 +388,51 @@ vTerms=function(){_vTerms();
   const fl=$("#pfile");if(fl){const lab=fl.closest("label");if(lab)lab.innerHTML=`<span>Your own terms document</span><small class="muted" style="font-weight:400">Email it to <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a> and mention it below.</small>`}
   const pf=$("#propF");if(pf)pf.addEventListener("submit",async e=>{e.preventDefault();e.stopImmediatePropagation();
     const n=id=>+($("#"+id).value||0),P={t1:n("pt1"),t2:n("pt2"),t3:n("pt3"),repl:n("prepl"),pay:n("ppay"),notes:$("#pnotes").value.trim()};
-    const b=pf.querySelector("[type=submit]");b.disabled=true;
-    const body=`Proposed terms for ${S.company.name}:\nFee under $100k: ${P.t1}% (standard ${STD.t1}%)\nFee $100-200k: ${P.t2}% (standard ${STD.t2}%)\nFee $200k+: ${P.t3}% (standard ${STD.t3}%)\nReplacement period: ${P.repl} weeks (standard ${STD.repl})\nPayment terms: ${P.pay} days (standard ${STD.pay})${P.notes?"\n\nNotes: "+P.notes:""}`;
-    const {error}=await sb.from("support_msgs").insert({name:S.company.contact||"",email:L.user.email,company:S.company.name,topic:"Terms proposal",body,payload:P});
-    if(error){b.disabled=false;return toast("That didn't send. Please try again.")}
-    S.deal={status:"pending",proposed:P,at:new Date().toISOString()};logEvent(`Proposed different terms: ${P.t1}/${P.t2}/${P.t3}%`,S.company.contact);
-    toast("Sent to Jamie and Connor. They'll reply by email, usually within a day.");vTerms()},{capture:true})};
+    const b=pf.querySelector("[type=submit]");b.disabled=true;const {error}=await sb.rpc("terms_propose",{p:P});
+    if(error){b.disabled=false;return toast(error.message.replace(/^.*?:\s*/,""))}
+    toast("Sent to Jamie and Connor. They'll reply here, usually within a day.");await refresh();vTerms()},{capture:true});
+  const d=S.deal;
+  // counter-offer from Consumer Talent
+  const ac=$("#accC");if(ac)ac.onclick=async()=>{ac.disabled=true;const {error}=await sb.rpc("terms_respond",{p_deal:d.id,p_accept:true});if(error){ac.disabled=false;return toast(error.message)}await refresh();vTerms();toast("Counter-offer accepted. Sign below to put it in place.")};
+  const dc=$("#decC");if(dc)dc.onclick=async()=>{const {error}=await sb.rpc("terms_respond",{p_deal:d.id,p_accept:false});if(error)return toast(error.message);await refresh();vTerms()};
+  const card=app.querySelector(".cols .card");if(!card)return;
+  if(d.status==="countered"&&d.note){const x=document.createElement("p");x.className="small";x.innerHTML=`<b>${esc(d.by||"Consumer Talent")}:</b> ${esc(d.note)}`;(ac?ac.closest(".row"):card).before(x)}
+  if(d.status==="declined"&&d.note){const x=document.createElement("p");x.className="small";x.innerHTML=`<b>${esc(d.by||"Consumer Talent")}:</b> ${esc(d.note)}`;card.appendChild(x)}
+  // agreed but not signed yet: sign the agreed terms
+  if(d.status==="agreed"&&!S.terms){const pf2=$("#propF");if(pf2)pf2.remove();card.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Your status</h2><span class="tag hit">Custom terms agreed</span></div>
+    <p>Consumer Talent agreed these terms with ${esc(S.company.name)}${d.note?`: “${esc(d.note)}”`:"."} Sign them to unlock names and chats.</p>${cmpTable(d.final,STD,"Agreed")}
+    <form class="stack" id="csF" style="gap:8px"><div class="grid2"><label class="field">Your name<input type="text" id="csN" required value="${esc(S.company.contact||"")}"></label><label class="field">Job title<input type="text" id="csT" required value="${esc(S.company.contactTitle||"")}"></label></div>
+      <label class="check"><input type="checkbox" id="csOk"><span>I'm authorised to agree terms for ${esc(S.company.name)}, and I agree to these terms and the Consumer Talent Group contingent terms of business.</span></label>
+      <p class="small" id="csE" style="color:var(--bad);display:none"></p><div><button class="btn" type="submit">Sign agreed terms</button></div></form>`;
+    $("#csF").onsubmit=e=>{e.preventDefault();const nm=$("#csN").value.trim(),ti=$("#csT").value.trim(),err=t=>{const x=$("#csE");x.textContent=t;x.style.display="block"};
+      if(nm.length<2||!ti)return err("Add your name and job title.");if(!$("#csOk").checked)return err("Tick to confirm you're authorised and agree.");
+      const by={name:nm,title:ti,email:L.user.email,at:Date.now()};S.terms=Object.assign({},by,{custom:true,tiers:d.final});
+      logEvent(`Signed agreed custom terms: ${tierRow(d.final)}`,nm);issueAgreement("Agreed custom terms",{...d.final},by,()=>{counts();vTerms()})}}};
+termsOK=function(){return !!S.terms};   // in the live app, terms count once they're signed
 VIEWS.terms=vTerms;
+
+/* ---------- Consumer Talent: terms requests ---------- */
+function vTermsLive(){const R=L.rows,deals=R.deals||[];const coN=id=>(R.cos.find(c=>c.id===id)||{}).name||"A company";const coT=id=>(R.cos.find(c=>c.id===id)||{}).terms;
+  const lbl={pending:["Needs a decision","new"],countered:["Counter-offer sent","brand"],agreed:["Agreed","hit"],declined:["Declined","tag"]};
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Terms</span><h1>Terms requests</h1><p class="muted">Companies that want different terms send them here. Accept, send a counter-offer or decline. They can keep browsing while you decide, but can't see names or chat until terms are signed.</p></div>
+  <div class="list" style="max-width:860px">${deals.map(d=>{const P=d.proposed||{};const st=lbl[d.status]||["",""];const signed=coT(d.company_id);
+    return `<div class="item"><div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coN(d.company_id))}</b><div class="muted small">${esc(fmtDay(new Date(d.created_at)))}${d.decided_by?` · answered by ${esc(d.decided_by)}`:""}</div></div><span class="tag ${st[1]}">${st[0]}${d.status==="agreed"?(signed?" · signed":" · not signed yet"):""}</span></div>
+      ${cmpTable(d.status==="countered"?d.counter:d.status==="agreed"?d.final:P,STD,d.status==="countered"?"Our counter":d.status==="agreed"?"Agreed":"They propose")}
+      ${d.status!=="pending"&&P.notes?`<p class="small"><b>Their notes:</b> ${esc(P.notes)}</p>`:""}${d.note?`<p class="small"><b>Your note:</b> ${esc(d.note)}</p>`:""}
+      ${d.status==="pending"?`<div class="row"><button class="btn good sm" data-tacc="${d.id}">Accept</button><button class="btn sm" data-tctr="${d.id}">Counter-offer</button><button class="btn line sm" data-tdec="${d.id}">Decline</button></div>`:""}</div>`}).join("")||`<div class="empty"><h2>No terms requests</h2><p class="muted">When a company proposes different terms, it appears here and you get an alert.</p></div>`}</div>`;
+  const go=async(id,action,counter,note)=>{const {error}=await sb.rpc("terms_decide",{p_deal:id,p_action:action,p_counter:counter||null,p_note:note||""});if(error)return toast(error.message.replace(/^.*?:\s*/,""));
+    toast(action==="accept"?"Accepted. They'll be asked to sign.":action==="counter"?"Counter-offer sent":"Declined. They've been told.");layer.innerHTML="";await refresh();vTermsLive();counts()};
+  app.querySelectorAll("[data-tacc]").forEach(b=>b.onclick=()=>{if(!confirmInline(b,"Tap again to accept"))return;b.disabled=true;go(b.dataset.tacc,"accept")});
+  app.querySelectorAll("[data-tdec]").forEach(b=>b.onclick=()=>ivReason("Decline proposal",t=>go(b.dataset.tdec,"decline",null,t).then(()=>true)));
+  app.querySelectorAll("[data-tctr]").forEach(b=>b.onclick=()=>{const d=deals.find(x=>x.id===b.dataset.tctr),P=d.proposed||STD;
+    layer.innerHTML=`<div class="scrim" id="tcS2"><form class="modal stack" id="tcF" style="max-width:520px;gap:12px"><span class="kicker">Counter-offer</span><h2 style="margin:0">${esc(coN(d.company_id))}</h2>
+      <div class="grid3"><label class="field">Fee under $100k (%)<input type="number" id="ct1" value="${P.t1}"></label><label class="field">$100–200k (%)<input type="number" id="ct2" value="${P.t2}"></label><label class="field">$200k+ (%)<input type="number" id="ct3" value="${P.t3}"></label>
+        <label class="field">Replacement (weeks)<input type="number" id="crepl" value="${P.repl}"></label><label class="field">Payment (days)<input type="number" id="cpay" value="${P.pay}"></label></div>
+      <label class="field">Note to them <small>Optional</small><textarea id="cnote" maxlength="500" style="min-height:70px"></textarea></label>
+      <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="tcX">Cancel</button><button class="btn" type="submit">Send counter-offer</button></div></form></div>`;
+    $("#tcX").onclick=()=>layer.innerHTML="";$("#tcF").onsubmit=e=>{e.preventDefault();e.target.querySelector("[type=submit]").disabled=true;const n=i=>+$("#"+i).value;
+      go(d.id,"counter",{t1:n("ct1"),t2:n("ct2"),t3:n("ct3"),repl:n("crepl"),pay:n("cpay")},$("#cnote").value.trim())}})}
+VIEWS.termsadmin=vTermsLive;
 
 /* ---------- team members for companies ---------- */
 async function vTeamLive(){const co=S.company;
@@ -461,7 +502,7 @@ VIEWS.chats=vChats;
 const keep=(arr,ok)=>{const k=arr.filter(t=>ok.includes(t[0]));arr.length=0;k.forEach(t=>arr.push(t))};
 keep(CLIENT_TABS,["company","foryou","applicants","discover","pool","shortlist","chats","team","terms"]);
 keep(CAND_TABS,["candidate","companies","allcos","introductions","messages"]);
-keep(ADMIN_TABS,["dash","invites","clients","protect","waitlist"]);
+keep(ADMIN_TABS,["dash","invites","clients","termsadmin","protect","waitlist"]);
 const ai=ADMIN_TABS.find(t=>t[0]==="invites");if(ai){ai[1]="Sign-ups";ai[2]="i"}
 const ROLE_TABS={client:CLIENT_TABS,pro:CAND_TABS,admin:ADMIN_TABS};
 view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="sign"&&L.role==="client")return h;const ok=ROLE_TABS[L.role].map(t=>t[0]);return ok.includes(h)?h:ok[0]};
@@ -665,7 +706,7 @@ async function refresh(){if(!L.user||L.busy||L.pending){refreshSoon(500);return}
 window.CTX_refresh=refresh;
 let chan=null;
 function subscribe(){if(chan)sb.removeChannel(chan);chan=sb.channel("ctx-live");
-  ["messages","intros","notifications","applies","companies","picks","interviews"].forEach(t=>chan.on("postgres_changes",{event:"*",schema:"public",table:t},()=>refreshSoon(350)));
+  ["messages","intros","notifications","applies","companies","picks","interviews","terms_deals"].forEach(t=>chan.on("postgres_changes",{event:"*",schema:"public",table:t},()=>refreshSoon(350)));
   chan.subscribe()}
 
 // header: who's signed in, sign out; hide the demo-only switch
