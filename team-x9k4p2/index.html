@@ -1924,15 +1924,27 @@ function seedDeals(){
     const cl=pick(DCLIENTS);
     out.push({id:"s"+k,co:cl[0],dealId:cl[1],c,st,start,last,ivAgo:st>=3?Math.max(0,start-Math.floor(rnd()*start)):null,blocked:rnd()<.08});
   }
+  const WHY=[["Candidate","Accepted a counter-offer"],["Candidate","Took another role"],["Candidate","Salary expectations too far apart"],["Candidate","Didn't want to relocate"],["Candidate","Went quiet"],["Candidate","Declined the introduction"],
+    ["Client","Role put on hold"],["Client","Hired internally"],["Client","Not the right fit after interview"],["Client","Interviewed them in the last 6 months"],["Client","Budget cut"],["Consumer Talent","Declined at review"]];
+  const dropW=[3,4,3,4,2];const dtot=dropW.reduce((a,b)=>a+b);
+  for(let k=0;k<17;k++){let x=rnd()*dtot,st=0;while(x>dropW[st]){x-=dropW[st];st++}
+    let c;do{c=pick(POOL)}while(used.has(c.id));used.add(c.id);
+    const pool=WHY.filter(w=>st===0?/introduction|review|6 months|hold/.test(w[1]):st>=3?!/introduction|review|6 months/.test(w[1]):!/review|introduction|after interview/.test(w[1])),w=pick(pool);
+    const start=st*7+3+Math.floor(rnd()*30),ago=Math.max(0,Math.floor(rnd()*Math.min(start-st*6,40)));const cl=pick(DCLIENTS);
+    out.push({id:"d"+k,co:cl[0],dealId:cl[1],c,st,start,last:ago,ivAgo:st>=3?Math.min(start,ago+3):null,drop:{by:w[0],why:w[1],ago}})}
   return SEED=out;
 }
 function pkg(c){const n=bandNums(c.band);const mid=n.length>1?(n[0]+n[1])/2:(n[0]||100)*1.1;return Math.round(mid*1000*1.12/1000)*1000}
 function rateFor(co,dealId,v){const d=dealId?S.dealReqs.find(x=>x.id===dealId):null;const T=co===S.company.name?tiers():(d&&d.status==="agreed"?d.final:STD);return {pct:v>=200000?T.t3:v>=100000?T.t2:T.t1,custom:T!==STD}}
 function allDeals(){
   const live=Object.entries(S.intros).filter(([k,i])=>i.stage>=1&&POOL.some(p=>p.id===k)).map(([k,i])=>{const c=POOL.find(p=>p.id===k);
-    return {id:k,co:S.company.name,c,st:[0,0,1,2,3,5][i.stage],start:Math.floor((Date.now()-i.at)/864e5),last:0,ivAgo:i.stage>=4?0:null,live:true,i}});
+    const st=[0,0,1,2,3,5][i.stage];let drop=null;
+    if(i.review==="declined")drop={by:"Consumer Talent",why:"Declined at review",ago:0};
+    else if(i.review==="passed")drop={by:"Candidate",why:"Declined the introduction",ago:0};
+    else if(i.closed)drop={by:i.closed.by==="pro"?"Candidate":"Client",why:i.priorDecision==="end"?"Interviewed them in the last 6 months":i.closed.by==="pro"?"Decided not to take it forward":"Decided to go separate ways",ago:Math.floor((Date.now()-i.closed.at)/864e5)};
+    return {id:k,co:S.company.name,c,st,start:Math.floor((Date.now()-i.at)/864e5),last:0,ivAgo:i.stage>=4?0:null,live:true,i,drop}});
   return [...live,...seedDeals()].map(d=>{const v=d.i&&d.i.offer?+(d.i.offer.summary.match(/Package \$([\d,]+)/)||[0,"0"])[1].replace(/,/g,""):pkg(d.c);const R=rateFor(d.co,d.dealId,v);const fee=Math.round(v*R.pct/100);
-    const alerts=[];if(d.st===2&&d.last>=7)alerts.push(["warn",`Quiet ${d.last} days after reveal`]);if(d.st===4)alerts.push(["new","Chase offer decision"]);if(d.st===5&&d.start<=21)alerts.push(["hit","Invoice due"]);if(d.blocked)alerts.push(["warn","Tried to share contact details"]);
+    const alerts=[];if(!d.drop&&d.st===2&&d.last>=7)alerts.push(["warn",`Quiet ${d.last} days after reveal`]);if(!d.drop&&d.st===4)alerts.push(["new","Chase offer decision"]);if(d.drop&&d.drop.ago<=7&&d.st>=3)alerts.push(["warn",`Dropped out at ${DSTAGES[d.st]}: ${d.drop.why}`]);if(d.st===5&&d.start<=21)alerts.push(["hit","Invoice due"]);if(d.blocked)alerts.push(["warn","Tried to share contact details"]);
     return {...d,v,pct:R.pct,custom:R.custom,fee,wfee:Math.round(fee*DPROB[d.st]),alerts}});
 }
 const money=v=>v>=1e6?`$${(v/1e6).toFixed(2)}M`:v>=1e3?`$${Math.round(v/1e3)}k`:`$${v}`;
@@ -1967,57 +1979,59 @@ function weeklySVG(conv,iv){
       <rect x="${x+1}" y="${y(iv[k])}" width="${bw}" height="${Math.max(0,y(0)-y(iv[k]))}" rx="3" fill="${SERIES[1]}" data-tip="<b>${lbl(k)}</b><br>${iv[k]} interviews held"></rect>
       <text x="${x}" y="${H-8}" text-anchor="middle" class="vm">${lbl(k)}</text>`}).join("")}</svg>`;
 }
-function feeStageSVG(rows){
-  const W=560,rowH=40,H=rows.length*rowH+8,lx=118,max=Math.max(...rows.map(r=>r.pot),1),bw=W-lx-120;
-  return `<svg viewBox="0 0 ${W} ${H}" class="viz" role="img" aria-label="Fees by stage">${rows.map((r,k)=>{const y=k*rowH+6,wp=Math.max(3,r.pot/max*bw),ww=Math.max(r.w?3:0,r.w/max*bw);
-    return `<text x="${lx-10}" y="${y+19}" text-anchor="end" class="vl">${r.k}</text>
-    <rect x="${lx}" y="${y+4}" width="${wp}" height="22" rx="4" fill="${SERIES[0]}" opacity=".3" data-tip="<b>${r.k}</b><br>Full fees if all close: ${money(r.pot)}<br>Weighted at ${Math.round(r.p*100)}%: ${money(r.w)}"></rect>
-    <rect x="${lx}" y="${y+4}" width="${ww}" height="22" rx="4" fill="${SERIES[0]}" data-tip="<b>${r.k}</b><br>Weighted at ${Math.round(r.p*100)}%: ${money(r.w)}<br>Full fees if all close: ${money(r.pot)}"></rect>
-    <text x="${lx+wp+8}" y="${y+19}" class="vv">${money(r.w)}</text><text x="${W-4}" y="${y+19}" text-anchor="end" class="vm">of ${money(r.pot)}</text>`}).join("")}</svg>`;
+function barsSVG(rows,color,label){
+  const W=560,rowH=36,H=rows.length*rowH+8,lx=150,max=Math.max(...rows.map(r=>r.n),1),bw=W-lx-60;
+  return `<svg viewBox="0 0 ${W} ${H}" class="viz" role="img" aria-label="${esc(label)}">${rows.map((r,k)=>{const y=k*rowH+5,w=Math.max(r.n?4:0,r.n/max*bw);
+    return `<text x="${lx-10}" y="${y+18}" text-anchor="end" class="vl">${esc(r.k.length>22?r.k.slice(0,21)+"…":r.k)}</text><rect x="${lx}" y="${y+4}" width="${w}" height="20" rx="4" fill="${color}" data-tip="<b>${esc(r.k)}</b><br>${esc(r.tip||r.n+" deals")}"></rect><text x="${lx+w+8}" y="${y+18}" class="vv">${r.n}</text>`}).join("")}</svg>`;
 }
-function clientSVG(rows){
-  const W=560,rowH=34,H=rows.length*rowH+6,lx=200,max=Math.max(...rows.map(r=>r.w),1),bw=W-lx-70;
-  return `<svg viewBox="0 0 ${W} ${H}" class="viz" role="img" aria-label="Weighted pipeline by client">${rows.map((r,k)=>{const y=k*rowH+4,w=Math.max(3,r.w/max*bw);
-    return `<text x="${lx-10}" y="${y+17}" text-anchor="end" class="vl">${esc(r.k.length>26?r.k.slice(0,25)+"…":r.k)}</text><rect x="${lx}" y="${y+4}" width="${w}" height="18" rx="4" fill="${SERIES[0]}" data-tip="<b>${esc(r.k)}</b><br>${r.n} live deals<br>Weighted pipeline ${money(r.w)}${r.custom?"<br>On custom terms":""}"></rect><text x="${lx+w+8}" y="${y+17}" class="vv">${money(r.w)}</text>`}).join("")}</svg>`;
-}
-const DF={stage:"all",shown:12};
+const DF={stage:"live",shown:12};
 function vDash(){
-  const D=allDeals(),open=D.filter(d=>d.st<5),placed=D.filter(d=>d.st===5);
-  const reach=DSTAGES.map((_,k)=>D.filter(d=>d.st>=k).length);
+  const D=allDeals(),drops=D.filter(d=>d.drop),open=D.filter(d=>!d.drop&&d.st<5),placed=D.filter(d=>!d.drop&&d.st===5);
+  const reach=DSTAGES.map((_,k)=>D.filter(d=>d.st>=k&&!(d.drop&&d.st<k)).length);
   const fam=GROUPS.map(([g,ls])=>({k:g,n:open.filter(d=>ls.includes(d.c.lvl)).length}));
-  const weeks=8,conv=Array(weeks).fill(0),iv=Array(weeks).fill(0);
+  const weeks=8,conv=Array(weeks).fill(0),iv=Array(weeks).fill(0),dw=Array(weeks).fill(0);
   D.forEach(d=>{const w=Math.floor(d.start/7);if(d.st>=1&&w<weeks)conv[weeks-1-w]++;if(d.ivAgo!==null){const wi=Math.floor(d.ivAgo/7);if(wi<weeks)iv[weeks-1-wi]++}});
-  const byStage=[1,2,3,4].map(k=>{const ds=D.filter(d=>d.st===k);return {k:DSTAGES[k],p:DPROB[k],pot:ds.reduce((a,d)=>a+d.fee,0),w:ds.reduce((a,d)=>a+d.wfee,0)}});
-  const cl={};open.forEach(d=>{const o=cl[d.co]||(cl[d.co]={k:d.co,n:0,w:0,custom:d.custom});o.n++;o.w+=d.wfee});
-  const clients=Object.values(cl).sort((a,b)=>b.w-a.w).slice(0,8);
-  const pipeW=open.reduce((a,d)=>a+d.wfee,0),pipeFull=open.reduce((a,d)=>a+d.fee,0),won=placed.reduce((a,d)=>a+d.fee,0);
+  const nowStage=[0,1,2,3,4].map(k=>({k:DSTAGES[k],n:open.filter(d=>d.st===k).length,tip:`${open.filter(d=>d.st===k).length} deals at ${DSTAGES[k]} now`}));
+  const dropStage=[0,1,2,3,4].map(k=>{const ds=drops.filter(d=>d.st===k);return {k:DSTAGES[k],n:ds.length,tip:`${ds.length} dropped out at ${DSTAGES[k]}`+(ds.length?`<br>${ds.filter(d=>d.drop.by==="Candidate").length} by the candidate, ${ds.filter(d=>d.drop.by==="Client").length} by the client`:"")}});
+  const reasons={};drops.forEach(d=>{const r=reasons[d.drop.why]||(reasons[d.drop.why]={why:d.drop.why,by:d.drop.by,n:0});r.n++});
+  const reasonList=Object.values(reasons).sort((a,b)=>b.n-a.n);
+  const byCand=drops.filter(d=>d.drop.by==="Candidate").length,byCli=drops.filter(d=>d.drop.by==="Client").length;
+  const cl={};open.forEach(d=>{const o=cl[d.co]||(cl[d.co]={k:d.co,n:0});o.n++});
+  const clients=Object.values(cl).sort((a,b)=>b.n-a.n).slice(0,8).map(o=>({...o,tip:`${o.n} deals in process`}));
+  const won=placed.reduce((a,d)=>a+d.fee,0),closedN=drops.length+placed.length;
   const alerts=D.flatMap(d=>d.alerts.map(a=>({d,a}))).sort((x,y)=>({warn:0,new:1,hit:2})[x.a[0]]-({warn:0,new:1,hit:2})[y.a[0]]);
-  const rows=D.filter(d=>DF.stage==="all"||DSTAGES[d.st]===DF.stage).sort((a,b)=>b.wfee-a.wfee);
+  const rows=D.filter(d=>DF.stage==="live"?!d.drop&&d.st<5:DF.stage==="drop"?!!d.drop:DF.stage==="all"?true:!d.drop&&DSTAGES[d.st]===DF.stage)
+    .sort((a,b)=>DF.stage==="drop"?a.drop.ago-b.drop.ago:(b.st-a.st)||(a.last-b.last));
   const kpi=(k,v,s)=>`<div class="card kpi"><div class="muted small">${k}</div><div class="kv num">${v}</div>${s?`<div class="muted small">${s}</div>`:""}</div>`;
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Dashboard</span><h1>How the Exchange is performing</h1>
-    <p class="muted">Every deal across every client, from first chat to placement, with fees worked out from each candidate's salary and that client's agreed terms. Last 8 weeks.</p></div>
+  const pills=[["live","In process",open.length],...DSTAGES.map(s=>[s,s,D.filter(d=>!d.drop&&DSTAGES[d.st]===s).length]),["drop","Dropped out",drops.length],["all","Everything",D.length]];
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Dashboard</span><h1>Deals in process</h1>
+    <p class="muted">Every deal across every client, from intro request to placement, and every deal that dropped out, with who pulled out and why. Last 8 weeks.</p></div>
   <div class="kpis">
-    ${kpi("Pipeline, weighted",money(pipeW),`${money(pipeFull)} if every deal closes`)}
-    ${kpi("Fees won",money(won),`${placed.length} placements`)}
-    ${kpi("Live conversations",D.filter(d=>d.st===1||d.st===2).length,"Chatting or revealed")}
-    ${kpi("Interviewing",D.filter(d=>d.st===3).length,`${iv[weeks-1]} interviews this week`)}
-    ${kpi("Offers out",D.filter(d=>d.st===4).length,"Waiting on decisions")}
+    ${kpi("Deals in process",open.length,"Requested to offer out")}
+    ${kpi("Interviewing",open.filter(d=>d.st===3).length,`${iv[weeks-1]} interviews this week`)}
+    ${kpi("Offers out",open.filter(d=>d.st===4).length,"Waiting on decisions")}
+    ${kpi("Placed",placed.length,`${money(won)} in fees`)}
+    ${kpi("Dropped out",drops.length,closedN?`${Math.round(drops.length/closedN*100)}% of finished deals`:"")}
     ${kpi("Members",`${POOL.length}`,`${S.leads.length} leads · ${DCLIENTS.length+1} companies`)}
   </div>
   <div class="dgrid">
-    <div class="card stack"><div><h2>Pipelined fees by stage</h2><p class="muted small">Solid bar: fees weighted by how likely each stage is to close (Chatting 10%, Revealed 25%, Interviewing 40%, Offer 75%). Pale bar: full fees if every deal closes.</p></div>${feeStageSVG(byStage)}</div>
-    <div class="card stack"><div><h2>Deal funnel</h2><p class="muted small">Deals that reached each stage, and the share that moved on from the stage before.</p></div>${funnelSVG(reach)}</div>
+    <div class="card stack"><div><h2>Where deals are now</h2><p class="muted small">Live deals at each stage. Tap "All deals" below to see who's in each.</p></div>${barsSVG(nowStage,SERIES[0],"Live deals by stage")}</div>
+    <div class="card stack"><div><h2>Where deals drop out</h2><p class="muted small">The stage each deal had reached when it fell away. ${byCand} pulled out by the candidate, ${byCli} by the client${drops.length-byCand-byCli?`, ${drops.length-byCand-byCli} declined by you at review`:""}.</p></div>${barsSVG(dropStage,SERIES[1],"Drop-outs by stage")}</div>
+    <div class="card stack"><div><h2>Why deals drop out</h2><p class="muted small">Most common reasons first.</p></div>
+      <div class="list" style="gap:8px">${reasonList.map(r=>`<div class="arow"><span class="tag ${r.by==="Candidate"?"brand":r.by==="Client"?"new":""}">${esc(r.by)}</span><span class="small" style="flex:1">${esc(r.why)}</span><b class="num">${r.n}</b></div>`).join("")||`<p class="muted">No drop-outs yet.</p>`}</div></div>
+    <div class="card stack"><div><h2>Deal funnel</h2><p class="muted small">Deals that reached each stage, and the share that moved on from the stage before. The gaps are your drop-outs.</p></div>${funnelSVG(reach)}</div>
     <div class="card stack"><div class="row" style="justify-content:space-between;align-items:baseline"><h2>Weekly activity</h2><div class="row small"><span class="key"><i style="background:${SERIES[0]}"></i>Conversations started</span><span class="key"><i style="background:${SERIES[1]}"></i>Interviews held</span></div></div>${weeklySVG(conv,iv)}</div>
+    <div class="card stack"><div><h2>Needs attention</h2><p class="muted small">Recent late-stage drop-outs, offers to chase, and quiet clients after a reveal (the main sign someone is going around you).</p></div>
+      <div class="list" style="gap:8px">${alerts.slice(0,8).map(({d,a})=>`<div class="arow"><span class="tag ${a[0]}">${esc(a[1])}</span><span class="small"><b>${esc(d.co)}</b> · ${esc(d.st>=2?d.c.name:d.c.user)} · ${LEVELS[d.c.lvl]}</span></div>`).join("")||`<p class="muted">Nothing needs you right now.</p>`}</div></div>
+    <div class="card stack"><div><h2>Deals in process by client</h2><p class="muted small">Top ${clients.length} clients by live deals.</p></div>${barsSVG(clients,SERIES[2],"Live deals by client")}</div>
     <div class="card stack"><div><h2>Live deals by function</h2><p class="muted small">Open deals, from intro requested to offer out.</p></div>${donutSVG(fam)}</div>
-    <div class="card stack"><div><h2>Weighted pipeline by client</h2><p class="muted small">Top ${clients.length} clients by weighted fees on open deals.</p></div>${clientSVG(clients)}</div>
-    <div class="card stack"><div><h2>Needs attention</h2><p class="muted small">Quiet clients after a reveal are the main sign someone is going around you.</p></div>
-      <div class="list" style="gap:8px">${alerts.slice(0,7).map(({d,a})=>`<div class="arow"><span class="tag ${a[0]}">${esc(a[1])}</span><span class="small"><b>${esc(d.co)}</b> · ${esc(d.st>=2?d.c.name:d.c.user)} · ${LEVELS[d.c.lvl]}</span></div>`).join("")||`<p class="muted">Nothing needs you right now.</p>`}</div></div>
   </div>
   <div class="card stack" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2>All deals</h2><span class="muted small num">${rows.length} deals</span></div>
-    <div class="row" style="gap:6px">${["all",...DSTAGES].map(s=>`<button type="button" class="pick radio" data-ds="${s}" aria-pressed="${DF.stage===s}">${s==="all"?"All stages":s} <span class="badge num">${s==="all"?D.length:D.filter(d=>DSTAGES[d.st]===s).length}</span></button>`).join("")}</div>
-    <div class="scrollx"><table class="log dtable"><thead><tr><th>Client</th><th>Candidate</th><th>Stage</th><th style="text-align:right">Est. package</th><th style="text-align:right">Fee rate</th><th style="text-align:right">Fee</th><th style="text-align:right">Weighted</th><th>Last activity</th></tr></thead>
-      <tbody>${rows.slice(0,DF.shown).map(d=>`<tr><td><b>${esc(d.co)}</b>${d.live?` <span class="tag brand">Live demo</span>`:""}</td><td>${esc(d.st>=2?d.c.name:d.c.user)}<div class="muted small">${LEVELS[d.c.lvl]}</div></td><td><span class="tag ${d.st===5?"hit":d.st>=3?"brand":""}">${DSTAGES[d.st]}</span>${d.alerts.filter(a=>a[0]==="warn").map(a=>`<div class="small" style="color:var(--warn)">${esc(a[1])}</div>`).join("")}</td>
-        <td class="num" style="text-align:right">${money(d.v)}</td><td class="num" style="text-align:right">${d.pct}%${d.custom?`<div class="muted small">custom</div>`:""}</td><td class="num" style="text-align:right">${money(d.fee)}</td><td class="num" style="text-align:right"><b>${money(d.wfee)}</b></td><td class="muted">${d.last===0?"Today":d.last===1?"Yesterday":d.last+" days ago"}</td></tr>`).join("")}</tbody></table></div>
+    <div class="row" style="gap:6px">${pills.map(([v,l,n])=>`<button type="button" class="pick radio" data-ds="${esc(v)}" aria-pressed="${DF.stage===v}">${esc(l)} <span class="badge num">${n}</span></button>`).join("")}</div>
+    <div class="scrollx"><table class="log dtable"><thead><tr><th>Client</th><th>Candidate</th><th>Stage</th><th>Started</th><th>Last activity</th><th style="text-align:right">Est. fee</th></tr></thead>
+      <tbody>${rows.slice(0,DF.shown).map(d=>`<tr><td><b>${esc(d.co)}</b>${d.live?` <span class="tag brand">Live demo</span>`:""}</td><td>${esc(d.st>=2?d.c.name:d.c.user)}<div class="muted small">${LEVELS[d.c.lvl]}</div></td>
+        <td>${d.drop?`<span class="tag" style="color:var(--warn)">Dropped at ${DSTAGES[d.st]}</span><div class="small"><b>${esc(d.drop.by)}:</b> ${esc(d.drop.why)}</div>`:`<span class="tag ${d.st===5?"hit":d.st>=3?"brand":""}">${DSTAGES[d.st]}</span>`}${d.alerts.filter(a=>a[0]==="warn"&&!d.drop).map(a=>`<div class="small" style="color:var(--warn)">${esc(a[1])}</div>`).join("")}</td>
+        <td class="muted">${d.start===0?"Today":d.start+" days ago"}</td><td class="muted">${d.drop?(d.drop.ago===0?"Dropped today":`Dropped ${d.drop.ago} day${d.drop.ago===1?"":"s"} ago`):d.last===0?"Today":d.last===1?"Yesterday":d.last+" days ago"}</td><td class="num" style="text-align:right">${d.drop?`<span class="muted">${money(d.fee)}</span>`:money(d.fee)}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">No deals here.</td></tr>`}</tbody></table></div>
     ${rows.length>DF.shown?`<div><button class="btn line sm" id="dMore">Show all ${rows.length}</button></div>`:""}
   </div>`;
   tipOn(app);
