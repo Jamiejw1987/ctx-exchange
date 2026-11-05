@@ -174,6 +174,13 @@ textarea{resize:vertical;min-height:90px}
 .meta3{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
 .meta3 span+span::before{content:"·";margin-right:14px;margin-left:-8px}
 .pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.acgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.accard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.accard.off{border-color:var(--bad)}
+.accard.req{border-color:var(--warn)}
+.accard .avs{display:flex}
+.accard .avs .av{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--accent-soft);color:var(--brand-2);font-weight:700;font-size:11px;margin-left:-6px;border:2px solid var(--surface)}
+.accard .avs .av:first-child{margin-left:0}
 .cogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}
 .cotile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;font:inherit;color:inherit;min-width:0}
 .cotile:hover{border-color:var(--brand)}
@@ -2371,22 +2378,100 @@ function vTeam(){
 const CLIENT_ACCOUNTS=[
  {co:"Harbor & Pine Confectionery",terms:"Custom terms requested",members:[["Grant Fischer","CEO","Leadership","Admin","Active"],["Hannah Ortiz","Head of Talent","People and HR","Admin","Active"],["Luis Romero","National Sales Director","Sales","Hiring manager","Active"]]},
  {co:"Sunridge Pantry Foods",terms:"Custom terms agreed",members:[["Erin Kowalski","CCO","Leadership","Admin","Active"],["Jordan Blake","VP Marketing","Marketing","Hiring manager","Active"],["Mei Chen","Director of E-commerce","E-commerce","Hiring manager","Active"],["Owen Price","Finance Business Partner","Finance","Viewer","Invited"]]}];
-function vClients(){
-  const co=S.company,live={co:co.name||"Northfield Snack Co.",terms:termsOK()?(S.agreement?`Signed · ${S.agreement.ref}`:"Terms agreed"):"Not signed yet",members:teamMembers().map(m=>[m.name,m.title,m.dept,m.role,m.status])};
-  const all=[live,...CLIENT_ACCOUNTS];
+/* ---------- client access: remove, reinstate, requests ---------- */
+const ACCESS_WHY=["Tried to share contact details in chat","Approached a candidate directly","Unusual browsing (bulk viewing profiles)","Sharing the login outside their team","Terms dispute or unpaid invoice","Other"];
+const FIRSTN=["Alex","Jordan","Taylor","Morgan","Casey","Jamie","Riley","Avery","Dana","Chris","Pat","Sam","Drew","Kelly","Robin","Lee","Shawn","Erin","Megan","Nate","Priya","Carlos","Aisha","Ben","Hannah","Luis","Mei","Owen","Grace","Tom"],
+  LASTN=["Parker","Reed","Hughes","Brooks","Price","Bennett","Ward","Foster","Hayes","Russell","Diaz","Patel","Nguyen","Kim","Garcia","Murphy","Cole","Shaw","Fischer","Ortiz","Romero","Chen","Blake","Kowalski","Wells","Grant","Stone","Lane","Fox","Webb"];
+function demoMembers(k){const h=hash(k.id+"team"),n=1+h%4,out=[];const T=[["CEO","Leadership","Admin"],["Founder","Leadership","Admin"],["Head of Talent","People and HR","Admin"],["VP Sales","Sales","Hiring manager"],["Sales Director","Sales","Hiring manager"],["VP Marketing","Marketing","Hiring manager"],["HR Business Partner","People and HR","Hiring manager"],["CFO","Finance","Viewer"],["Head of E-commerce","E-commerce","Hiring manager"],["Operations Director","Operations","Viewer"]];
+  for(let j=0;j<n;j++){const x=hash(k.id+"m"+j),t=j===0?T[x%3]:T[3+x%7];out.push([FIRSTN[x%FIRSTN.length]+" "+LASTN[(x>>>5)%LASTN.length],t[0],t[1],t[2],(x>>>9)%7===0?"Invited":"Active"])}return out}
+function clientAccounts(){const co=S.company,selfName=co.name||"Northfield Snack Co.";
+  const live={key:selfName,co:selfName,self:true,stage:co.stage,terms:termsOK()?(S.agreement?`Signed · ${S.agreement.ref}`:"Terms agreed"):"Not signed yet",members:teamMembers().map(m=>[m.name,m.title,m.dept,m.role,m.status]),last:0};
+  const extra=CLIENT_ACCOUNTS.map(a=>({key:a.co,...a,stage:(COMPANIES.find(k=>k.name===a.co)||{}).stage,last:1}));
+  const rest=COMPANIES.filter(k=>!k.self&&!CLIENT_ACCOUNTS.some(a=>a.co===k.name)).map(k=>{const nm=k.name||coDisplay({...k,anon:true});return {key:nm,co:nm,anon:!!k.anon,stage:k.stage,terms:k.signed===false?"Not signed yet":"Terms signed",members:demoMembers(k),last:hash(k.id+"seen")%30}});
+  return [live,...extra,...rest]}
+function ensureAccess(){if(S.access)return;S.access={};const all=clientAccounts().filter(a=>!a.self),day=864e5;
+  const a1=all.find(a=>/Golden Mesa|Kestrel|Copper/.test(a.co))||all[5],a2=all.find(a=>a!==a1&&/Bluebird|Wren|Sparrow/.test(a.co))||all[9];
+  if(a1)S.access[a1.key]={status:"suspended",why:ACCESS_WHY[2],note:"Viewed 160 profiles in under an hour from two locations.",at:Date.now()-3*day,by:"Connor",hist:[{at:Date.now()-3*day,what:"Access removed: "+ACCESS_WHY[2],by:"Connor"}]};
+  if(a2)S.access[a2.key]={status:"requested",why:ACCESS_WHY[0],note:"Shared a mobile number with a candidate twice in one chat.",at:Date.now()-6*day,by:"Jamie",req:{at:Date.now()-5*36e5,by:a2.members[0][0],note:"Sorry, we didn't realise numbers weren't allowed. Happy to keep everything on the Exchange from now on."},hist:[{at:Date.now()-6*day,what:"Access removed: "+ACCESS_WHY[0],by:"Jamie"},{at:Date.now()-5*36e5,what:"Requested access again",by:a2.members[0][0]}]}}
+function accessOf(key){ensureAccess();return S.access[key]||{status:"active"}}
+function setAccess(key,st,extra,who){ensureAccess();const cur=S.access[key]||{status:"active",hist:[]};const nx={...cur,...extra,status:st,hist:[...(cur.hist||[]),{at:Date.now(),what:extra&&extra.histWhat||st,by:who||"Consumer Talent"}]};delete nx.histWhat;S.access[key]=nx;save()}
+const CF2={q:"",f:"all"};
+function vClients(){ensureAccess();
+  const co=S.company,all=clientAccounts().map(a=>({...a,acc:accessOf(a.key)}));
   const ch=(S.chase||[]).filter(x=>x.status==="open"&&!(termsOK()&&sameCo(x.co,co.name||"Northfield Snack Co.")));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Clients</span><h1>Client accounts</h1><p class="muted">Everyone on each client account, by department. Each company's terms cover all of its members.</p></div>
+  const signed=a=>!/^not|requested/i.test(a.terms)&&/signed|agreed/i.test(a.terms);
+  const F={all:["All accounts",()=>true],req:["Access requests",a=>a.acc.status==="requested"],off:["Access removed",a=>a.acc.status==="suspended"||a.acc.status==="denied"],signed:["Terms signed",a=>signed(a)&&a.acc.status==="active"],unsigned:["Not signed",a=>!signed(a)]};
+  const nReq=all.filter(F.req[1]).length;
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Clients</span><h1>Client accounts</h1><p class="muted">Every company on the Exchange and everyone on its account. Each company's terms cover all of its members. If you see unusual activity, remove their access. They'll have to request it again, and you decide whether to let them back in.</p></div>
   ${ch.length?`<div class="card stack" style="max-width:860px;margin-bottom:16px;border-color:var(--warn)"><div class="row" style="justify-content:space-between"><h2>Wants to chat, terms not signed</h2><span class="tag warn">${ch.length} to chase</span></div>
     <p class="muted small">These went to Jamie and Connor by email and notification. Get in touch to get the terms signed so the chat can start.</p>
     ${ch.map(x=>`<div class="item" style="background:var(--soft)"><div class="line1"><div><b>${esc(x.co)}</b> wants to chat with <b>${esc(x.ref)}</b><div class="muted small">${esc(LEVELS[x.lvl])} · ${esc(x.region)} · ${esc(new Date(x.at).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}</div></div></div>
       <div class="msg"><div class="mh"><b>To:</b> jamie@consumer-talent.com, connor@consumer-talent.com<br><b>Subject:</b> ${esc(x.subj)}</div><div class="mb"><p>${esc(x.body)}</p>${x.email?`<p class="small muted">Client contact: ${esc(x.contact)}${x.title?", "+esc(x.title):""} · ${esc(x.email)}</p>`:""}</div></div>
       <div class="row">${x.email?`<a class="btn sm" href="mailto:${encodeURIComponent(x.email)}?subject=${encodeURIComponent("Your terms for the Consumer Talent Exchange")}&body=${encodeURIComponent(`Hi ${x.contact.split(" ")[0]||"there"},\n\nThanks for looking to chat with ${x.ref} on the Exchange. To start the conversation we just need your terms signed. You can sign here: ${signLink()}\n\nIf someone else signs agreements for ${x.co}, reply with their name and email and we'll send it to them.\n\nThanks,\nJamie and Connor\nConsumer Talent`)}">Email ${esc(x.contact.split(" ")[0]||"client")} to sign</a>`:""}<button class="btn line sm" data-chdone="${x.id}">Mark as chased</button></div></div>`).join("")}</div>`:""}
-  <div class="list" style="max-width:860px">${all.map(a=>`<div class="item">
-    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(a.co)}</b><div class="muted small">${a.members.length} member${a.members.length===1?"":"s"} · ${[...new Set(a.members.map(m=>m[2]))].length} department${[...new Set(a.members.map(m=>m[2]))].length===1?"":"s"}</div></div><span class="tag ${/Signed|agreed/.test(a.terms)?"hit":"new"}">${esc(a.terms)}</span></div>
-    <div>${a.members.map(m=>`<div class="mem"><span class="av">${esc(initials(m[0]))}</span><div class="mi"><b>${esc(m[0])}</b><span>${esc(m[1]||"")}${m[1]?" · ":""}${esc(m[2])} · ${esc(m[3])}</span></div><div class="ma"><span class="tag ${m[4]==="Active"?"hit":"new"}">${esc(m[4])}</span></div></div>`).join("")}</div>
-  </div>`).join("")}</div>`;
+  <div class="row" style="gap:8px;margin-bottom:12px">${Object.entries(F).map(([k,[l,fn]])=>`<button type="button" class="pick radio" data-acf="${k}" aria-pressed="${CF2.f===k}">${l} <span class="badge num">${all.filter(fn).length}</span></button>`).join("")}</div>
+  <div style="max-width:520px;margin-bottom:14px"><input type="search" id="acQ" value="${esc(CF2.q)}" placeholder="Search company or person" aria-label="Search client accounts" autocomplete="off" style="width:100%"></div>
+  <p class="muted small num" id="acN"></p><div class="acgrid" id="acGrid"></div>`;
+  const tagT=a=>`<span class="tag ${signed(a)?"hit":"new"}">${esc(a.terms)}</span>`;
+  const tagA=a=>a.acc.status==="suspended"?`<span class="tag" style="color:var(--bad);border-color:var(--bad)">Access removed</span>`:a.acc.status==="requested"?`<span class="tag warn">Requesting access</span>`:a.acc.status==="denied"?`<span class="tag" style="color:var(--bad);border-color:var(--bad)">Request denied</span>`:`<span class="tag">Active</span>`;
+  const card=a=>{const st=a.acc.status;return `<div class="accard ${st==="suspended"||st==="denied"?"off":st==="requested"?"req":""}">
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start;gap:8px"><div style="min-width:0"><b style="font-size:16px;font-family:var(--display);font-weight:600">${esc(a.co)}</b>${a.self?` <span class="tag brand">Live demo</span>`:""}<div class="muted small">${esc(STAGES[a.stage]||"")}${a.stage?" · ":""}${a.members.length} member${a.members.length===1?"":"s"} · ${[...new Set(a.members.map(m=>m[2]))].length} dept${[...new Set(a.members.map(m=>m[2]))].length===1?"":"s"}</div></div></div>
+    <div class="row" style="gap:5px">${tagT(a)}${tagA(a)}</div>
+    <div class="avs">${a.members.slice(0,6).map(m=>`<span class="av" title="${esc(m[0])}">${esc(initials(m[0]))}</span>`).join("")}</div>
+    ${st!=="active"?`<div class="small" style="background:var(--soft);border-radius:10px;padding:8px 10px"><b>${esc(a.acc.why||"Access removed")}</b>${a.acc.note?`<div class="muted">${esc(a.acc.note)}</div>`:""}<div class="muted">Removed by ${esc(a.acc.by||"Consumer Talent")} · ${fmtDay(new Date(a.acc.at))}</div>
+      ${st==="requested"&&a.acc.req?`<div style="margin-top:6px"><b>${esc(a.acc.req.by||"They")} asked for access back</b> · ${fmt(new Date(a.acc.req.at))}${a.acc.req.note?`<div>"${esc(a.acc.req.note)}"</div>`:""}</div>`:""}</div>`:""}
+    <div class="row" style="gap:6px;margin-top:auto"><button class="btn quiet sm" data-acv="${esc(a.key)}">View team</button>
+      ${st==="active"?`<button class="btn line sm" data-acoff="${esc(a.key)}">Remove access</button>`:st==="requested"?`<button class="btn good sm" data-acok="${esc(a.key)}">Accept</button><button class="btn line sm" data-acno="${esc(a.key)}">Deny</button>`:`<button class="btn sm" data-acok="${esc(a.key)}">Reinstate</button>`}</div></div>`};
+  const draw=()=>{const q=CF2.q.trim().toLowerCase(),list=all.filter(F[CF2.f][1]).filter(a=>!q||(a.co+" "+a.members.map(m=>m[0]+" "+m[1]).join(" ")).toLowerCase().includes(q))
+      .sort((x,y)=>({requested:0,suspended:1,denied:2,active:3})[x.acc.status]-({requested:0,suspended:1,denied:2,active:3})[y.acc.status]||(y.self?1:0)-(x.self?1:0)||x.last-y.last);
+    $("#acN").textContent=`Showing ${list.length} of ${all.length}`;
+    $("#acGrid").innerHTML=list.map(card).join("")||`<div class="empty" style="grid-column:1/-1"><h2>No accounts here</h2><p class="muted">Try another filter or search.</p></div>`;
+    bindCards()};
+  const again=()=>{const y=SC.scrollTop;vClients();SC.scrollTop=y;counts()};
+  const isSelf=k=>k===(co.name||"Northfield Snack Co.");
+  const bindCards=()=>{const g=$("#acGrid");
+    g.querySelectorAll("[data-acv]").forEach(b=>b.onclick=()=>{const a=all.find(x=>x.key===b.dataset.acv);
+      layer.innerHTML=`<div class="scrim" id="avS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="avT" style="max-width:560px"><div class="stack" style="gap:4px"><span class="kicker">Client account</span><h2 id="avT">${esc(a.co)}</h2><div class="row" style="gap:5px">${tagT(a)}${tagA(a)}</div></div>
+        <div>${a.members.map(m=>`<div class="mem"><span class="av">${esc(initials(m[0]))}</span><div class="mi"><b>${esc(m[0])}</b><span>${esc(m[1]||"")}${m[1]?" · ":""}${esc(m[2])} · ${esc(m[3])}</span></div><div class="ma"><span class="tag ${m[4]==="Active"?"hit":"new"}">${esc(m[4])}</span></div></div>`).join("")}</div>
+        ${(a.acc.hist||[]).length?`<div class="stack" style="gap:4px"><b class="small">Access history</b>${a.acc.hist.slice().reverse().map(h=>`<div class="small muted">${fmt(new Date(h.at))} · ${esc(h.what)} · ${esc(h.by)}</div>`).join("")}</div>`:""}
+        <div class="row" style="justify-content:flex-end"><button class="btn line" id="avX">Close</button></div></div></div>`;
+      $("#avX").onclick=()=>layer.innerHTML="";$("#avS").onclick=e=>{if(e.target.id==="avS")layer.innerHTML=""}});
+    g.querySelectorAll("[data-acoff]").forEach(b=>b.onclick=()=>{const key=b.dataset.acoff;
+      layer.innerHTML=`<div class="scrim"><form class="modal" id="aoF" role="dialog" aria-modal="true" aria-labelledby="aoT" style="max-width:480px"><div class="stack" style="gap:6px"><span class="kicker">Remove access</span><h2 id="aoT">${esc(key)}</h2><p class="muted small">Everyone on this account is signed out and can't browse, chat or request introductions. Their conversations and history are kept. They'll see a message asking them to request access again, and you decide whether to let them back in.</p></div>
+        <label class="field">What did you see?<select id="aoW">${ACCESS_WHY.map(w=>`<option>${esc(w)}</option>`).join("")}</select></label>
+        <label class="field">Notes <small>For you and Connor only. The client doesn't see this.</small><textarea id="aoN" style="min-height:70px" placeholder="What happened and when"></textarea></label>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="aoX">Cancel</button><button class="btn" type="submit" style="background:var(--bad);border-color:var(--bad)">Remove access</button></div></form></div>`;
+      $("#aoX").onclick=()=>layer.innerHTML="";
+      $("#aoF").onsubmit=e=>{e.preventDefault();const why=$("#aoW").value,note=$("#aoN").value.trim();
+        setAccess(key,"suspended",{why,note,at:Date.now(),by:"Jamie",req:null,histWhat:"Access removed: "+why},"Jamie");
+        if(isSelf(key)){notify("client","Your access to the Exchange has been paused. Request access again to continue.","company");logEvent("Access to the Exchange paused by Consumer Talent","Consumer Talent")}
+        notify("admin",`Access removed for ${key}: ${why}`,"clients");layer.innerHTML="";again();toast(`Access removed for ${key}`)}});
+    g.querySelectorAll("[data-acok]").forEach(b=>b.onclick=()=>{const key=b.dataset.acok,was=accessOf(key).status;
+      setAccess(key,"active",{req:null,histWhat:was==="requested"?"Access request accepted":"Access reinstated"},"Jamie");
+      if(isSelf(key)){notify("client","Your access to the Exchange has been restored. Welcome back.","company");logEvent("Access to the Exchange restored","Consumer Talent")}
+      again();toast(`${key} can use the Exchange again`)});
+    g.querySelectorAll("[data-acno]").forEach(b=>b.onclick=()=>{const key=b.dataset.acno;
+      setAccess(key,"denied",{histWhat:"Access request denied"},"Jamie");
+      if(isSelf(key))notify("client","Your request for access wasn't approved. Contact Jamie and Connor to talk it through.","company");
+      again();toast(`Request denied. ${key} stays locked out.`)})};
+  app.querySelectorAll("[data-acf]").forEach(b=>b.onclick=()=>{CF2.f=b.dataset.acf;vClients()});
+  $("#acQ").addEventListener("input",e=>{CF2.q=e.target.value;draw()});
   app.querySelectorAll("[data-chdone]").forEach(b=>b.onclick=()=>{const x=S.chase.find(y=>y.id===b.dataset.chdone);x.status="chased";logEvent(`Terms chase marked done for ${x.co} (${x.ref})`,"Consumer Talent");save();vClients();toast("Marked as chased")});
+  draw();
 }
+/* client side: what a company sees while its access is removed */
+function vLocked(){const key=S.company.name||"Northfield Snack Co.",a=accessOf(key);
+  app.innerHTML=`<div class="empty" style="max-width:560px;margin:30px auto;text-align:left">
+    <span class="kicker">Access paused</span>
+    ${a.status==="requested"?`<h1>Request sent</h1><p class="muted">Thanks. Jamie and Connor have your request and will be in touch shortly. You'll get a notification and an email as soon as your access is back.</p>`
+    :a.status==="denied"?`<h1>Your request wasn't approved</h1><p class="muted">Your access to the Exchange is still paused. Please speak to Jamie and Connor to talk it through. You can send another request once you have.</p>`
+    :`<h1>Your access to the Exchange has been paused</h1><p class="muted">We've paused access for everyone at ${esc(key)} while we check some recent activity on your account. Your conversations, shortlist and history are all safe. To continue, request access again and we'll review it.</p>`}
+    ${a.status!=="requested"?`<form class="stack" id="raF" style="gap:10px;margin-top:14px"><label class="field">Anything we should know? <small>Optional</small><textarea id="raN" style="min-height:80px" placeholder="Tell us what happened, or why you'd like access back."></textarea></label>
+      <div class="row"><button class="btn" type="submit">Request access again</button>${contactBtn()}</div></form>`:`<div class="row" style="margin-top:12px">${contactBtn()}</div>`}</div>`;
+  try{bindContact(app,"Access")}catch(e){}
+  const f=$("#raF");if(f)f.onsubmit=e=>{e.preventDefault();const note=$("#raN").value.trim(),by=S.company.contact||"Your team";
+    setAccess(key,"requested",{req:{at:Date.now(),by,note},histWhat:"Requested access again"},by);
+    notify("admin",`${key} has requested access to the Exchange again${note?`: "${note}"`:""}`,"clients");logEvent("Requested access to the Exchange again",by);
+    counts();vLocked();toast("Request sent to Jamie and Connor")}}
 
 /* ---------------- backdoor protection ---------------- */
 const normName=x=>String(x||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
@@ -2543,12 +2628,12 @@ function vWaitlist(){const a=sbGet();
 const VIEWS={applicants:vApplicants,allcos:()=>vCompanies("all"),interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:()=>vCompanies("hiring"),introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["applicants","Interested in you","a"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["interviews","Interviews"],["waitlist","Waiting list","w"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const ADMIN_TABS=[["dash","Dashboard"],["interviews","Interviews"],["waitlist","Waiting list","w"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients","q"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["applicants","Interested in you","a"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
-function counts(){try{ensureApplies()}catch(e){}try{Object.keys(S.intros).forEach(k=>{if(S.intros[k].review==="pending")sendIntroNow(k)})}catch(e){}bellCount();
+function counts(){try{ensureApplies()}catch(e){}try{ensureAccess()}catch(e){}try{Object.keys(S.intros).forEach(k=>{if(S.intros[k].review==="pending")sendIntroNow(k)})}catch(e){}bellCount();
   const fy=completeness().pct===100;
-  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",a:(S.applies||[]).filter(x=>x.status==="new").length||"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",q:(()=>{try{return Object.values(S.access||{}).filter(x=>x.status==="requested").length||""}catch(e){return ""}})(),a:(S.applies||[]).filter(x=>x.status==="new").length||"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
@@ -2557,12 +2642,12 @@ function render(){ensureCustom();
   const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
   if(!/^Ref CTX-/.test(S.cand.user))S.cand.user="Ref CTX-4127";document.body.classList.toggle("pro",S.mode==="cand");$("#sideLbl").textContent=S.mode==="cand"?"For professionals":S.mode==="admin"?"Team view":"For hiring teams";$("#partners").hidden=S.mode==="admin"||v==="welcome";
-  layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
+  layer.innerHTML="";deckGo=null;(S.mode==="client"&&v!=="sign"&&accessOf(S.company.name||"Northfield Snack Co.").status!=="active"?vLocked:VIEWS[v])();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,applied:S.applied,applies:S.applies,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,access:S.access,applied:S.applied,applies:S.applies,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};try{S.coView=JSON.parse(localStorage.getItem(STORE+"-coview")||"null")||{}}catch(e){}S.applied=d.applied||{};S.applies=d.applies||null;S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.access=d.access||null;try{S.coView=JSON.parse(localStorage.getItem(STORE+"-coview")||"null")||{}}catch(e){}S.applied=d.applied||{};S.applies=d.applies||null;S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
