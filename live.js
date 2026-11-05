@@ -338,8 +338,40 @@ function authNewPw(){$("#tabs").innerHTML="";
     if(r.error){const x=$("#npErr");x.textContent=r.error.message;x.style.display="block";return}
     L.recovering=false;toast("Password changed");const {data}=await sb.auth.getSession();if(data.session)await start(data.session)}}
 
+/* ---------- push notifications on this device ---------- */
+const VAPID="BGmEvdgzu8Ukronq7qH4Q9RNFdmg5e2AKctobk9wQ3atDwJiBUsR_drfZ5qQre-GVcCXfX2YTqYFPzQCN08ICys";
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const standalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+const b64u=s=>{const p="=".repeat((4-s.length%4)%4),r=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+async function pushSub(){try{const reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription()}catch(e){return null}}
+async function pushStatus(){if(isIOS&&!standalone)return "ios-install";if(!pushOK())return "unsupported";
+  if(Notification.permission==="denied")return "blocked";return Notification.permission==="granted"&&await pushSub()?"on":"off"}
+async function savePushSub(sub){const j=sub.toJSON();await sb.from("push_subs").upsert({user_id:L.user.id,endpoint:j.endpoint,sub:j},{onConflict:"endpoint"})}
+async function enablePush(){try{if(await Notification.requestPermission()!=="granted")return false;
+    const reg=await navigator.serviceWorker.ready;const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+    await savePushSub(sub);return true}catch(e){console.warn(e);return false}}
+async function disablePush(){const sub=await pushSub();if(!sub)return;try{await sb.from("push_subs").delete().eq("endpoint",sub.endpoint)}catch(e){}try{await sub.unsubscribe()}catch(e){}}
+function pushCardHTML(st){return st==="on"?`<div class="row" style="justify-content:space-between;gap:10px"><span class="small muted">Notifications are on for this device.</span><button class="btn quiet sm" id="puOff">Turn off</button></div>`
+  :st==="off"?`<div class="row" style="justify-content:space-between;gap:10px"><span class="small"><b>Get notified on this device</b><br><span class="muted">Instant alerts for introductions and messages, as well as email.</span></span><button class="btn sm" id="puOn">Turn on</button></div>`
+  :st==="ios-install"?`<p class="small muted" style="margin:0"><b>Want alerts on your iPhone?</b> Tap the Share button in Safari, then <b>Add to Home Screen</b>. Open the Exchange from your home screen and turn notifications on here.</p>`
+  :st==="blocked"?`<p class="small muted" style="margin:0">Notifications are blocked for this site. Turn them on in your browser or phone settings to get alerts here.</p>`:""}
+function bindPush(root,after){const on=root.querySelector("#puOn"),off=root.querySelector("#puOff");
+  if(on)on.onclick=async()=>{on.disabled=true;const ok=await enablePush();toast(ok?"Notifications on for this device":"Notifications weren't turned on");after()};
+  if(off)off.onclick=async()=>{await disablePush();toast("Notifications off for this device");after()}}
+// one gentle prompt per device after signing in
+async function pushPrompt(){let seen=false;try{seen=localStorage.getItem("ctx_push_ask")==="1"}catch(e){}if(seen)return;
+  const st=await pushStatus();if(st!=="off"&&st!=="ios-install")return;
+  const d=document.createElement("div");d.id="puBar";d.className="card";d.style.cssText="position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.35)";
+  const close=()=>{try{localStorage.setItem("ctx_push_ask","1")}catch(e){}d.remove()};
+  d.innerHTML=st==="off"?`<p class="small" style="margin:0"><b>Get notified on this device</b><br><span class="muted">Instant alerts when a company wants to chat or you get a message, as well as email.</span></p>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn quiet sm" id="puNo">Not now</button><button class="btn sm" id="puOn">Turn on</button></div>`
+    :pushCardHTML(st)+`<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn quiet sm" id="puNo">Got it</button></div>`;
+  document.body.appendChild(d);d.querySelector("#puNo").onclick=close;bindPush(d,close)}
+
 /* ---------- boot ---------- */
-async function start(session){L.user=session.user;L.token=session.access_token;try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
+async function start(session){L.user=session.user;L.token=session.access_token;
+  if(pushOK()&&Notification.permission==="granted")pushSub().then(s=>s&&savePushSub(s)).catch(()=>{});setTimeout(pushPrompt,2500);try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
   const prof=(await q(sb.from("profiles").select("*").eq("user_id",L.user.id)))[0];
   L.role=TEAM.includes(L.user.email)?"admin":prof?prof.role:"pro";
   if(L.role==="client"){const m=await q(sb.from("company_members").select("company_id").eq("user_id",L.user.id));L.companyId=m[0]&&m[0].company_id}
@@ -367,9 +399,13 @@ function subscribe(){if(chan)sb.removeChannel(chan);chan=sb.channel("ctx-live");
 // header: who's signed in, sign out; hide the demo-only switch
 const hdr=document.querySelector("header .seg");if(hdr)hdr.style.display="none";
 $("#demoTxt").innerHTML=`<span id="lvWho"></span> <button type="button" class="btn quiet sm" id="lvOut" hidden style="margin-left:8px">Sign out</button>`;
-$("#lvOut").onclick=async()=>{await sb.auth.signOut();location.hash="";location.reload()};
+$("#lvOut").onclick=async()=>{await disablePush();try{localStorage.removeItem("ctx_push_ask")}catch(e){}await sb.auth.signOut();location.hash="";location.reload()};
 const pt=$("#partners");if(pt)pt.hidden=true;
-$("#bell").onclick=openBell;
+const _openBell=openBell;
+openBell=async function(){_openBell();const st=await pushStatus();const h=$("#nT");if(!h||!pushCardHTML(st))return;
+  const box=document.createElement("div");box.id="puBox";box.style.cssText="border:1px solid var(--line);border-radius:12px;padding:10px 12px";box.innerHTML=pushCardHTML(st);
+  h.parentElement.after(box);bindPush(box,()=>{const m=$("#nS");if(m)openBell()})};
+$("#bell").onclick=()=>openBell();
 window.addEventListener("hashchange",()=>{if(!L.role){if(L.recovering)return;if(view()==="auth"&&!$("#auBk"))vAuth();return}render()});
 const _render=render;
 render=function(){if(!L.role){vAuth();return}

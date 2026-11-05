@@ -96,3 +96,42 @@ end $$;
 drop trigger if exists notification_email on public.notifications;
 create trigger notification_email after insert on public.notifications for each row execute function public.notification_email();
 revoke execute on function public.notification_email() from public, anon, authenticated;
+
+-- ---------- phone and desktop push notifications ----------
+-- Each device that turns on notifications stores a Web Push subscription here.
+-- The notification trigger hands the recipients to the "push" edge function (supabase/functions/push).
+-- Needs private.settings 'push_secret' = the PUSH_SECRET edge-function secret.
+create table if not exists public.push_subs(
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  endpoint text not null unique, sub jsonb not null,
+  created_at timestamptz not null default now());
+alter table public.push_subs enable row level security;
+drop policy if exists ps_own on public.push_subs;
+create policy ps_own on public.push_subs for all to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+insert into private.settings(key,value) values('push_url','https://tqndlcgeiksdzvzswoaa.supabase.co/functions/v1/push') on conflict(key) do nothing;
+
+create or replace function private.send_push(ids uuid[], title text, body text, url text, tag text)
+returns void language plpgsql security definer set search_path='' as $$
+declare sec text:=private.setting('push_secret');
+begin
+  if sec is null or ids is null or cardinality(ids)=0 then return; end if;
+  if not exists(select 1 from public.push_subs where user_id=any(ids)) then return; end if;
+  perform net.http_post(url:=private.setting('push_url'),
+    headers:=jsonb_build_object('Content-Type','application/json','x-push-secret',sec),
+    body:=jsonb_build_object('user_ids',to_jsonb(ids),'title',title,'body',body,'url',url,'tag',tag));
+end $$;
+
+create or replace function public.notification_push() returns trigger language plpgsql security definer set search_path='' as $$
+declare ids uuid[]; url text:=private.setting('app_url')||'#'||coalesce(nullif(new.go,''),'');
+begin
+  if new.audience='admin' then
+    select array_agg(u.id) into ids from auth.users u where u.email=any(string_to_array(replace(private.setting('admin_emails'),' ',''),','));
+  elsif new.audience='user' then ids:=array[new.user_id];
+  else select array_agg(user_id) into ids from public.company_members where company_id=new.company_id; end if;
+  perform private.send_push(ids, case when new.audience='admin' then 'CTX team' else 'Consumer Talent Exchange' end, new.text, url, coalesce(nullif(new.go,''),'ctx'));
+  return new;
+end $$;
+drop trigger if exists notification_push on public.notifications;
+create trigger notification_push after insert on public.notifications for each row execute function public.notification_push();
+revoke execute on function public.notification_push() from public, anon, authenticated;
