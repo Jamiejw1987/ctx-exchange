@@ -985,7 +985,26 @@ function vShortlist(){
   app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.shortlist=S.shortlist.filter(i=>i!==b.dataset.rm);delete S.decided[b.dataset.rm];counts();save();vShortlist()});
 }
 const CTX_LOGO=`<span class="colog ctxl" title="Consumer Talent Exchange" aria-label="Consumer Talent Exchange">CT<em>X</em></span>`;
-const EXCHANGE_EMAIL="exchange@consumer-talent.com";
+const CT_TEAM=[["Jamie","jamie@consumer-talent.com"],["Connor","connor@consumer-talent.com"]];
+const contactBtn=(label="Contact Jamie and Connor")=>`<button type="button" class="btn quiet sm ctc">${label}</button>`;
+function bindContact(root=document,topic="Terms"){root.querySelectorAll(".ctc").forEach(b=>b.onclick=e=>{e.preventDefault();contactUs(topic)})}
+function contactUs(topic="Terms"){
+  const back=layer.innerHTML;const co=S.company;
+  const mail=`mailto:${CT_TEAM.map(t=>t[1]).join(",")}?subject=${encodeURIComponent("Consumer Talent Exchange: "+topic+(co.name?" ("+co.name+")":""))}`;
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="cuF" role="dialog" aria-modal="true" aria-labelledby="cuT" style="max-width:480px">
+    <div class="stack" style="gap:4px"><span class="kicker">Consumer Talent</span><h2 id="cuT">Contact Jamie and Connor</h2>
+    <p class="muted small">Your message goes straight to Jamie and Connor as a notification and an email. They'll come back to you directly.</p></div>
+    <div class="grid2"><label class="field">Your name<input type="text" id="cuN" value="${esc(co.contact||"")}" required></label><label class="field">Your email<input type="email" id="cuE" value="${esc(co.email||S.alerts.email_to||"")}" required></label></div>
+    <label class="field">How can we help?<textarea id="cuM" style="min-height:90px" required placeholder="e.g. Our CEO signs all supplier terms. Can you send them to her directly?"></textarea></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="cuX">Back</button><button class="btn" type="submit">Send to Jamie and Connor</button></div>
+    <p class="muted small">Prefer your own email? <a href="${mail}">Email Jamie and Connor</a></p></form></div>`;
+  $("#cuX").onclick=()=>{layer.innerHTML=back;if(back.includes('id="termsBox"'))openTermsGate();};
+  $("#cuF").onsubmit=e=>{e.preventDefault();const m=$("#cuM").value.trim();if(!m)return;
+    const who=$("#cuN").value.trim()||"A client",em=$("#cuE").value.trim();
+    notify("admin",`${who}${co.name?" at "+co.name:""} sent a message about ${topic.toLowerCase()}: "${m.length>90?m.slice(0,90)+"…":m}"`,"clients");
+    logEvent(`Message to Consumer Talent (${topic}) emailed to ${CT_TEAM.map(t=>t[1]).join(", ")}${em?", reply to "+em:""}`,who);
+    save();layer.innerHTML="";toast("Sent to Jamie and Connor. They'll be in touch.")};
+}
 function notify(to,t,go){S.notes.unshift({id:"n"+Date.now()+Math.random().toString(36).slice(2,5),to,t,go,at:Date.now(),read:false});bellCount()}
 function sideKey(){return S.mode==="cand"?"cand":S.mode==="admin"?"admin":"client"}
 function bellCount(){const el=$("#bellN");if(el){const n=(S.notes||[]).filter(x=>x.to===sideKey()&&!x.read).length;el.textContent=n?String(n):""}}
@@ -1235,14 +1254,14 @@ function openTermsGate(onDone){
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
     <div class="row"><button class="btn" id="sGo" disabled>Sign and reveal</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
     <div class="card stack" style="background:var(--soft);gap:8px"><b>Not authorised to sign?</b><span class="muted small">Send the terms to someone who can sign. Until they do, you can keep browsing, shortlisting and chatting, but you can't reveal anyone.</span>
-      <div class="row"><button type="button" class="btn sm" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Send to someone who can sign"}</button><span class="small muted">or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></span></div></div>
+      <div class="row"><button type="button" class="btn sm" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Send to someone who can sign"}</button>${contactBtn("Or contact Jamie and Connor")}</div></div>
   </div></div>`;
   let read=false;const box=$("#termsBox");
   const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim())&&$("#sAuth").checked&&$("#sRead").checked)};
   box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
   ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
   $("#sX").onclick=()=>layer.innerHTML="";$("#sAlt").onclick=()=>layer.innerHTML="";
-  $("#sDel").onclick=()=>sendForSignature();
+  $("#sDel").onclick=()=>sendForSignature();bindContact(layer,"Terms");
   $("#sGo").onclick=()=>{S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -1272,8 +1291,8 @@ function sendForSignature(){
     <label class="field">Their work email<input type="email" id="sdE" value="${esc(r.email||"")}" required placeholder="name@company.com"></label>
     <label class="field">Message <small>Optional</small><textarea id="sdM" style="min-height:64px" placeholder="We'd like to start meeting candidates on the Exchange. Can you sign these?">${esc(r.note||"")}</textarea></label>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="sdX">Back</button><button class="btn" type="submit">Send for signature</button></div>
-    <p class="muted small">Questions about the terms? Email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a>.</p></form></div>`;
-  $("#sdX").onclick=()=>openTermsGate();
+    <p class="muted small">Questions about the terms? ${contactBtn()}</p></form></div>`;
+  $("#sdX").onclick=()=>openTermsGate();bindContact(layer,"Terms");
   $("#sdF").onsubmit=e=>{e.preventDefault();const em=$("#sdE").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Enter a valid work email");return}
     S.sigReq={name:$("#sdN").value.trim(),title:$("#sdJ").value.trim(),email:em,note:$("#sdM").value.trim(),by:S.company.contact||"Your team",at:Date.now(),status:"sent"};
     logEvent(`Terms sent for signature to ${S.sigReq.name}, ${S.sigReq.title} (${em})`,S.company.contact);
@@ -1282,7 +1301,7 @@ function sendForSignature(){
 }
 function vSign(){
   const r=S.sigReq;
-  if(!r){app.innerHTML=`<div class="empty" style="max-width:560px;margin:24px auto"><h2>This signing link has expired</h2><p class="muted">Ask your colleague to send it again, or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a>.</p></div>`;return}
+  if(!r){app.innerHTML=`<div class="empty" style="max-width:560px;margin:24px auto"><h2>This signing link has expired</h2><p class="muted">Ask your colleague to send it again, or contact us.</p>${contactBtn()}</div>`;bindContact(app,"Signing link");return}
   if(r.status==="signed"){app.innerHTML=`<div class="card stack" style="max-width:560px;margin:24px auto"><h1>Thank you, ${esc(r.name.split(" ")[0])}</h1><p>The terms for ${esc(S.company.name)} are signed. ${esc(r.by)} can now reveal candidates on the Exchange. A signed copy has been emailed to you.</p></div>`;return}
   app.innerHTML=`<div style="max-width:680px;margin:0 auto" class="stack">
     <div class="pagehead" style="margin:0"><span class="kicker">Signature requested</span><h1>Terms of engagement for ${esc(S.company.name)}</h1>
@@ -1292,7 +1311,7 @@ function vSign(){
     <div class="grid2"><label class="field">Full name<input type="text" id="sgN" value="${esc(r.name)}"></label><label class="field">Job title<input type="text" id="sgJ" value="${esc(r.title)}"></label></div>
     <label class="check"><input type="checkbox" id="sgA"><span>I am authorised to sign for ${esc(S.company.name)} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sgR"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
-    <div class="row"><button class="btn" id="sgGo" disabled>Sign terms</button><span class="muted small">Questions? <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></span></div></div>`;
+    <div class="row"><button class="btn" id="sgGo" disabled>Sign terms</button>${contactBtn("Questions? Contact Jamie and Connor")}</div></div>`;bindContact(app,"Signing the terms");
   let read=false;const box=$("#termsBox");const upd=()=>{$("#sgGo").disabled=!(read&&$("#sgN").value.trim().length>2&&$("#sgJ").value.trim()&&$("#sgA").checked&&$("#sgR").checked)};
   if(box)box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
   ["sgN","sgJ"].forEach(i=>$("#"+i).oninput=upd);["sgA","sgR"].forEach(i=>$("#"+i).onchange=upd);
@@ -1324,7 +1343,7 @@ function vTerms(){
       ${d.status==="declined"?`<p class="muted">We weren't able to agree that proposal. You can sign our standard terms or send a new proposal.</p>`:""}
       ${!termsOK()&&S.sigReq&&S.sigReq.status==="sent"?`<div class="protect">${lockIcon}<span><b>Waiting for ${esc(S.sigReq.name)} (${esc(S.sigReq.title)}) to sign.</b> Sent to ${esc(S.sigReq.email)}. You can browse, shortlist and chat, but reveals unlock once they've signed.</span></div>
         <div class="row"><button class="btn line sm" id="sigResend">Resend</button><button class="btn line sm" id="sigCopy">Copy signing link</button><a class="btn quiet sm" href="#sign">Open as ${esc(S.sigReq.name.split(" ")[0])} (demo)</a></div>`:""}
-      ${!termsOK()&&d.status!=="pending"&&d.status!=="countered"?`<div class="row"><button class="btn" id="signStd">Sign standard terms</button><button class="btn line" id="sigSend">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Not authorised? Send to someone who can sign"}</button></div><p class="muted small">Or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></p>`:""}
+      ${!termsOK()&&d.status!=="pending"&&d.status!=="countered"?`<div class="row"><button class="btn" id="signStd">Sign standard terms</button><button class="btn line" id="sigSend">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Not authorised? Send to someone who can sign"}</button></div><div>${contactBtn("Or contact Jamie and Connor")}</div>`:""}
       ${termsOK()&&S.agreement?`<div class="protect">${lockIcon}<span><b>Signed copy ${esc(S.agreement.ref)}</b> emailed to ${esc([S.agreement.by.email,...S.agreement.cc].filter(Boolean).join(", "))}.</span></div><div class="row"><button class="btn line sm" id="viewAg">View signed copy</button></div>`:""}
     </div>
     ${!termsOK()&&d.status!=="pending"?`<form class="card stack" id="propF"><h2>Propose different terms</h2><p class="muted small">Tell us what works for you. Consumer Talent will accept, counter or decline, usually within a day.</p>
@@ -1336,7 +1355,7 @@ function vTerms(){
   </div>
   <div class="sticky"><div class="previewlabel">Our standard terms</div>${termsHTML().replace('id="termsBox"','')}</div></div>`;
   const ss=$("#signStd");if(ss)ss.onclick=()=>openTermsGate(()=>vTerms());
-  const sg=$("#sigSend");if(sg)sg.onclick=()=>sendForSignature();
+  const sg=$("#sigSend");if(sg)sg.onclick=()=>sendForSignature();bindContact(app,"Terms");
   const sr=$("#sigResend");if(sr)sr.onclick=()=>{S.sigReq.at=Date.now();logEvent(`Signing link resent to ${S.sigReq.email}`,S.company.contact);save();toast(`Resent to ${S.sigReq.email}`);vTerms()};
   const sc=$("#sigCopy");if(sc)sc.onclick=()=>{const t=signLink();try{navigator.clipboard.writeText(t).then(()=>toast("Signing link copied"),()=>toast(t))}catch(e){toast(t)}};
   const va=$("#viewAg");if(va)va.onclick=()=>showAgreement(S.agreement);
