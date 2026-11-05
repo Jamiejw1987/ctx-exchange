@@ -65,7 +65,7 @@ declare
 begin
   if new.audience='admin' then
     -- professionals join automatically, so no email for each one; everything else needs a look
-    if new.text like 'New professional joined%' then return new; end if;
+    if new.text like 'New professional joined%' or new.text like 'Message from %' then return new; end if;
     subj:='CTX: '||left(new.text,110); body:='Open the Exchange to take a look.'; btn:='Open the Exchange';
     for rcpt in select trim(x) from unnest(string_to_array(private.setting('admin_emails'),',')) x loop
       perform private.send_email(rcpt,subj,new.text,body,btn,url,'admin');

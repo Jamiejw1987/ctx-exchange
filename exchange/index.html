@@ -3103,6 +3103,55 @@ function authSwitch(session){$("#tabs").innerHTML="";try{$("#sideLbl").textConte
   $("#swOut").onclick=async()=>{L.authMode="up";L.authSide=L.prefill&&L.prefill.side==="client"?"client":(L.authSide||"pro");await disablePush();await sb.auth.signOut({scope:"local"});L.role=null;vAuth()};
   $("#swStay").onclick=async()=>{L.joinIntent=false;await start(session)}}
 
+/* ---------- account settings: email, password, sign out everywhere ---------- */
+function openAccount(){const em=L.user.email;
+  layer.innerHTML=`<div class="scrim" id="acS"><div class="modal stack" role="dialog" aria-modal="true" aria-labelledby="acT" style="max-width:480px;gap:16px">
+    <div class="stack" style="gap:4px"><span class="kicker">Your account</span><h2 id="acT">Account settings</h2><p class="muted small">Signed in as <b>${esc(em)}</b></p></div>
+    <form class="stack" id="acE" style="gap:8px;border-top:1px solid var(--line);padding-top:14px"><b>Change email</b>
+      <label class="field">New email<input type="email" id="acEm" required autocomplete="email"></label>
+      <p class="muted small" style="margin:0">We'll email a confirmation link to both your current and your new address. The change happens once you've confirmed.</p>
+      <p class="small" id="acEr" style="display:none"></p><div class="row" style="justify-content:flex-end"><button class="btn sm" type="submit">Send confirmation</button></div></form>
+    <form class="stack" id="acP" style="gap:8px;border-top:1px solid var(--line);padding-top:14px"><b>Change password</b>
+      <label class="field">Current password<input type="password" id="acP0" required autocomplete="current-password"></label>
+      <label class="field">New password <small>At least 8 characters</small><input type="password" id="acP1" required minlength="8" autocomplete="new-password"></label>
+      <p class="small" id="acPr" style="display:none"></p><div class="row" style="justify-content:flex-end"><button class="btn sm" type="submit">Change password</button></div></form>
+    <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:14px"><b>Sign out everywhere</b>
+      <p class="muted small" style="margin:0">Signs you out on every phone and computer, for example if you've lost a device or used a shared computer.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn line sm" id="acAll">Sign out everywhere</button></div></div>
+    <p class="muted small" style="margin:0;border-top:1px solid var(--line);padding-top:14px">Want your account deleted? <a href="#" id="acDel">Ask Consumer Talent</a> and we'll take care of it. See our <a href="../privacy/" target="_blank">privacy policy</a>.</p>
+  </div></div>`;
+  $("#acS").onclick=e=>{if(e.target.id==="acS")layer.innerHTML=""};
+  const msg=(id,t,ok)=>{const x=$(id);x.textContent=t;x.style.color=ok?"var(--good, #6fcf97)":"var(--bad)";x.style.display="block"};
+  $("#acE").onsubmit=async e=>{e.preventDefault();const n=$("#acEm").value.trim().toLowerCase();if(n===em)return msg("#acEr","That's already your email.");
+    const r=await sb.auth.updateUser({email:n},{emailRedirectTo:location.origin+location.pathname});
+    if(r.error)return msg("#acEr",/rate limit/i.test(r.error.message)?"Please wait a minute and try again.":/already|registered/i.test(r.error.message)?"There's already an account with that email.":r.error.message);
+    msg("#acEr",`Check ${em} and ${n} for confirmation links. Your email changes once you've confirmed.`,true)};
+  $("#acP").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;
+    const chk=await sb.auth.signInWithPassword({email:em,password:$("#acP0").value});
+    if(chk.error){b.disabled=false;return msg("#acPr","Your current password isn't right.")}
+    const r=await sb.auth.updateUser({password:$("#acP1").value});b.disabled=false;
+    if(r.error)return msg("#acPr",/different|same/i.test(r.error.message)?"Choose a password different from your current one.":r.error.message);
+    $("#acP0").value="";$("#acP1").value="";msg("#acPr","Password changed.",true)};
+  $("#acAll").onclick=async()=>{await disablePush();await sb.auth.signOut({scope:"global"});location.hash="";location.reload()};
+  $("#acDel").onclick=e=>{e.preventDefault();contactUs("Delete my account","Please delete my Consumer Talent Exchange account.")}}
+
+/* ---------- contact Consumer Talent from inside the Exchange ---------- */
+contactUs=function(topic="Question",preset=""){const back=layer.innerHTML;
+  const nm=(S.cand&&S.cand.name)||(L.company&&L.company.private&&L.company.private.contact)||((L.rows&&L.rows.me)||{}).name||"";
+  const coName=L.role==="client"&&L.company?L.company.name:"";
+  layer.innerHTML=`<div class="scrim" id="cuS"><form class="modal" id="cuF" role="dialog" aria-modal="true" aria-labelledby="cuT" style="max-width:480px">
+    <div class="stack" style="gap:4px"><span class="kicker">Consumer Talent</span><h2 id="cuT">Contact Jamie and Connor</h2>
+    <p class="muted small">Your message goes straight to Jamie and Connor. They'll reply to <b>${esc(L.user.email)}</b>.</p></div>
+    <label class="field">Your name<input type="text" id="cuN" value="${esc(nm)}" autocomplete="name"></label>
+    <label class="field">How can we help?<textarea id="cuM" style="min-height:110px" required maxlength="5000">${esc(preset)}</textarea></label>
+    <p class="small" id="cuEr" style="color:var(--bad);display:none"></p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="cuX">Cancel</button><button class="btn" type="submit">Send</button></div></form></div>`;
+  $("#cuX").onclick=()=>{layer.innerHTML=back;if(back.includes('id="termsBox"')&&typeof openTermsGate==="function")openTermsGate()};
+  $("#cuF").onsubmit=async e=>{e.preventDefault();const m=$("#cuM").value.trim();if(!m)return;const b=e.target.querySelector("button[type=submit]");b.disabled=true;
+    const {error}=await sb.from("support_msgs").insert({name:$("#cuN").value.trim(),email:L.user.email,company:coName,topic,body:m});
+    if(error){b.disabled=false;const x=$("#cuEr");x.textContent="That didn't send. Please try again, or email jamie@consumer-talent.com.";x.style.display="block";return}
+    layer.innerHTML="";toast("Sent. Jamie or Connor will reply by email.")}};
+
 /* ---------- boot ---------- */
 async function start(session){L.user=session.user;L.token=session.access_token;
   if(pushOK()&&Notification.permission==="granted")pushSub().then(s=>s&&savePushSub(s)).catch(()=>{});setTimeout(pushPrompt,2500);try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
@@ -3111,7 +3160,7 @@ async function start(session){L.user=session.user;L.token=session.access_token;
   if(L.role==="client"){const m=await q(sb.from("company_members").select("company_id").eq("user_id",L.user.id));L.companyId=m[0]&&m[0].company_id}
   S.mode=sideOf();
   await hydrate();subscribe();
-  $("#lvOut").hidden=false;$("#lvWho").textContent=L.user.email;
+  $("#lvOut").hidden=false;$("#lvAcc").hidden=false;$("#lvHelp").hidden=L.role==="admin";$("#lvWho").textContent=L.user.email;
   if(L.role==="admin"){sbSet({email:L.user.email,access_token:session.access_token,refresh_token:session.refresh_token,exp:(session.expires_at||0)*1000});try{await loadWL()}catch(e){}}
   location.hash=location.hash&&location.hash!=="#auth"?location.hash:"#"+ROLE_TABS[L.role][0][0];render();
 }
@@ -3132,7 +3181,8 @@ function subscribe(){if(chan)sb.removeChannel(chan);chan=sb.channel("ctx-live");
 
 // header: who's signed in, sign out; hide the demo-only switch
 const hdr=document.querySelector("header .seg");if(hdr)hdr.style.display="none";
-$("#demoTxt").innerHTML=`<span id="lvWho"></span> <button type="button" class="btn quiet sm" id="lvOut" hidden style="margin-left:8px">Sign out</button>`;
+$("#demoTxt").innerHTML=`<span id="lvWho"></span> <button type="button" class="btn quiet sm" id="lvAcc" hidden style="margin-left:8px">Account</button><button type="button" class="btn quiet sm" id="lvHelp" hidden>Contact us</button><button type="button" class="btn quiet sm" id="lvOut" hidden>Sign out</button>`;
+$("#lvAcc").onclick=()=>openAccount();$("#lvHelp").onclick=()=>contactUs("Question");
 $("#lvOut").onclick=async()=>{await disablePush();try{localStorage.removeItem("ctx_push_ask")}catch(e){}await sb.auth.signOut();location.hash="";location.reload()};
 const pt=$("#partners");if(pt)pt.hidden=true;
 const _openBell=openBell;

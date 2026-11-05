@@ -30,3 +30,45 @@ begin
 end $$;
 revoke execute on function public.admin_delete_account(uuid) from public, anon;
 grant execute on function public.admin_delete_account(uuid) to authenticated;
+
+-- ---------- messages to Consumer Talent from inside the Exchange ----------
+create table if not exists public.support_msgs(
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete set null default auth.uid(),
+  name text, email text, company text, topic text, body text not null check (length(body) between 1 and 5000),
+  created_at timestamptz not null default now());
+alter table public.support_msgs enable row level security;
+drop policy if exists sm_ins on public.support_msgs;
+create policy sm_ins on public.support_msgs for insert to authenticated with check (user_id=auth.uid());
+drop policy if exists sm_admin on public.support_msgs;
+create policy sm_admin on public.support_msgs for select to authenticated using (public.is_admin());
+
+create or replace function public.support_notify() returns trigger language plpgsql security definer set search_path='' as $$
+declare tok text:=private.setting('postmark_token'); rcpt text; who text;
+begin
+  who:=coalesce(nullif(new.name,''),new.email,'Someone')||case when coalesce(new.company,'')<>'' then ' ('||new.company||')' else '' end;
+  insert into public.notifications(audience,text,go) values('admin','Message from '||who||': "'||left(new.body,120)||case when length(new.body)>120 then '…' else '' end||'"','dash');
+  if tok is null then return new; end if;
+  for rcpt in select trim(x) from unnest(string_to_array(private.setting('admin_emails'),',')) x loop
+    perform net.http_post(url:='https://api.postmarkapp.com/email',
+      headers:=jsonb_build_object('Accept','application/json','Content-Type','application/json','X-Postmark-Server-Token',tok),
+      body:=jsonb_build_object('From',private.setting('mail_from'),'To',rcpt,'ReplyTo',coalesce(new.email,''),
+        'Subject','CTX message from '||who||case when coalesce(new.topic,'')<>'' then ' · '||new.topic else '' end,
+        'HtmlBody',private.email_html('Message from '||who, new.body, 'Open the Exchange', private.setting('app_url')||'#dash')
+          ||'<p style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#8a857a;text-align:center">Reply to this email to answer '||private.esc(coalesce(new.email,''))||' directly.</p>',
+        'TextBody','Message from '||who||' <'||coalesce(new.email,'')||E'>\n\n'||new.body||E'\n\nReply to this email to answer them directly.',
+        'MessageStream','outbound','Tag','support'));
+  end loop;
+  return new;
+end $$;
+drop trigger if exists support_notify on public.support_msgs;
+create trigger support_notify after insert on public.support_msgs for each row execute function public.support_notify();
+
+-- keep the email on file in step when someone changes their sign-in email
+create or replace function public.sync_profile_email() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if new.email is distinct from old.email then update public.profiles set email=new.email where user_id=new.id; end if;
+  return new;
+end $$;
+drop trigger if exists sync_profile_email on auth.users;
+create trigger sync_profile_email after update of email on auth.users for each row execute function public.sync_profile_email();
