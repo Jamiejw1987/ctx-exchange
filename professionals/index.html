@@ -621,7 +621,7 @@ const S={
     hl:["Won 3 new national items at Kroger in 2025","Cut trade spend 12% while growing volume","Managed two broker partners across the Midwest"],
     retailers:["Kroger","Costco","Target"],prefStage:"SME",prefStages:["START","CHAL","PEVC"],prefCats:["Salty snacks","Better-for-you","Protein snacks"],
     dream:"Northfield, protein snack brands, PE-backed scale-ups",kw:["Better-for-you","Protein","Chips","Club channel","Clean label","RTD"],hide:"Crunchly Foods",agreed:false},
-  interest:{},notes:[],touch:{},moves:[],claims:[],selfMoves:[],
+  interest:{},applied:{},applies:null,notes:[],touch:{},moves:[],claims:[],selfMoves:[],
   creqs:[
     {id:"q1",at:Date.now()-2*864e5,co:"Northfield Snack Co.",role:"National Account Manager, Kroger",base:"$130–150k + bonus",stage:"CHAL",hq:"Chicago, IL",why:"Equity for senior hires and a founder who came up through sales.",status:"new"},
     {id:"q2",at:Date.now()-5*864e5,co:"Harbor & Pine Confectionery",role:"National Account Director",base:"$150–170k + bonus",stage:"EST",hq:"Hershey, PA",why:"A 90-year-old brand relaunching with a new commercial team.",status:"new"}]
@@ -2083,23 +2083,100 @@ function coLive(k){return (k.roles||[]).filter(r=>(r.title||"").trim())}
 function coHiring(k){return coSigned(k)&&!k.anon&&coLive(k).length>0}
 function coFull(k){if(!k.self)return {sector:"Food",...k};const co=S.company;return {self:true,id:k.id,sector:co.sector||"Food",name:co.name,stage:co.stage,hq:co.hq,revenue:co.revenue,size:co.size,cats:co.cats,tagline:co.tagline,about:co.about,why:co.why,logo:co.logo,anon:co.anon,
   roles:co.roles.filter(r=>r.title.trim()).map(r=>({...r,base:r.base||({r1:"$130–150k + bonus",r2:"$210–240k + bonus + equity",r3:"$110–130k + bonus + equity",r4:"$165–185k + bonus"})[r.id]||""}))}}
+function coName(k){return k.anon?coDisplay({...k,anon:true}):k.name}
+function coMatchQ(k,live,q){q=(q||"").trim().toLowerCase();if(!q)return true;
+  const hay=[coName(k),k.tagline,k.about,k.anon?"":k.hq,STAGES[k.stage],SECTOR_LABEL[k.sector],...(k.cats||[]),...live.map(r=>[r.title,r.region,LEVELS[r.lvl]].join(" "))].join(" ").toLowerCase();
+  return q.split(/\s+/).every(w=>hay.includes(w))}
 function vCompanies(mode){mode=mode||"hiring";
   const p=S.cand,my=groupOf(p.lvl),hiring=mode==="hiring";
-  const list=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];const lvlHit=live.some(r=>r.lvl===p.lvl),grpHit=live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,live,lvlHit,grpHit,secHit:sectorFit(k.sector,p.sector||"Food")}})
+  const all=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];const lvlHit=live.some(r=>r.lvl===p.lvl),grpHit=live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,live,lvlHit,grpHit,secHit:sectorFit(k.sector,p.sector||"Food")}})
     .sort((a,b)=>(b.secHit-a.secHit)||(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit)||(b.live.length-a.live.length));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies. Register interest and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Register interest in any of them and they'll see your anonymous profile. ${hiring?"":`<a href="#companies">See only companies with live vacancies</a>.`}`}</p></div>
-  <div class="list" style="max-width:760px">${list.length?list.map(({k,live,lvlHit,grpHit,secHit})=>{const name=k.anon?coDisplay({...k,anon:true}):k.name,on=!!S.interest[k.id];return `<div class="item">
+  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies. Apply for a role or tell them you'd like to work there, and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Tell any of them you'd like to work there and they'll see your anonymous profile. <a href="#companies">See only companies with live vacancies</a>.`}</p></div>
+  <div style="max-width:760px;margin-bottom:14px"><input type="search" id="coQ" value="${esc(S.coQ||"")}" placeholder="${hiring?"Search by company, role, category or region":"Search by company, category, stage or region"}" aria-label="Search companies" autocomplete="off" style="width:100%"></div>
+  <div class="list" id="coList" style="max-width:760px"></div>`;
+  const draw=()=>{const q=S.coQ||"",list=all.filter(x=>coMatchQ(x.k,x.live,q)),box=$("#coList");
+    box.innerHTML=list.length?`${q.trim()?`<p class="muted small">${list.length} ${list.length===1?"company":"companies"} matching "${esc(q.trim())}"</p>`:""}`+list.map(({k,live,lvlHit,secHit})=>{const name=coName(k),on=!!S.interest[k.id],ap=(S.applied[k.id]||[]).filter(t=>live.some(r=>r.title===t));return `<div class="item">
     <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?CTX_LOGO:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]||""} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
       <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${live.length?(secHit&&lvlHit?`<span class="tag hit">Hiring your level</span>`:`<span class="tag hit">Hiring now</span>`):!hiring?`<span class="tag">Open to great talent</span>`:""}</div></div>
     <p style="font-weight:600">${esc(k.tagline)}</p>
-    ${live.map(r=>`<div class="openrole"><b>${esc(r.title)}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
+    ${live.map(r=>`<div class="openrole"><b>${esc(r.title)}${ap.includes(r.title)?` <span class="tag hit" style="margin-left:6px">Applied</span>`:""}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
     <details><summary class="small" style="cursor:pointer;font-weight:600">About ${k.anon?"this company":esc(k.name)} and why join</summary><div class="stack" style="gap:8px;margin-top:8px"><p class="small">${esc(k.about)}</p><p class="small"><b>Why join now.</b> ${esc(k.why)}</p><div class="row" style="gap:6px">${(k.cats||[]).map(c=>`<span class="tag brand">${esc(c)}</span>`).join("")}${k.size?`<span class="tag">${esc(k.size)}</span>`:""}</div></div></details>
-    <div class="row">${on?`<span class="tag hit">Interest registered</span><button class="btn quiet sm" data-int="${k.id}">Withdraw</button>`:`<button class="btn sm" data-int="${k.id}">I'm interested</button>`}</div>
-  </div>`}).join(""):`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`}</div>`;
-  app.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
-    if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();toast(`We'll show ${k.anon?"them":k.name} your anonymous profile`)}
-    save();const y=SC.scrollTop;vCompanies(mode);(SC.scrollTop=y)});
+    <div class="row">${live.length?`<button class="btn sm" data-apply="${k.id}">${ap.length?`Applied for ${ap.length} role${ap.length>1?"s":""} · change`:"Apply for a role"}</button>`:""}
+      ${on?`<span class="tag hit">Interested in working here</span><button class="btn quiet sm" data-int="${k.id}">Withdraw</button>`:`<button class="btn ${live.length?"line":""} sm" data-int="${k.id}">I'm interested in working for ${k.anon?"this company":esc(k.name)}</button>`}</div>
+  </div>`}).join(""):q.trim()?`<div class="empty"><h2>No companies match "${esc(q.trim())}"</h2><p class="muted">${hiring?"Nobody with a live vacancy matches that. Try every company on the Exchange, including those not advertising right now.":"Try a different word, like a category, a state or a stage."}</p>${hiring?`<a class="btn" href="#allcos">Search all companies</a>`:""}</div>`:`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`;
+    const keep=()=>{const y=SC.scrollTop;draw();SC.scrollTop=y};
+    box.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
+      if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();sendInterest(k,"","");toast(`${k.anon?"They'll":coName(k)+" will"} see your anonymous profile and get a notification`)}
+      save();keep()});
+    box.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>openApply(b.dataset.apply,keep))};
+  draw();
+  $("#coQ").addEventListener("input",e=>{S.coQ=e.target.value;draw()});
 }
+function openApply(id,rer){const k=coFull(COMPANIES.find(x=>x.id===id)),live=coLive(k),cur=S.applied[id]||[];
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="apF" role="dialog" aria-modal="true" aria-labelledby="apT" style="max-width:480px">
+    <div class="stack" style="gap:6px"><span class="kicker">Apply for a role</span><h2 id="apT">${esc(coName(k))}</h2><p class="muted small">Tick the role${live.length>1?"s":""} you'd like to be considered for. ${esc(coName(k))} gets a notification with your anonymous profile. Your name and employer stay hidden until you both agree to reveal.</p></div>
+    <div class="stack" style="gap:8px">${live.map((r,j)=>`<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer"><input type="checkbox" name="r" value="${j}" ${cur.includes(r.title)?"checked":""} style="margin-top:3px"><span><b>${esc(r.title)}</b><span class="muted small" style="display:block">${esc([r.region,r.base].filter(Boolean).join(" · "))}</span></span></label>`).join("")}</div>
+    <label class="field">A line for the hiring team <small>Optional. Leave out your name, employer and contact details.</small><textarea id="apN" style="min-height:60px" placeholder="Ten years selling into Kroger, and I'd love to build out the Midwest team."></textarea></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="apX">Cancel</button><button class="btn" type="submit">Send application</button></div></form></div>`;
+  $("#apX").onclick=()=>layer.innerHTML="";
+  $("#apF").onsubmit=e=>{e.preventDefault();const picked=[...$("#apF").querySelectorAll("input[name=r]:checked")].map(x=>live[+x.value].title);
+    const note=$("#apN").value.trim();if(note&&CONTACT_RE.test(note)){toast("Please leave out contact details. They're shared once you both agree to reveal.");return}
+    if(!picked.length&&!cur.length){toast("Tick the role you'd like to apply for");return}
+    const added=picked.filter(t=>!cur.includes(t));if(picked.length)S.applied[id]=picked;else delete S.applied[id];
+    added.forEach(t=>sendInterest(k,t,note));layer.innerHTML="";save();rer();
+    toast(added.length?`Applied. ${coName(k)} will see your anonymous profile and get a notification.`:picked.length?"Applications updated":"Application withdrawn")}}
+function standIn(){const p=S.cand;return POOL.find(x=>x.lvl===p.lvl&&x.region===p.region)||POOL.find(x=>x.lvl===p.lvl)||POOL[0]}
+function sendInterest(k,role,note){const p=S.cand,sc=k.self?standIn():null,ref=refOf(sc?sc.user:p.user),nm=coName(k).replace(/\.$/,"");
+  notify("admin",`${ref} (${LEVELS[p.lvl]||""}, ${p.region}) ${role?`applied for ${role} at ${nm}`:`is interested in working for ${nm}`}.${coSigned(k)?"":" Their terms aren't signed yet, so they'll need to sign to reveal."}`,"clients");
+  if(k.self){ensureApplies();const c=sc;
+    S.applies.unshift({id:"ap"+Date.now()+Math.random().toString(36).slice(2,5),cid:c.id,role:role||"",note:note||"",at:Date.now(),status:"new"});
+    notify("client",`${refOf(c.user)} ${role?`is interested in your ${role} role`:"is interested in working for you"}. ${termsOK()?"Reveal them to start chatting.":"Sign your terms to reveal them."}`,"applicants");
+    logEvent(`${refOf(c.user)} ${role?`applied for ${role}`:"registered interest in working for you"}`,"Professional")}}
+/* ---------- client: candidates interested in you ---------- */
+function applyRole(a){if(a.role)return a.role;const live=S.company.roles.filter(r=>r.title.trim());return a.slot!=null&&live[a.slot]?live[a.slot].title:""}
+function ensureApplies(){if(S.applies||TASTER==="client"&&!S.company.name)return;const co=S.company,used=new Set([...Object.keys(S.intros),...S.shortlist]),live=co.roles.filter(r=>r.title.trim());
+  const pick=(...ls)=>{for(const l of ls){const c=POOL.find(p=>p.lvl===l&&!used.has(p.id));if(c){used.add(c.id);return c}}return null};
+  S.applies=[];const add=(c,slot,hrs)=>{if(c)S.applies.push({id:"ap"+c.id,cid:c.id,role:"",slot,note:"",at:Date.now()-hrs*36e5,status:"new"})};
+  const r1=live[0],r2=live[2]||live[1];
+  add(pick(r1?r1.lvl:"NAM","KAM"),0,3);
+  add(pick(r2?r2.lvl:"BM","SBM"),live[2]?2:1,20);
+  add(pick("RSD","NSD","KAM","DIR"),null,44);
+  S.applies.slice().reverse().forEach(a=>{const c=POOL.find(p=>p.id===a.cid);S.notes.unshift({id:"n"+a.id,to:"client",t:`${refOf(c.user)} ${applyRole(a)?`is interested in your ${applyRole(a)} role`:"is interested in working for you"}`,go:"applicants",at:a.at,read:false})})}
+function vApplicants(){ensureApplies();const co=S.company,ok=termsOK();
+  if(!S.applies){app.innerHTML=`<div class="pagehead"><span class="kicker">Interested in you</span><h1>Candidates who want to work for you</h1></div><div class="empty"><h2>Add your company first</h2><p class="muted">Once your company profile is set up, professionals can find you, apply for your vacancies and tell you they'd like to work for you. They'll show up here.</p><a class="btn" href="#company">Set up your company</a></div>`;return}
+  const rows=S.applies.map(a=>({a:{...a,role:applyRole(a)},c:POOL.find(p=>p.id===a.cid)})).filter(x=>x.c).sort((x,y)=>(x.a.status==="new"?0:1)-(y.a.status==="new"?0:1)||y.a.at-x.a.at);
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Interested in you</span><h1>Candidates who want to work for you</h1><p class="muted">These professionals found ${esc(co.name||"you")} on the Exchange and either applied for one of your vacancies or said they'd like to work for you. You see their anonymous profile. ${ok?"Your terms are signed, so you can reveal any of them and start chatting.":"Sign your terms to reveal them and see their names, or chat anonymously through Jamie and Connor."}</p></div>
+  ${ok?"":`<div class="protect" style="max-width:760px;margin-bottom:14px">${lockIcon}<span><b>Terms not signed yet.</b> You can view their anonymous profiles. To reveal someone, sign your terms or chat through Jamie and Connor. <a href="#terms">Go to terms</a></span></div>`}
+  <div class="list" style="max-width:760px">${rows.length?rows.map(({a,c})=>{const x=score(c),i=S.intros[c.id],live=i&&i.stage>=2,named=live&&i.stage>=3;return `<div class="item">
+    <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(named?c.name:refOf(c.user))}</b><div class="muted small">${esc(LEVELS[c.lvl]||"")} · ${esc(c.region||"")}${c.yrs?` · ${c.yrs} years`:""} · ${fmt(new Date(a.at))}</div></div>
+      ${a.status==="new"?`<span class="tag new">New</span>`:a.status==="revealed"?`<span class="tag hit">${named?"Revealed":"Chatting through Consumer Talent"}</span>`:`<span class="tag">Not taken forward</span>`}</div>
+    <div class="openrole"><b>${a.role?`Applied for ${esc(a.role)}`:`Interested in working for ${esc(co.name||"you")}`}</b><span class="num">${esc(fitWord(x.score))}</span></div>
+    ${a.note?`<p class="small">"${esc(a.note)}"</p>`:""}
+    <div class="row"><button class="btn line sm" data-apv="${c.id}">View profile</button>
+      ${a.status==="revealed"&&live?`<a class="btn sm" href="#chats" data-apc="${c.id}">Open conversation</a>`:a.status==="declined"?"":`<button class="btn ${ok?"good":""} sm" data-apr="${a.id}">${ok?"Reveal and start chatting":"Reveal candidate"}</button><button class="btn quiet sm" data-apn="${a.id}">Not for us</button>`}</div>
+  </div>`}).join(""):`<div class="empty"><h2>No one yet</h2><p class="muted">When a professional applies for one of your vacancies or says they'd like to work for you, they'll appear here and you'll get a notification.</p></div>`}</div>`;
+  app.querySelectorAll("[data-apv]").forEach(b=>b.onclick=()=>openProfile(b.dataset.apv));
+  app.querySelectorAll("[data-apc]").forEach(b=>b.onclick=()=>{S.activeChat=b.dataset.apc});
+  app.querySelectorAll("[data-apr]").forEach(b=>b.onclick=()=>revealApplicant(b.dataset.apr));
+  app.querySelectorAll("[data-apn]").forEach(b=>b.onclick=()=>{const a=S.applies.find(x=>x.id===b.dataset.apn),c=POOL.find(p=>p.id===a.cid);a.role=applyRole(a);a.status="declined";
+    notify("cand",`${co.name||"A company"} isn't taking your ${a.role?a.role+" application":"interest"} forward right now. Your details were never shared.`,"allcos");
+    logEvent(`Didn't take forward ${refOf(c.user)}${a.role?" for "+a.role:""}`,co.contact);save();counts();vApplicants();toast("Marked as not for you. They won't see who you are.")});
+}
+function revealApplicant(aid){const a=S.applies.find(x=>x.id===aid),c=POOL.find(p=>p.id===a.cid);
+  if(!termsOK()){chaseTerms(c);openTermsGate(()=>revealApplicant(aid),refOf(c.user),()=>applicantChat(aid,true));return}
+  applicantChat(aid,false)}
+function applicantChat(aid,brokered){const a=S.applies.find(x=>x.id===aid);a.role=applyRole(a);const c=POOL.find(p=>p.id===a.cid),co=S.company;layer.innerHTML="";
+  let i=S.intros[c.id];
+  if(!i||i.stage<2){const r=co.roles.find(x=>x.title===a.role)||{};
+    i=S.intros[c.id]={brokered:!!brokered&&!termsOK(),stage:2,review:"approved",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),approvedAt:Date.now(),acceptedAt:Date.now(),msgs:[],role:a.role||"",base:r.base||"",note:a.note||"",by:co.contact||"Your team",fromApply:true};
+    i.msgs.push({f:"ct",t:`${refOf(c.user)} ${a.role?`applied for your ${a.role} role`:`told us they'd like to work for ${co.name||"you"}`} on the Exchange.${a.note?` Their note: "${a.note}"`:""} ${i.brokered?"Your terms aren't signed yet, so Jamie and Connor will pass messages between you anonymously until they are.":"Say hello and find a time to talk."} Jamie, Consumer Talent`,at:tnow()});
+    if(!S.shortlist.includes(c.id)){S.shortlist.push(c.id);S.decided[c.id]="keep"}}
+  if(!i.brokered)autoReveal(i,c,a.role?`${refOf(c.user)} applied for your ${a.role} role and your terms are signed.`:`${refOf(c.user)} asked to work for you and your terms are signed.`);
+  a.status="revealed";
+  logEvent(i.brokered?`Started a chat through Consumer Talent with ${refOf(c.user)}, who ${a.role?"applied for "+a.role:"registered interest"} (${i.ref})`:`Revealed ${refOf(c.user)} as ${c.name}, who ${a.role?"applied for "+a.role:"registered interest"} (${i.ref})`,co.contact);
+  notify("admin",i.brokered?`${co.name||"A client"} wants to chat with ${refOf(c.user)}, who ${a.role?"applied for "+a.role:"registered interest"}. Terms not signed, so it's going through you.`:`${co.name||"A client"} revealed ${c.name} (${refOf(c.user)}), who ${a.role?"applied for "+a.role:"registered interest"}. Protected until ${fmtDay(plus12(new Date()))}.`,i.brokered?"clients":"protect");
+  notify("cand",`${co.name||"A company"} would like to talk to you about ${a.role?"the "+a.role+" role":"working there"}`,"messages");
+  S.activeChat=c.id;save();counts();location.hash="chats";toast(i.brokered?"Chat opened through Jamie and Connor":`Revealed: ${c.name}`)}
 /* ---------------- company team ---------------- */
 const DEPTS=["Sales","Marketing","People and HR","Finance","Operations","E-commerce","Leadership"];
 const ROLES={"Admin":"Manages the account, team and terms","Hiring manager":"Browses, shortlists and chats for their roles","Viewer":"Can view shortlists and conversations"};
@@ -2322,15 +2399,15 @@ function vWaitlist(){const a=sbGet();
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={allcos:()=>vCompanies("all"),interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:()=>vCompanies("hiring"),introductions:vRequests,messages:vCandMsgs};
-const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
+const VIEWS={applicants:vApplicants,allcos:()=>vCompanies("all"),interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:()=>vCompanies("hiring"),introductions:vRequests,messages:vCandMsgs};
+const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["applicants","Interested in you","a"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]];
 const ADMIN_TABS=[["dash","Dashboard"],["interviews","Interviews"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
-const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
+const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["applicants","Interested in you","a"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
-function counts(){bellCount();
+function counts(){try{ensureApplies()}catch(e){}bellCount();
   const fy=completeness().pct===100;
-  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",a:(S.applies||[]).filter(x=>x.status==="new").length||"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
@@ -2342,9 +2419,9 @@ function render(){ensureCustom();
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,applied:S.applied,applies:S.applies,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.applied=d.applied||{};S.applies=d.applies||null;S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
