@@ -24,6 +24,7 @@ for a, b in [('href="icon-180.png"', 'href="../icon-180.png"'),
              ('href="icon-192.png"', 'href="../icon-192.png"'),
              ('serviceWorker.register("sw.js")', 'serviceWorker.register("../sw.js")'),
              ('<meta name="apple-mobile-web-app-title" content="CTX">', '<meta name="apple-mobile-web-app-title" content="CTX Exchange">'),
+             ('<title>Consumer Talent Exchange</title>', '<title>Sign in · Consumer Talent Exchange</title>\n<meta name="description" content="Sign in or join the Consumer Talent Exchange, the private exchange for senior food and drink talent.">\n<meta property="og:title" content="Consumer Talent Exchange">\n<meta property="og:description" content="Sign in or join the private exchange for senior food and drink talent. Now open.">\n<meta property="og:image" content="https://exchange.consumer-talent.com/og-image.png">\n<meta name="twitter:card" content="summary_large_image">'),
              ('\n<script>\nconst SC=', '\n<script src="../supabase-js.min.js"></script>\n<script>window.CTX_LIVE=true</script>\n<script>\nconst SC='),
              ('</script>\n\n<script>if("serviceWorker"', '</script>\n<script>\n' + open("live.js", encoding="utf8").read() + '\n</script>\n\n<script>if("serviceWorker"')]:
     assert live.count(a) == 1, a
