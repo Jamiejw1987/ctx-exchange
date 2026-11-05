@@ -137,3 +137,26 @@ end $$;
 -- removing a colleague must not be blocked by records they created
 alter table public.intros drop constraint if exists intros_created_by_fkey;
 alter table public.intros add constraint intros_created_by_fkey foreign key (created_by) references auth.users(id) on delete set null;
+
+-- ---------- teaser for companies waiting for approval: counts only, never profiles ----------
+create or replace function public.pool_teaser() returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare c uuid:=public.my_company(); d jsonb; lv text[]; rg text[]; res jsonb;
+begin
+  if c is null then return null; end if;
+  select data into d from public.companies where id=c;
+  lv:=array(select jsonb_array_elements_text(coalesce(d->'levels','[]'::jsonb)));
+  rg:=array(select jsonb_array_elements_text(coalesce(d->'regions','[]'::jsonb)));
+  with pool as (
+    select p.data->>'lvl' lvl, p.data->>'region' region from public.pro_public p
+    where not public.pro_hidden_from(p.user_id,c))
+  select jsonb_build_object(
+    'total',(select count(*) from pool),
+    'match',(select count(*) from pool where (cardinality(lv)=0 or lvl=any(lv)) and (cardinality(rg)=0 or region=any(rg) or 'National'=any(rg))),
+    'filtered',cardinality(lv)>0 or cardinality(rg)>0,
+    'levels',coalesce((select jsonb_object_agg(lvl,n) from (select lvl,count(*) n from pool where coalesce(lvl,'')<>'' group by lvl) x),'{}'::jsonb),
+    'regions',coalesce((select jsonb_object_agg(region,n) from (select region,count(*) n from pool where coalesce(region,'')<>'' group by region) y),'{}'::jsonb))
+  into res;
+  return res;
+end $$;
+revoke execute on function public.pool_teaser() from public, anon;
+grant execute on function public.pool_teaser() to authenticated;
