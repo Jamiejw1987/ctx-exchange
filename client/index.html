@@ -1064,21 +1064,21 @@ function startIntro(id,brokered){if(TASTER==="candidate"){openInvite("intro");re
   layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
     <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
       <p class="muted small">Consumer Talent reviews every request, usually within a few hours, then sends it to them. They'll see your company name and confirm whether they've interviewed with you before. You'll get a notification here at each step.</p></div>
-    <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")||`<option value="">${co.always?"Always looking for great talent":esc(LEVELS[c.lvl])}</option>`}</select></label>
+    <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")}<option value="" ${co.roles.some(r=>r.title.trim())?"":"selected"}>No specific vacancy, just a chat</option></select></label>
     <label class="field">Why them? <small>Optional. Shared with Consumer Talent, not with the professional.</small><textarea id="riW" style="min-height:70px" placeholder="Strong Kroger experience, and we need someone to lead the Midwest."></textarea></label>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="riX">Cancel</button><button class="btn" type="submit">Send request</button></div></form></div>`;
   $("#riX").onclick=()=>layer.innerHTML="";
-  $("#riF").onsubmit=e=>{e.preventDefault();const r=co.roles.find(x=>x.id===$("#riR").value)||def;
-    S.intros[id]={brokered:!!brokered&&!termsOK(),stage:1,review:"pending",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[],role:r.title||LEVELS[c.lvl],base:r.base||"",note:$("#riW").value.trim(),by:co.contact||"Your team"};
-    logEvent(`Requested introduction to ${refOf(c.user)} for ${S.intros[id].role} (${S.intros[id].ref})`,co.contact);
-    notify("admin",`${co.name||"A client"} wants an introduction to ${refOf(c.user)} (${LEVELS[c.lvl]}) for ${S.intros[id].role}`,"intros");
+  $("#riF").onsubmit=e=>{e.preventDefault();const r=$("#riR").value?(co.roles.find(x=>x.id===$("#riR").value)||def):{title:"",base:""};
+    S.intros[id]={brokered:!!brokered&&!termsOK(),stage:1,review:"pending",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[],role:r.title||"",base:r.title?r.base||"":"",note:$("#riW").value.trim(),by:co.contact||"Your team"};
+    logEvent(`Requested introduction to ${refOf(c.user)} for ${S.intros[id].role||"a chat"} (${S.intros[id].ref})`,co.contact);
+    notify("admin",`${co.name||"A client"} wants an introduction to ${refOf(c.user)} (${LEVELS[c.lvl]}) for ${S.intros[id].role||"a chat (no specific vacancy)"}`,"intros");
     layer.innerHTML="";save();counts();if(view()==="shortlist")vShortlist();toast("Request sent to Consumer Talent for review");
     if(TASTER==="client")demoProgress(id)};
 }
 /* client taster: there's no team on the other end, so play the next steps out for the demo */
 function demoProgress(id){const c=POOL.find(p=>p.id===id);const re=()=>{save();counts();const v=view();if(v==="shortlist")vShortlist();else if(v==="chats")vChats()};
   setTimeout(()=>{const i=S.intros[id];if(!i||i.review!=="pending")return;i.review="approved";i.approvedAt=Date.now();logEvent(`Consumer Talent approved the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");notify("client",`Consumer Talent approved your introduction to ${refOf(c.user)}. We've sent it to them.`,"shortlist");toast("Consumer Talent approved your request (demo)");re()},3500);
-  setTimeout(()=>{const i=S.intros[id];if(!i||i.stage>=2)return;linkAccept({intro:id});i.msgs.push({f:"them",t:`Hi, thanks for reaching out. I'd love to hear more about the ${i.role} role and what the next 12 months look like.`,at:tnow()});toast(`${refOf(c.user)} accepted. Your chat is open in Conversations (demo).`);re()},8000)}
+  setTimeout(()=>{const i=S.intros[id];if(!i||i.stage>=2)return;linkAccept({intro:id});i.msgs.push({f:"them",t:i.role?`Hi, thanks for reaching out. I'd love to hear more about the ${i.role} role and what the next 12 months look like.`:`Hi, thanks for reaching out. Happy to have a chat. What's on your mind for the team?`,at:tnow()});toast(`${refOf(c.user)} accepted. Your chat is open in Conversations (demo).`);re()},8000)}
 function currentCo(c){const n=(c.career||[]).find(x=>x.now);return n?n.co:"Current employer on file"}
 function vIntros(){
   const co=S.company,rows=Object.entries(S.intros).filter(([k,i])=>i.review&&POOL.some(p=>p.id===k)).map(([k,i])=>({k,i,c:POOL.find(p=>p.id===k)})).sort((a,b)=>(a.i.review==="pending"?0:1)-(b.i.review==="pending"?0:1)||b.i.at-a.i.at);
@@ -1086,7 +1086,7 @@ function vIntros(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Introductions</span><h1>Introduction requests</h1><p class="muted">Every request from a client comes here first. Approve it and the professional gets a notification in the app. Decline it and the client is told, with your reason.</p></div>
   <div class="list" style="max-width:760px">${rows.length?rows.map(({k,i,c})=>{const st=i.review==="approved"&&i.stage>=2?"accepted":i.review;return `<div class="item">
     <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(co.name||"Client")} → ${esc(c.name)}</b><div class="muted small">${esc(i.ref)} · requested by ${esc(i.by||co.contact)} · ${fmt(new Date(i.at))}</div></div><span class="tag ${lab[st][1]}">${lab[st][0]}</span></div>
-    <div class="rq"><span class="lbl">Role</span><b>${esc(i.role)}${i.base?` · ${esc(i.base)}`:""}</b>
+    <div class="rq"><span class="lbl">Role</span><b>${i.role?esc(i.role)+(i.base?` · ${esc(i.base)}`:""):"No specific vacancy, just a chat"}</b>
       <span class="lbl" style="margin-top:4px">Professional <span class="tag" style="font-size:10.5px;text-transform:none;letter-spacing:0;margin-left:4px">Only Consumer Talent sees the name</span></span><b style="font-size:15px">${esc(c.name)}</b><span>${esc(LEVELS[c.lvl])} · ${esc(currentCo(c))} · ${esc(c.base||c.region)}</span><span class="muted">${esc(c.band)} · ${esc(c.headline)}</span>
       <div><button type="button" class="btn line sm" data-full="${k}">View full profile</button></div>
       ${blockedFor(c)?`<span style="color:var(--bad);margin-top:6px"><b>Works at ${esc(co.name)} or an associated company.</b> Don't approve this request.</span>`:""}
@@ -1107,7 +1107,7 @@ function vIntros(){
     const qid="qi_"+k;S.creqs=S.creqs.filter(r=>r.id!==qid&&!(r.id==="q1"&&r.status==="new"));S.creqs.unshift({id:qid,at:Date.now(),intro:k,co:co.name||"A food brand",role:i.role,base:i.base||"",stage:co.stage,hq:co.hq,why:i.ctNote||co.why||co.tagline,status:"new"});
     logEvent(`Consumer Talent approved the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");
     notify("client",`Consumer Talent approved your introduction to ${refOf(c.user)}. We've sent it to them.`,"shortlist");
-    notify("cand",`${co.anon?coDisplay(co):co.name||"A company"} would like to speak with you about ${i.role}`,"introductions");
+    notify("cand",`${co.anon?coDisplay(co):co.name||"A company"} would like ${i.role?"to speak with you about "+i.role:"to have a chat with you"}`,"introductions");
     save();counts();vIntros();toast("Approved. The professional has been notified.")});
   app.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const k=b.dataset.dec,i=S.intros[k],c=POOL.find(p=>p.id===k);i.review="declined";i.ctNote=note(k);
     logEvent(`Consumer Talent declined the introduction to ${refOf(c.user)} (${i.ref})`,"Consumer Talent");
@@ -1635,7 +1635,7 @@ function priorCheck(rid,onAccept){const r=S.creqs.find(x=>x.id===rid),co=reqCo(r
   const OUT=["I was offered the role","I wasn't taken forward","I withdrew","Still in process","Other"];
   const draw=()=>{const yes=F.pq1==="Yes";
     layer.innerHTML=`<div class="scrim"><form class="modal" id="pcF" role="dialog" aria-modal="true" aria-labelledby="pcT" style="max-width:480px" novalidate>
-      <div class="row" style="flex-wrap:nowrap;gap:12px">${coLogo(co)}<div class="stack" style="gap:2px"><span class="kicker">Accept request to chat</span><h2 id="pcT" style="margin:0">${esc(co.name)}</h2><span class="muted small">${esc(r.role)}${r.base?" · "+esc(r.base):""}</span></div></div>
+      <div class="row" style="flex-wrap:nowrap;gap:12px">${coLogo(co)}<div class="stack" style="gap:2px"><span class="kicker">Accept request to chat</span><h2 id="pcT" style="margin:0">${esc(co.name)}</h2>${r.role?`<span class="muted small">${esc(r.role)}${r.base?" · "+esc(r.base):""}</span>`:`<span class="muted small">Would like to have a chat</span>`}</div></div>
       <p class="muted small">A quick check before your chat opens. Your answers go on the introduction record.</p>
       <div class="field">Have you interviewed with ${esc(co.name)} in the last six months?${picks("pq1",["Yes","No"],F.pq1,{radio:true})}</div>
       ${yes?`<label class="field">Who did you interview with? <small>Their name or job title</small><input type="text" id="pcWho" value="${esc(F.who||"")}" placeholder="e.g. Sarah Lee, Head of Sales"></label>
@@ -1662,11 +1662,11 @@ function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:
 function vRequests(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
   <div class="list" style="max-width:760px">${S.creqs.filter(r=>!proBlocks(r.co)).map(r=>{const co=reqCo(r);return `<div class="item">
-    <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
+    <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b>${r.role?`<div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div>`:""}</div></div>
       ${r.status==="new"?`<span class="tag new">New request</span>`:r.status==="yes"?`<span class="tag hit">You accepted</span>`:`<span class="tag">Declined</span>`}</div>
     ${r.prior?`<p class="muted small">${r.prior.prior==="Yes"?`You told us you interviewed with them in the last six months${r.prior.who?", with "+esc(r.prior.who):""}${r.prior.outcome?" ("+esc(r.prior.outcome)+")":""}.`:"You confirmed you haven't interviewed with them in the last six months."}</p>`:""}
-    <div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>
-    <p class="small">${esc(r.why)}</p>
+    ${r.role?`<div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>`:`<p class="small"><b>${esc(co.name)}</b> would like to have a chat with you.</p>`}
+    ${r.role?`<p class="small">${esc(r.why)}</p>`:""}
     ${co.anon?`<div class="protect">${lockIcon}<span>This company has chosen to stay anonymous until you both agree to reveal.</span></div>`:""}
     ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept</button><button class="btn line" data-no="${r.id}">Decline</button></div>`:
       r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
@@ -1674,7 +1674,7 @@ function vRequests(){
   const acceptReq=yid=>{const r=S.creqs.find(x=>x.id===yid);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
     const ii=r.intro?S.intros[r.intro]:null,named=termsOK()&&!(ii&&ii.brokered);
     S.cthreads[r.id]=[{f:"ct",t:named?`You accepted ${co.name}'s request to chat. Their terms are signed, so they can now see your name, and you're talking directly with ${co.name}. Everything here is logged on the introduction record. Jamie, Consumer Talent`:`You accepted ${coDisplay(co)}'s request to chat. Both sides stay anonymous until their terms are signed, and Jamie and Connor are looking after the conversation. Jamie, Consumer Talent`,at:tnow()},
-      {f:"them",t:`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`,at:tnow()},
+      {f:"them",t:r.role?`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`:`Thanks for accepting. We'd love to have a chat about what we're building and where you might fit. Would a 30-minute video call work?`,at:tnow()},
       {f:"iv",fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact,opts:nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);return d.toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}),booked:null}];
     S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")};
   app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.yes,acceptReq));
@@ -1688,7 +1688,7 @@ function vCandMsgs(){
   const r=S.creqs.find(x=>x.id===S.cthread),co=reqCo(r),msgs=S.cthreads[r.id],p=S.cand;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Messages</span><h1>Chats and interviews</h1><p class="muted">You're shown as <b>${esc(p.user)}</b>. Your name, employer and contact details stay hidden until you agree to reveal.</p></div>
   <div class="chat"><div class="threads">${ids.map(k=>{const rr=S.creqs.find(x=>x.id===k),cc=reqCo(rr);return `<button class="thr ${k===r.id?"on":""}" data-t="${k}"><b>${esc(coDisplay(cc))}</b><div class="muted small">${esc(rr.role)}</div></button>`}).join("")}</div>
-    <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${esc(r.role)} · ${esc(r.base)}</div></div></div>
+    <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${r.role?esc(r.role)+(r.base?" · "+esc(r.base):""):"A chat, no specific vacancy"}</div></div></div>
       <div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Contact details and links are blocked until you both agree to reveal. ${esc(p.current||"Your employer")} can never see your profile.</span></div>
       <div class="row"><button class="btn line sm" id="bFb">${r.fb?"Edit feedback":"Give feedback"}</button></div></div>
       <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="rv"?rvCard(m,k,co):m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar.`:"Pick the time that suits you:"}</span>${m.booked?"":`<div class="row">${m.opts.map((o,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(o)}</button>`).join("")}</div><span class="muted small">None of these work? Just reply and say when you're free.</span>`}</div>`
@@ -2111,7 +2111,7 @@ function vProtect(){
       <p class="small">${esc(r.co)} ${esc(r.ev.map(e=>e.what.toLowerCase()).join(", then ").replace(/ref ctx-\\d+/g,"them"))}, last on ${fmtDay(new Date(r.last))}.</p>
       <div class="row">${S.claims.some(x=>x.pid===r.pid&&x.co===r.co)?`<span class="tag hit">Claim logged</span>`:""}<button class="btn sm" data-claim="${esc(r.pid)}|${esc(r.co)}" data-mv="${esc(m.name)}|${esc(m.co)}">${S.claims.some(x=>x.pid===r.pid&&x.co===r.co)?"View claim":"Draft fee claim"}</button></div></div>`).join("")).join("")}</div>`:""}
     ${S.selfMoves.length?`<div class="card stack"><h2>Reported by professionals</h2><p class="muted small">Moves members told us about through check-ins or when pausing their profile, matched against companies that asked to meet them.</p>${S.selfMoves.map(m=>{const asked=S.creqs.filter(r=>sameCo(r.co,m.co));return `<div class="item" ${asked.length?`style="border-color:rgba(255,122,110,.5)"`:""}><div class="line1"><div><b>${esc(m.ref)} → ${esc(m.co)}</b><div class="muted small">${esc(m.title||"New role")}${m.date?` · from ${esc(m.date)}`:""} · reported ${fmtDay(new Date(m.at))}</div></div><span class="tag ${asked.length||m.viaExchange?"new":"hit"}">${asked.length||m.viaExchange?"Check for a fee":"No link found"}</span></div>
-      ${asked.length?`<ul class="evl">${asked.map(r=>`<li><span>${r.at?fmtDay(new Date(r.at)):"Earlier"}</span><span>${esc(r.co)} requested an introduction for ${esc(r.role)}${r.status==="yes"?", which they accepted":r.status==="no"?", which they declined":""}</span></li>`).join("")}</ul>`:""}
+      ${asked.length?`<ul class="evl">${asked.map(r=>`<li><span>${r.at?fmtDay(new Date(r.at)):"Earlier"}</span><span>${esc(r.co)} requested ${r.role?"an introduction for "+esc(r.role):"a chat"}${r.status==="yes"?", which they accepted":r.status==="no"?", which they declined":""}</span></li>`).join("")}</ul>`:""}
       ${m.viaExchange?`<p class="small">They say they met this company through the Exchange.</p>`:""}</div>`}).join("")}</div>`:""}
     <form class="card stack" id="cmF"><h2>Check a move</h2><p class="muted small">Heard someone's moved? Check it against everything on the Exchange.</p>
       <div class="grid2"><label class="field">Person's name<input type="text" id="cm_n" list="cmNames" autocomplete="off" placeholder="Diana Hale"></label><label class="field">Company they've joined<input type="text" id="cm_c" list="cmCos" autocomplete="off" placeholder="Harbor & Pine Confectionery"></label></div>
