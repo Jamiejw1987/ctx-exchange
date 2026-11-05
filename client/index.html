@@ -533,7 +533,11 @@ const STAGE_PHRASE={START:"start-up",CHAL:"challenger brand",PEVC:"PE/VC-backed 
 const REGIONS=["National","Northeast","Midwest","South","Southeast","Southwest","West","Mountain West","Canada","Mexico"];
 const RETAIL=["Costco","Kroger","Walmart","Target","Sprouts","Whole Foods","Albertsons","Publix","Sam's Club","CVS","Convenience","E-commerce"];
 const CATS=["Salty snacks","Confectionery","Ambient & pantry","Better-for-you","Protein snacks","Bakery","RTD coffee & tea","Energy & functional","Sparkling & still water","Craft beer","Spirits","Wine","Non-alcoholic","Juice & smoothies"];
-const BANDS=[...new Set(DATA.map(p=>p.band))].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+const BANDS=["$70–90k","$90–120k","$120–150k","$150–200k","$200–250k","$250–300k","$300–350k","$350–500k","$500k+"];
+const BAND_LO=[70,90,120,150,200,250,300,350,500];
+const bandNums=b=>(String(b).match(/\d+/g)||[]).map(Number);
+function toBand(b){if(BANDS.includes(b))return b;const n=bandNums(b);if(!n.length)return b;const mid=n.length>1?(n[0]+n[1])/2:n[0];let k=0;BAND_LO.forEach((lo,i)=>{if(mid>=lo)k=i});return BANDS[k]}
+DATA.forEach(p=>{p.band=toBand(p.band)});
 DATA.forEach((p,i)=>{p.user="Ref CTX-"+(1201+i*7)});
 [311,402,517].forEach(k=>{const p=DATA[k];if(p&&p.career&&p.career.length)p.career=p.career.map(x=>x.now?{...x,co:"Northfield Snack Co."}:x)});
 const DRINK_CATS=["RTD coffee & tea","Energy & functional","Sparkling & still water","Craft beer","Spirits","Wine","Non-alcoholic","Juice & smoothies"];
@@ -611,7 +615,7 @@ const S={
     {id:"l8",type:"client",name:"Erin Kowalski",email:"erin@sunridgepantry.com",phone:"+1 303 555 0120",detail:"CCO · Sunridge Pantry Foods",company:"Sunridge Pantry Foods",source:"LinkedIn post",at:"Fri",status:3,sent:"Fri, 09:12"}],
   decided:{},shortlist:[],intros:{},terms:null,log:[],filter:"all",
   alerts:{email:true,sms:true,freq:"instant",min:70,email_to:"talent@northfieldsnacks.com",phone:"+1 312 555 0148"},feed:[],
-  cand:{sector:"Food",user:"KrogerNAM_Columbus",current:"Crunchly Foods",lvl:"NAM",region:"Midwest",yrs:11,team:0,band:"$90–130k",notice:"2 months notice",open:"Open to the right move",
+  cand:{sector:"Food",user:"KrogerNAM_Columbus",current:"Crunchly Foods",lvl:"NAM",region:"Midwest",yrs:11,team:0,band:"$90–120k",notice:"2 months notice",open:"Open to the right move",
     headline:"Grew a $25M Kroger and Meijer book by 38% in two years",
     summary:"National Account Manager at Crunchly Foods covering Kroger and Meijer. I lead joint business planning, trade spend and new item launches for a better-for-you salty snack portfolio.",
     hl:["Won 3 new national items at Kroger in 2025","Cut trade spend 12% while growing volume","Managed two broker partners across the Midwest"],
@@ -1349,7 +1353,7 @@ function reportOffer(id){
   const pct=v=>v>=200000?T.t3:v>=100000?T.t2:T.t1;
   layer.innerHTML=`<div class="scrim"><form class="modal" id="ofF" role="dialog" aria-modal="true" aria-labelledby="ofT">
     <div class="stack" style="gap:4px"><span class="kicker">Offer</span><h2 id="ofT">Report an offer to ${esc(c.name)}</h2><p class="muted small">Your terms ask you to tell us within ${T===STD?7:7} days of an offer being accepted. Reporting here covers it.</p></div>
-    <div class="grid2"><label class="field">Total first-year package (USD)<input type="number" id="ofV" min="0" step="1000" value="${parseInt(c.band.replace(/[^0-9]/g,"").slice(0,3))*1000+15000}"></label><label class="field">Start date<input type="text" id="ofS" value="${fmtDay(new Date(Date.now()+42*864e5))}"></label></div>
+    <div class="grid2"><label class="field">Total first-year package (USD)<input type="number" id="ofV" min="0" step="1000" value="${(bandNums(c.band)[0]||100)*1000+15000}"></label><label class="field">Start date<input type="text" id="ofS" value="${fmtDay(new Date(Date.now()+42*864e5))}"></label></div>
     <div class="card" id="ofFee" style="background:var(--soft)"></div>
     <div class="row"><button class="btn" type="submit">Confirm accepted offer</button><button class="btn line" type="button" id="ofX">Cancel</button></div></form></div>`;
   const upd=()=>{const v=+$("#ofV").value||0;$("#ofFee").innerHTML=`<div class="muted small">Placement fee at ${pct(v)}% ${S.deal.status==="agreed"?"(your agreed terms)":"(standard terms)"}</div><div class="num" style="font-family:var(--display);font-size:30px;font-weight:600">$${Math.round(v*pct(v)/100).toLocaleString()}</div><div class="muted small">Invoice payable within ${T.pay} days. Free replacement if they leave within ${T.repl} weeks.</div>`};
@@ -1628,7 +1632,7 @@ function vProfile(){
           <label class="field">Region<select id="p_region">${REGIONS.map(g=>`<option ${g===p.region?"selected":""}>${g}</option>`).join("")}</select></label>
           <label class="field">Years in the industry<input type="number" min="0" max="50" id="p_yrs" value="${esc(p.yrs)}"></label>
           <label class="field">People you manage<input type="number" min="0" max="500" id="p_team" value="${esc(p.team)}"></label>
-          <label class="field">Base salary<select id="p_band">${BANDS.map(b=>`<option ${b===p.band?"selected":""}>${b}</option>`).join("")}</select></label>
+          <label class="field">Base salary<select id="p_band">${BANDS.map(b=>`<option ${b===toBand(p.band)?"selected":""}>${b}</option>`).join("")}</select></label>
           <label class="field">Availability<select id="p_notice">${["Available now","1 month notice","2 months notice","3 months notice"].map(b=>`<option ${b===p.notice?"selected":""}>${b}</option>`).join("")}</select></label>
         </div>
         <div class="field">Where you are${picks("open",["Actively looking","Open to the right move","Quietly exploring"],p.open,{radio:true})}</div>
@@ -1913,7 +1917,7 @@ function seedDeals(){
   }
   return SEED=out;
 }
-function pkg(c){const n=c.band.match(/\d+/g).map(Number);return Math.round(((n[0]+n[1])/2)*1000*1.12/1000)*1000}
+function pkg(c){const n=bandNums(c.band);const mid=n.length>1?(n[0]+n[1])/2:(n[0]||100)*1.1;return Math.round(mid*1000*1.12/1000)*1000}
 function rateFor(co,dealId,v){const d=dealId?S.dealReqs.find(x=>x.id===dealId):null;const T=co===S.company.name?tiers():(d&&d.status==="agreed"?d.final:STD);return {pct:v>=200000?T.t3:v>=100000?T.t2:T.t1,custom:T!==STD}}
 function allDeals(){
   const live=Object.entries(S.intros).filter(([k,i])=>i.stage>=1&&POOL.some(p=>p.id===k)).map(([k,i])=>{const c=POOL.find(p=>p.id===k);
@@ -2330,7 +2334,7 @@ function render(){ensureCustom();
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
 function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
