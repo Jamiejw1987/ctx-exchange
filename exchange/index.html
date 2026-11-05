@@ -3128,6 +3128,7 @@ VIEWS.auth=vAuth;
 
 /* ---------- sign in / join ---------- */
 // arriving from the landing page: open in Join mode, with what they already typed
+try{const q=new URLSearchParams(location.search),th=q.get("confirm"),ty=q.get("type");if(th&&["signup","recovery","magiclink","email_change","invite"].includes(ty)){L.confirm={th,ty};history.replaceState(null,"",location.pathname)}}catch(e){}
 try{const q=new URLSearchParams(location.search),inv=q.get("invite");if(inv&&/^[0-9a-f-]{36}$/i.test(inv)){L.inviteId=inv;L.joinIntent=true;L.authMode="up";L.authSide="client";history.replaceState(null,"",location.pathname)}}catch(e){}
 try{const q=new URLSearchParams(location.search),j=q.get("join");if(j){L.joinIntent=true;L.authMode="up";L.authSide=j==="company"?"client":"pro";history.replaceState(null,"",location.pathname+location.hash)}
   const pf=JSON.parse(localStorage.getItem("ctx_join")||"null");if(pf){L.joinIntent=true;L.prefill=pf;L.authMode="up";L.authSide=pf.side==="client"?"client":"pro"}}catch(e){}
@@ -3283,6 +3284,21 @@ contactUs=function(topic="Question",preset=""){const back=layer.innerHTML;
     if(error){b.disabled=false;const x=$("#cuEr");x.textContent="That didn't send. Please try again, or email jamie@consumer-talent.com.";x.style.display="block";return}
     layer.innerHTML="";toast("Sent. Jamie or Connor will reply by email.")}};
 
+function authConfirm(){const c=L.confirm,ty=c.ty;$("#tabs").innerHTML="";
+  const T={signup:["Confirm your email","Tap below to confirm your email and finish setting up your account.","Confirm my email"],
+    recovery:["Reset your password","Tap below to choose a new password.","Choose a new password"],
+    magiclink:["Sign in","Tap below to sign in to the Exchange.","Sign in"],
+    email_change:["Confirm your new email","Tap below to confirm the change to your email address.","Confirm new email"],
+    invite:["Accept your invite","Tap below to continue.","Continue"]}[ty];
+  app.innerHTML=`<div style="max-width:460px;margin:20px auto" class="card stack"><span class="kicker">Consumer Talent Exchange</span><h1 style="margin:0">${T[0]}</h1><p class="muted">${T[1]}</p>
+    <p class="small" id="cfErr" style="color:var(--bad);display:none"></p><button class="btn" id="cfGo" style="justify-content:center">${T[2]}</button></div>`;
+  $("#cfGo").onclick=async()=>{const b=$("#cfGo");b.disabled=true;b.textContent="One moment...";
+    const {data,error}=await sb.auth.verifyOtp({token_hash:c.th,type:ty});L.confirm=null;
+    if(error){L.authMode="in";L.linkErr=/expired|invalid|not found/i.test(error.message)?"That link has expired or was already used. Sign in, or tap Forgot your password to get a new one.":error.message;return vAuth()}
+    if(ty==="recovery"){L.recovering=true;return authNewPw()}
+    if(ty==="email_change"){toast("Email confirmed. If you're asked to confirm on your other address too, do that as well.")}
+    const s2=data.session||(await sb.auth.getSession()).data.session;if(s2)await start(s2);else{L.authMode="in";vAuth()}}}
+
 /* ---------- boot ---------- */
 async function start(session){L.user=session.user;L.token=session.access_token;
   try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(tz&&(session.user.user_metadata||{}).tz!==tz){sb.from("profiles").update({tz}).eq("user_id",session.user.id).then(()=>{})}}catch(e){}
@@ -3332,6 +3348,7 @@ try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("error_descript
 sb.auth.onAuthStateChange((ev,session)=>{if(session)L.token=session.access_token;if(ev==="PASSWORD_RECOVERY"){L.recovering=true;setTimeout(authNewPw,0)}if(ev==="SIGNED_OUT"){L.role=null;vAuth()}});
 (async()=>{if(L.inviteId){try{const {data:inf}=await sb.rpc("invite_info",{p_inv:L.inviteId});if(inf&&inf.company)L.invite=inf;else{L.authMode="in";L.linkErr="This invite has already been used or was cancelled. If you've already joined, sign in. Otherwise ask your colleague to send a new one."}}catch(e){}}
   const {data}=await sb.auth.getSession();if(location.hash.includes("access_token")||location.hash.includes("error="))history.replaceState(null,"",location.pathname);
+  if(L.confirm)return authConfirm();
   if(L.recovering&&data.session)return authNewPw();
   if(data.session&&L.joinIntent)return authSwitch(data.session);
   if(data.session)await start(data.session);else vAuth()})();
