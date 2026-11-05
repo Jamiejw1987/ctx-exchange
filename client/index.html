@@ -507,7 +507,10 @@ const LEVELS={CCO:"Chief Commercial Officer",VPS:"VP of Sales",VPNA:"VP of Natio
 const GROUPS=[["Sales leadership",["CCO","VPS","VPNA","NAD","KAM","NAM"]],["Field sales",["RSD","RSM","MM","SM"]],["Marketing & brand",["CMO","VPM","MD","BD","BM"]],["Digital & e-commerce",["VPD","HEC"]],["Insights & category",["VPCI","CID","CATD","CATM"]],["Finance & operations",["VPFPA","VPO","OD"]]];
 const LV=GROUPS.flatMap(g=>g[1]);
 const groupOf=l=>GROUPS.find(g=>g[1].includes(l))[0];
-const STAGES={SME:"Funded scale-up",EST:"Established brand"};
+const STAGES={START:"Start-up",CHAL:"Challenger / emerging",EST:"Established",PUB:"Publicly traded",SME:"Funded scale-up"};
+const CO_STAGES=["START","CHAL","EST","PUB"];
+const stageFam=x=>(x==="START"||x==="CHAL"||x==="SME")?"SME":"EST";
+const STAGE_PHRASE={START:"start-up",CHAL:"challenger brand",EST:"established brand",PUB:"publicly traded company",SME:"funded scale-up"};
 const REGIONS=["National","Northeast","Midwest","South","Southeast","Southwest","West","Mountain West","Canada","Mexico"];
 const RETAIL=["Costco","Kroger","Walmart","Target","Sprouts","Whole Foods","Albertsons","Publix","Sam's Club","CVS","Convenience","E-commerce"];
 const CATS=["Salty snacks","Confectionery","Ambient & pantry","Better-for-you","Protein snacks","Bakery","RTD coffee & tea","Energy & functional","Sparkling & still water","Craft beer","Spirits","Wine","Non-alcoholic","Juice & smoothies"];
@@ -560,7 +563,7 @@ function levelPicks(group,selected){return `<div class="stack" style="gap:10px">
 
 const S={
   mode:"client",
-  company:{name:"Northfield Snack Co.",site:"northfieldsnacks.com",stage:"SME",cats:["Salty snacks","Better-for-you","Protein snacks"],hq:"Chicago, IL",revenue:"$40–60M",size:"85 people",
+  company:{name:"Northfield Snack Co.",site:"northfieldsnacks.com",stage:"CHAL",cats:["Salty snacks","Better-for-you","Protein snacks"],hq:"Chicago, IL",revenue:"$40–60M",size:"85 people",
     levels:["NAM","KAM","NAD","VPS","VPNA","BM","BD","HEC"],regions:["National","Midwest","Northeast"],retailers:["Costco","Kroger","Sprouts","Target"],
     roles:[{id:"r1",title:"National Account Manager, Kroger",lvl:"NAM",region:"Midwest"},{id:"r2",title:"VP of Sales",lvl:"VPS",region:"National"},{id:"r3",title:"Brand Manager, Protein Crisps",lvl:"BM",region:"National"},{id:"r4",title:"Head of E-commerce",lvl:"HEC",region:"National"}],
     tagline:"High-protein baked crisps, now in 9,000 doors.",
@@ -591,7 +594,7 @@ const S={
     dream:"Northfield, protein snack brands, PE-backed scale-ups",kw:["Better-for-you","Protein","Chips","Club channel","Clean label","RTD"],hide:"Crunchly Foods",agreed:false},
   interest:{},notes:[],touch:{},moves:[],claims:[],selfMoves:[],
   creqs:[
-    {id:"q1",at:Date.now()-2*864e5,co:"Northfield Snack Co.",role:"National Account Manager, Kroger",base:"$130–150k + bonus",stage:"SME",hq:"Chicago, IL",why:"Equity for senior hires and a founder who came up through sales.",status:"new"},
+    {id:"q1",at:Date.now()-2*864e5,co:"Northfield Snack Co.",role:"National Account Manager, Kroger",base:"$130–150k + bonus",stage:"CHAL",hq:"Chicago, IL",why:"Equity for senior hires and a founder who came up through sales.",status:"new"},
     {id:"q2",at:Date.now()-5*864e5,co:"Harbor & Pine Confectionery",role:"National Account Director",base:"$150–170k + bonus",stage:"EST",hq:"Hershey, PA",why:"A 90-year-old brand relaunching with a new commercial team.",status:"new"}]
 };
 
@@ -675,11 +678,11 @@ function score(c){
   const hits=c.retailers.filter(r=>co.retailers.includes(r));
   s+=Math.min(hits.length*10,25);if(hits.length)why.push(`Sells into ${hits.join(" and ")}`);
   if(!sectorFit(c.sector,co.sector||"Food")){s-=60}else if(c.sector===co.sector||c.sector==="Both"){s+=8;if(co.sector!=="Food"||c.sector!=="Food")why.push(`${SECTOR_LABEL[c.sector]} experience`)}
-  if(c.stage===co.stage){s+=10}
+  if(c.stage===stageFam(co.stage)){s+=10}
   const coReg=co.regions.map(x=>STATEREG[x]||x);
   if(c.region==="National"||coReg.includes(c.region)){s+=12;if(c.region!=="National")why.push(`Based in your ${c.region} territory`)}
   const coS=co.cats.map(x=>x.toLowerCase()),near=a=>b=>{a=a.toLowerCase();return b===a||b.includes(a.split(" ")[0])||a.includes(b.split(" ")[0])};
-  const prefFit=(c.prefStage==="ANY"||c.prefStage===co.stage)&&[...c.prefCats,...(c.cats||[])].some(x=>coS.some(near(x)));
+  const prefFit=(c.prefStage==="ANY"||c.prefStage===stageFam(co.stage))&&[...c.prefCats,...(c.cats||[])].some(x=>coS.some(near(x)));
   if(prefFit){s+=18;why.push("Wants to work for companies like yours")}
   const ck=(co.kw||[]).map(k=>k.toLowerCase());const kwHits=(c.kw||[]).filter(k=>ck.includes(k.toLowerCase()));
   if(kwHits.length){s+=Math.min(kwHits.length*6,18);why.push(`Shares your focus: ${kwHits.slice(0,3).join(", ")}`)}
@@ -738,7 +741,7 @@ function vCompany(){
           <label class="field">Revenue<select id="f_revenue">${["Under $10M","$10–40M","$40–60M","$60–150M","$150–500M","$500M+"].map(v=>`<option ${v===co.revenue?"selected":""}>${v}</option>`).join("")}</select></label>
         </div>
         <div class="field">Sector <small>Choose both if you hire across food and drink.</small>${picks("sector",SECTOR_OPTS,co.sector||"Food",{radio:true,label:x=>SECTOR_LABEL[x]})}</div>
-        <div class="field">Company stage${picks("stage",["SME","EST"],co.stage,{radio:true,label:x=>STAGES[x]})}</div>
+        <div class="field">Company stage${picks("stage",CO_STAGES,co.stage,{radio:true,label:x=>STAGES[x]})}</div>
         <div class="field">Your categories <small>Type the categories you operate in, like jerky, RTD coffee or kids snacks, and press Enter. Pick from suggestions or add your own.</small>${tagField("secCo",co.cats,"Type a sector and press Enter")}</div>
         <label class="field">One-line pitch<input type="text" id="f_tagline" value="${esc(co.tagline)}"></label>
         <label class="field">About us<textarea id="f_about">${esc(co.about)}</textarea></label>
@@ -940,7 +943,7 @@ function proEmployers(c){const now=(c.career||[]).find(x=>x.now);return [c.curre
 function blockedFor(c){const mine=coNames();if(!mine.length)return false;return proEmployers(c).some(e=>mine.some(n=>sameCo(e,n)))}
 function proBlocks(name){return proEmployers(S.cand).some(e=>sameCo(e,name))}
 function visible(){return POOL.filter(c=>!blockedFor(c))}
-function coDisplay(co){return co.anon?`A ${STAGES[co.stage].toLowerCase()} in ${String(co.cats[0]||"food").toLowerCase()}`:co.name}
+function coDisplay(co){const ph=STAGE_PHRASE[co.stage]||"food business";return co.anon?`${/^[aeiou]/.test(ph)?"An":"A"} ${ph} in ${String(co.cats[0]||"food").toLowerCase()}`:co.name}
 
 function vShortlist(){
   S.shortlist=S.shortlist.filter(id=>POOL.some(p=>p.id===id));
@@ -1751,27 +1754,27 @@ const COMPANIES=[
   about:"Soups, broths and grain sides with clean-label recipes, sold across conventional, natural and club. Growing fastest in e-commerce and Costco.",
   why:"A commercial team that's grown every year for a decade, with real career paths into director and VP roles.",
   roles:[{title:"VP of Sales, Club and Mass",lvl:"VPS",region:"National",base:"$210–250k + bonus + LTIP"},{title:"Head of E-commerce",lvl:"HEC",region:"West",base:"$170–190k + bonus"},{title:"Category Manager, Kroger",lvl:"CATM",region:"Midwest",base:"$105–120k + bonus"}]},
- {id:"k4",name:"Cedar & Salt Provisions",stage:"SME",hq:"Austin, TX",revenue:"$20–40M",size:"60 people",cats:["Meat snacks","Protein"],
+ {id:"k4",name:"Cedar & Salt Provisions",stage:"CHAL",hq:"Austin, TX",revenue:"$20–40M",size:"60 people",cats:["Meat snacks","Protein"],
   tagline:"Grass-fed meat sticks, now in H-E-B, Whole Foods and Sprouts.",
   about:"Founder-led meat snack brand that tripled distribution in two years. Backed by a growth investor focused on better-for-you food.",
   why:"Equity for every senior hire, a direct line to the founders, and a national rollout planned for 2027.",
   roles:[{title:"National Account Manager, Natural Channel",lvl:"NAM",region:"National",base:"$120–140k + bonus + equity"},{title:"Regional Sales Manager, South",lvl:"RSM",region:"South",base:"$100–120k + bonus"}]},
- {id:"k5",name:"Little Orchard Kitchen",stage:"SME",hq:"Brooklyn, NY",revenue:"$10–20M",size:"35 people",cats:["Kids snacks","Better-for-you"],
+ {id:"k5",name:"Little Orchard Kitchen",stage:"START",hq:"Brooklyn, NY",revenue:"$10–20M",size:"35 people",cats:["Kids snacks","Better-for-you"],
   tagline:"Fruit and veg snacks for kids, with nothing to hide on the label.",
   about:"Kids snack brand selling through Target, Whole Foods and Amazon, with a loyal parent community and a fast-growing subscription business.",
   why:"A small, ambitious team where senior hires shape the brand and the channel strategy from day one.",
   roles:[{title:"Brand Director",lvl:"BD",region:"Northeast",base:"$150–170k + bonus + equity"}]},
- {id:"k6",name:"Brightfield Bakehouse",stage:"EST",hq:"Columbus, OH",revenue:"$500M+",size:"2,400 people",cats:["Bakery","Crackers & cookies"],
+ {id:"k6",name:"Brightfield Bakehouse",stage:"PUB",hq:"Columbus, OH",revenue:"$500M+",size:"2,400 people",cats:["Bakery","Crackers & cookies"],
   tagline:"Crackers and cookies in nine out of ten US grocery stores.",
   about:"One of the largest independent bakery businesses in North America, with national brands and a growing private label arm.",
   why:"Scale, stability and investment in insight and revenue management, with leaders who are promoted from within.",
   roles:[{title:"Director of Revenue Growth Management",lvl:"CATD",region:"Midwest",base:"$170–195k + bonus"},{title:"Key Account Manager, Kroger",lvl:"KAM",region:"Midwest",base:"$110–125k + bonus"},{title:"Consumer Insights Director",lvl:"CID",region:"Midwest",base:"$160–180k + bonus"}]},
- {id:"k7",anon:true,stage:"SME",hq:"",revenue:"$40–60M",size:"110 people",cats:["Bars","Protein"],
+ {id:"k7",anon:true,stage:"CHAL",hq:"",revenue:"$40–60M",size:"110 people",cats:["Bars","Protein"],
   tagline:"A PE-backed protein bar brand entering club and mass.",
   about:"Fast-growing protein bar business with strong velocity in natural and e-commerce, now expanding into Costco, Sam's Club and Walmart.",
   why:"Join ahead of the next stage of growth, with a meaningful bonus and equity plan for senior commercial hires.",
   roles:[{title:"Chief Commercial Officer",lvl:"CCO",region:"National",base:"$260–300k + bonus + equity"},{title:"National Account Director, Club",lvl:"NAD",region:"National",base:"$160–180k + bonus"}]},
- {id:"k9",sector:"Drink",name:"Fieldstone Coffee Co.",stage:"SME",hq:"Seattle, WA",revenue:"$60–80M",size:"140 people",cats:["RTD coffee & tea","Energy & functional"],
+ {id:"k9",sector:"Drink",name:"Fieldstone Coffee Co.",stage:"CHAL",hq:"Seattle, WA",revenue:"$60–80M",size:"140 people",cats:["RTD coffee & tea","Energy & functional"],
   tagline:"Ready-to-drink cold brew, now in 18,000 doors.",
   about:"Cold brew and RTD coffee brand growing fast across grocery, convenience and club. Backed by a beverage-focused growth investor.",
   why:"A national convenience rollout in 2027 and a seat at the table for every senior commercial hire.",
@@ -2037,7 +2040,7 @@ function render(){
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
 function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
