@@ -2089,8 +2089,14 @@ function vCompanies(){
 /* ---------------- company team ---------------- */
 const DEPTS=["Sales","Marketing","People and HR","Finance","Operations","E-commerce","Leadership"];
 const ROLES={"Admin":"Manages the account, team and terms","Hiring manager":"Browses, shortlists and chats for their roles","Viewer":"Can view shortlists and conversations"};
-function teamMembers(){const co=S.company;if(!co.members)co.members=[];
-  if(!co.members.length&&co.contact.trim())return [{id:"me",name:co.contact,title:co.contactTitle,email:co.email||"",dept:"Leadership",role:"Admin",status:"Active",at:"Today",me:true}];return co.members}
+const sameP=(a,b)=>!!a&&!!b&&((a.email&&b.email&&a.email.toLowerCase()===b.email.toLowerCase())||(a.name&&b.name&&a.name.trim().toLowerCase()===b.name.trim().toLowerCase()));
+function signer(){return S.terms&&S.terms.name?{name:S.terms.name,title:S.terms.title||"",email:S.terms.email||""}:null}
+function meP(){const co=S.company;return {name:co.contact,email:co.email||""}}
+function iAmSigner(){const sg=signer();return !!sg&&sameP(sg,meP())}
+function teamMembers(){const co=S.company;if(!co.members)co.members=[];const sg=signer();
+  let list=!co.members.length&&co.contact.trim()?[{id:"me",name:co.contact,title:co.contactTitle,email:co.email||"",dept:"Leadership",role:"Hiring manager",status:"Active",at:"Today",me:true}]:co.members.map(m=>({...m,me:m.me||sameP(m,meP())}));
+  if(sg&&!list.some(m=>sameP(m,sg)))list=[{id:"signer",name:sg.name,title:sg.title,email:sg.email,dept:"Leadership",role:"Admin",status:"Active",at:"Signed terms"},...list];
+  return list.map(m=>{const isSg=!!sg&&sameP(m,sg);return {...m,signer:isSg,role:isSg?"Admin":m.role==="Admin"&&m.adminBy&&sg&&sameP({name:m.adminBy.name,email:m.adminBy.email},sg)?"Admin":m.role==="Admin"?"Hiring manager":m.role}})}
 function vTeam(){
   const co=S.company,list=teamMembers(),ag=S.agreement,signed=termsOK();
   const byDept=DEPTS.map(d=>[d,list.filter(m=>m.dept===d).length]).filter(x=>x[1]);
@@ -2099,13 +2105,13 @@ function vTeam(){
   <div class="cols"><div class="stack">
     <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Your team</h2><span class="tag">${list.filter(m=>m.status==="Active").length} active${list.some(m=>m.status==="Invited")?` · ${list.filter(m=>m.status==="Invited").length} invited`:""}</span></div>
       ${byDept.length?`<div class="depts">${byDept.map(([d,n])=>`<span class="tag">${esc(d)} · ${n}</span>`).join("")}</div>`:""}
-      <div>${list.length?list.map(m=>`<div class="mem"><span class="av">${esc(initials(m.name)||"?")}</span><div class="mi"><b>${esc(m.name)}${m.me?" (you)":""}</b><span>${esc(m.title||"")}${m.title?" · ":""}${esc(m.dept)} · ${esc(m.role)}</span><span>${esc(m.email)}</span></div>
-        <div class="ma">${m.status==="Invited"?`<span class="tag new">Invited</span>`:`<span class="tag hit">Active</span>`}${m.role!=="Admin"||list.filter(x=>x.role==="Admin").length>1?`<button class="btn quiet sm" data-rmm="${m.id}" aria-label="Remove ${esc(m.name)}">Remove</button>`:""}</div></div>`).join(""):`<p class="muted">Add your name on the Company profile first, then invite your colleagues.</p>`}</div>
+      <div>${list.length?list.map(m=>`<div class="mem"><span class="av">${esc(initials(m.name)||"?")}</span><div class="mi"><b>${esc(m.name)}${m.me?" (you)":""}</b><span>${esc(m.title||"")}${m.title?" · ":""}${esc(m.dept)} · ${esc(m.role)}${m.signer?" · Signed the terms":""}</span><span>${esc(m.email)}</span></div>
+        <div class="ma">${m.status==="Invited"?`<span class="tag new">Invited</span>`:`<span class="tag hit">Active</span>`}${iAmSigner()&&!m.signer?(m.role==="Admin"?`<button class="btn line sm" data-adm="${m.id}:off">Remove admin</button>`:`<button class="btn line sm" data-adm="${m.id}:on">Make admin</button>`):""}${!m.signer&&(iAmSigner()||!m.me)&&!(m.role==="Admin"&&!iAmSigner())?`<button class="btn quiet sm" data-rmm="${m.id}" aria-label="Remove ${esc(m.name)}">Remove</button>`:""}</div></div>`).join(""):`<p class="muted">Add your name on the Company profile first, then invite your colleagues.</p>`}</div>
     </div>
     <form class="card stack" id="invF" novalidate><h2>Invite a colleague</h2>
       <div class="grid2"><label class="field">Name<input type="text" id="in_n" autocomplete="off"></label><label class="field">Work email<input type="email" id="in_e" autocomplete="off" placeholder="name@${esc((co.site||"company.com").replace(/^https?:\/\/(www\.)?/,""))}"></label>
         <label class="field">Job title<input type="text" id="in_t" autocomplete="off"></label><label class="field">Department<select id="in_d">${DEPTS.map(d=>`<option>${d}</option>`).join("")}</select></label></div>
-      <div class="field">Access${picks("inviteRole",Object.keys(ROLES),S.inviteRole||"Hiring manager",{radio:true})}<small class="muted" style="font-weight:400">${esc(ROLES[S.inviteRole||"Hiring manager"])}</small></div>
+      ${(()=>{const opts=Object.keys(ROLES).filter(r=>r!=="Admin"||iAmSigner());if(!opts.includes(S.inviteRole))S.inviteRole="Hiring manager";return `<div class="field">Access${picks("inviteRole",opts,S.inviteRole||"Hiring manager",{radio:true})}<small class="muted" style="font-weight:400">${esc(ROLES[S.inviteRole||"Hiring manager"])}</small>${iAmSigner()?"":`<small class="muted" style="font-weight:400">${signer()?`Only ${esc(signer().name)}, who signed the terms, can make someone an admin.`:"Admin rights go to the person who signs the terms. They can then make others admins."}</small>`}</div>`})()}
       <p class="small" id="in_err" style="color:var(--bad);display:none"></p>
       <div><button class="btn" type="submit">Send invite</button></div></form>
   </div>
@@ -2113,15 +2119,21 @@ function vTeam(){
     <div class="card stack" style="gap:8px"><h3>One set of terms for everyone</h3>
       <p class="small">${signed?`${ag?`Signed copy <b>${esc(ag.ref)}</b>, signed by ${esc(ag.by.name)}, covers`:"Your agreed terms cover"} every colleague you invite. Nobody needs to sign again.`:`When your company agrees terms, they'll cover every colleague you invite. Only someone authorised to sign needs to do it, once.`}</p>
       <p class="small muted">Introductions made by any team member count as introductions to ${esc(co.name||"your company")} and its associated companies.</p></div>
+    <div class="card stack" style="gap:6px"><h3>Who can be an admin</h3><p class="small">${signer()?`<b>${esc(signer().name)}</b> signed the terms, so they're the account admin. Only they can make someone else an admin or remove admin rights.`:`Nobody is an admin yet. Whoever signs the terms becomes the account admin, and only they can make someone else an admin.`}</p>${signer()&&!iAmSigner()?`<p class="small muted">Need admin access? Ask ${esc(signer().name.split(" ")[0])}.</p>`:""}</div>
     <div class="protect">${lockIcon}<span><b>Professionals never see your team list.</b> Only your colleagues and Consumer Talent can see who's on your account.</span></div>
   </div></div>`;
   bindPicks(app,S,()=>{const y=SC.scrollTop,keep=["in_n","in_e","in_t","in_d"].map(i=>$("#"+i).value);vTeam();["in_n","in_e","in_t","in_d"].forEach((i,k)=>$("#"+i).value=keep[k]);(SC.scrollTop=y)});
+  app.querySelectorAll("[data-adm]").forEach(b=>b.onclick=()=>{if(!iAmSigner())return;const [id,on]=b.dataset.adm.split(":");
+    if(!co.members.length&&co.contact.trim())co.members=teamMembers().map(m=>({...m,id:m.id==="me"?"m"+Date.now():m.id}));
+    const m=co.members.find(x=>x.id===id);if(!m)return;const sg=signer();
+    if(on==="on"){m.role="Admin";m.adminBy={name:sg.name,email:sg.email,at:Date.now()};logEvent(`${sg.name} made ${m.name} an admin`,sg.name);toast(`${m.name} is now an admin`)}else{m.role="Hiring manager";delete m.adminBy;logEvent(`${sg.name} removed admin rights from ${m.name}`,sg.name);toast(`${m.name} is no longer an admin`)}
+    save();vTeam()});
   app.querySelectorAll("[data-rmm]").forEach(b=>b.onclick=()=>{const m=co.members.find(x=>x.id===b.dataset.rmm);co.members=co.members.filter(x=>x.id!==b.dataset.rmm);if(m)logEvent(`Removed ${m.name} (${m.dept}) from the company account`,co.contact);save();vTeam();toast("Removed from your team")});
   $("#invF").onsubmit=e=>{e.preventDefault();const v=i=>$("#"+i).value.trim(),err=$("#in_err");const n=v("in_n"),em=v("in_e");
     if(n.length<2||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent="Add their name and a valid work email.";err.style.display="block";return}
     if(teamMembers().some(m=>m.email.toLowerCase()===em.toLowerCase())){err.textContent="They're already on your team.";err.style.display="block";return}
     if(!co.members.length&&co.contact.trim())co.members=teamMembers().map(m=>({...m,id:"m"+Date.now(),me:undefined}));
-    const m={id:"m"+Date.now()+Math.random().toString(36).slice(2,5),name:n,email:em,title:v("in_t"),dept:v("in_d"),role:S.inviteRole||"Hiring manager",status:"Invited",at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})};
+    const m={id:"m"+Date.now()+Math.random().toString(36).slice(2,5),name:n,email:em,title:v("in_t"),dept:v("in_d"),role:S.inviteRole==="Admin"&&iAmSigner()?"Admin":(S.inviteRole==="Admin"?"Hiring manager":S.inviteRole||"Hiring manager"),...(S.inviteRole==="Admin"&&iAmSigner()?{adminBy:{name:signer().name,email:signer().email,at:Date.now()}}:{}),status:"Invited",at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})};
     co.members.push(m);logEvent(`Invited ${m.name} (${m.dept}, ${m.role}) to the company account`,co.contact);save();vTeam();toast(`Invite sent to ${m.email}`)};
 }
 const CLIENT_ACCOUNTS=[
