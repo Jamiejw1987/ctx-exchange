@@ -3072,11 +3072,14 @@ function bindIvPro(r,co){
 const _vCompany=vCompany;
 vCompany=function(){_vCompany();
   const r=$("#reset");if(r)r.remove();
-  const pending=L.company&&L.company.status!=="approved",f=$("#coForm");if(!f||!pending)return;
-  const sb2=f.querySelector("button[type=submit]");if(sb2)sb2.textContent="Save profile";
-  app.querySelectorAll('a[href="#foryou"],a[href="#discover"]').forEach(x=>x.remove());
+  const na=$("#f_noauth");if(na){const l=document.createElement("a");l.className="btn line sm";l.href="#team";l.textContent="Invite the person who signs";na.replaceWith(l)}
+  const pending=L.company&&L.company.status!=="approved",f=$("#coForm");if(!f)return;
+  // saving the profile never depends on who signs the terms; that happens on the Terms page
   f.addEventListener("submit",e=>{e.preventDefault();e.stopImmediatePropagation();save();
-    toast("Profile saved. We'll let you know as soon as you're approved.")},{capture:true})};
+    if(pending)toast("Profile saved. We'll let you know as soon as you're approved.");else{toast("Profile saved");location.hash="discover"}},{capture:true});
+  if(!pending)return;
+  const sb2=f.querySelector("button[type=submit]");if(sb2)sb2.textContent="Save profile";
+  app.querySelectorAll('a[href="#foryou"],a[href="#discover"]').forEach(x=>x.remove())};
 VIEWS.company=vCompany;
 
 /* ---------- terms page: real proposals; signing goes through a teammate ---------- */
