@@ -1021,7 +1021,7 @@ function openBell(){const k=sideKey(),list=(S.notes||[]).filter(x=>x.to===k);
   app.ownerDocument.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{const x=S.notes.find(n=>n.id===b.dataset.n);x.read=true;save();bellCount();layer.innerHTML="";if(x.go&&location.hash!=="#"+x.go)location.hash=x.go;else render()})}
 function introRole(c){const co=S.company;return co.roles.find(r=>r.lvl===c.lvl)||co.roles[0]||{title:co.always?`${LEVELS[c.lvl]} (always looking for great talent)`:LEVELS[c.lvl],base:""}}
 function startIntro(id){if(TASTER){openInvite("intro");return}
-  if(!termsOK()){openTermsGate(()=>startIntro(id));return}
+  if(!termsOK()){const c0=POOL.find(p=>p.id===id);chaseTerms(c0);openTermsGate(()=>startIntro(id),refOf(c0.user));return}
   const c=POOL.find(p=>p.id===id),co=S.company,def=introRole(c);
   layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
     <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
@@ -1245,10 +1245,19 @@ function termsHTML(){
     <p class="muted small">Full Consumer Talent Group contingent terms of business apply. Demo summary only.</p>
   </div>`;
 }
-function openTermsGate(onDone){
+function chaseTerms(c){
+  const co=S.company,ref=refOf(c.user);S.chase=S.chase||[];if(S.chase.some(x=>x.pid===c.id&&x.status==="open"))return;
+  const subj=`${co.name||"A client"} wants to chat with ${ref}, terms not signed`;
+  const body=`${co.contact||"A user"}${co.contactTitle?" ("+co.contactTitle+")":""} at ${co.name||"a client"} wants to start a chat with ${ref}, ${LEVELS[c.lvl]}, ${c.region}. Their terms aren't signed yet${S.sigReq&&S.sigReq.status==="sent"?`, and they've sent them to ${S.sigReq.name} (${S.sigReq.title}, ${S.sigReq.email}) to sign`:""}. Please get in touch to get terms signed.`;
+  S.chase.unshift({id:"ch"+Date.now(),pid:c.id,co:co.name||"A client",contact:co.contact||"",title:co.contactTitle||"",email:co.email||S.alerts.email_to||"",ref,lvl:c.lvl,region:c.region,subj,body,at:Date.now(),status:"open"});
+  notify("admin",`${co.name||"A client"} wants to chat with ${ref} (${LEVELS[c.lvl]}) but hasn't signed terms. Push them to sign.`,"clients");
+  logEvent(`Emailed Jamie and Connor: ${subj}`,"Consumer Talent");save();
+}
+function openTermsGate(onDone,chaseRef){
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="stack" style="gap:4px"><span class="kicker">Before you start chatting</span><h2 id="tT">Agree terms to chat with candidates</h2>
     <p class="muted small">Browsing anonymous profiles is free. Chatting with a candidate counts as a reveal, so terms are needed first. You sign once for ${esc(S.company.name||"your company")}, and a fee applies only on a successful hire.</p></div>
+    ${chaseRef?`<div class="protect">${lockIcon}<span><b>We've let Jamie and Connor know you'd like to chat with ${esc(chaseRef)}.</b> They'll be in touch to help get your terms signed, or you can sign below now.</span></div>`:""}
     ${termsHTML()}
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
     <div class="grid2"><label class="field">Full name<input type="text" id="sName" value="${esc(S.company.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="sTitle" value="${esc(S.company.contactTitle)}"></label></div>
@@ -1952,11 +1961,18 @@ const CLIENT_ACCOUNTS=[
 function vClients(){
   const co=S.company,live={co:co.name||"Northfield Snack Co.",terms:termsOK()?(S.agreement?`Signed · ${S.agreement.ref}`:"Terms agreed"):"Not signed yet",members:teamMembers().map(m=>[m.name,m.title,m.dept,m.role,m.status])};
   const all=[live,...CLIENT_ACCOUNTS];
+  const ch=(S.chase||[]).filter(x=>x.status==="open"&&!(termsOK()&&sameCo(x.co,co.name||"Northfield Snack Co.")));
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Clients</span><h1>Client accounts</h1><p class="muted">Everyone on each client account, by department. Each company's terms cover all of its members.</p></div>
+  ${ch.length?`<div class="card stack" style="max-width:860px;margin-bottom:16px;border-color:var(--warn)"><div class="row" style="justify-content:space-between"><h2>Wants to chat, terms not signed</h2><span class="tag warn">${ch.length} to chase</span></div>
+    <p class="muted small">These went to Jamie and Connor by email and notification. Get in touch to get the terms signed so the chat can start.</p>
+    ${ch.map(x=>`<div class="item" style="background:var(--soft)"><div class="line1"><div><b>${esc(x.co)}</b> wants to chat with <b>${esc(x.ref)}</b><div class="muted small">${esc(LEVELS[x.lvl])} · ${esc(x.region)} · ${esc(new Date(x.at).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}</div></div></div>
+      <div class="msg"><div class="mh"><b>To:</b> jamie@consumer-talent.com, connor@consumer-talent.com<br><b>Subject:</b> ${esc(x.subj)}</div><div class="mb"><p>${esc(x.body)}</p>${x.email?`<p class="small muted">Client contact: ${esc(x.contact)}${x.title?", "+esc(x.title):""} · ${esc(x.email)}</p>`:""}</div></div>
+      <div class="row">${x.email?`<a class="btn sm" href="mailto:${encodeURIComponent(x.email)}?subject=${encodeURIComponent("Your terms for the Consumer Talent Exchange")}&body=${encodeURIComponent(`Hi ${x.contact.split(" ")[0]||"there"},\n\nThanks for looking to chat with ${x.ref} on the Exchange. To start the conversation we just need your terms signed. You can sign here: ${signLink()}\n\nIf someone else signs agreements for ${x.co}, reply with their name and email and we'll send it to them.\n\nThanks,\nJamie and Connor\nConsumer Talent`)}">Email ${esc(x.contact.split(" ")[0]||"client")} to sign</a>`:""}<button class="btn line sm" data-chdone="${x.id}">Mark as chased</button></div></div>`).join("")}</div>`:""}
   <div class="list" style="max-width:860px">${all.map(a=>`<div class="item">
     <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(a.co)}</b><div class="muted small">${a.members.length} member${a.members.length===1?"":"s"} · ${[...new Set(a.members.map(m=>m[2]))].length} department${[...new Set(a.members.map(m=>m[2]))].length===1?"":"s"}</div></div><span class="tag ${/Signed|agreed/.test(a.terms)?"hit":"new"}">${esc(a.terms)}</span></div>
     <div>${a.members.map(m=>`<div class="mem"><span class="av">${esc(initials(m[0]))}</span><div class="mi"><b>${esc(m[0])}</b><span>${esc(m[1]||"")}${m[1]?" · ":""}${esc(m[2])} · ${esc(m[3])}</span></div><div class="ma"><span class="tag ${m[4]==="Active"?"hit":"new"}">${esc(m[4])}</span></div></div>`).join("")}</div>
   </div>`).join("")}</div>`;
+  app.querySelectorAll("[data-chdone]").forEach(b=>b.onclick=()=>{const x=S.chase.find(y=>y.id===b.dataset.chdone);x.status="chased";logEvent(`Terms chase marked done for ${x.co} (${x.ref})`,"Consumer Talent");save();vClients();toast("Marked as chased")});
 }
 
 /* ---------------- backdoor protection ---------------- */
@@ -2131,11 +2147,11 @@ function render(){ensureCustom();
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
   Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
-  S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
+  S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
 if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
