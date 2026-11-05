@@ -274,6 +274,13 @@ view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="
 VIEWS.auth=vAuth;
 
 /* ---------- sign in / join ---------- */
+// arriving from the landing page: open in Join mode, with what they already typed
+try{const q=new URLSearchParams(location.search),j=q.get("join");if(j){L.authMode="up";L.authSide=j==="company"?"client":"pro";history.replaceState(null,"",location.pathname+location.hash)}
+  const pf=JSON.parse(localStorage.getItem("ctx_join")||"null");if(pf){L.prefill=pf;L.authMode="up";L.authSide=pf.side==="client"?"client":"pro"}}catch(e){}
+function fillAuth(){const p=L.prefill;if(!p)return;const set=(id,v)=>{const el=$("#"+id);if(el&&v&&!el.value)el.value=v};
+  set("auN",p.name);set("auE",p.email);set("auC",p.company);set("auT",p.title);
+  const r=$("#auR");if(r&&p.region&&[...r.options].some(o=>o.text===p.region))r.value=p.region;
+  const pw=$("#auP");if(pw&&p.email)setTimeout(()=>{try{pw.focus()}catch(e){}},50)}
 function vAuth(){const mode=L.authMode||"in",side=L.authSide||"pro";
   $("#tabs").innerHTML="";try{$("#sideLbl").textContent=""}catch(e){}
   app.innerHTML=`<div style="max-width:460px;margin:20px auto" class="card stack">
@@ -292,6 +299,7 @@ function vAuth(){const mode=L.authMode||"in",side=L.authSide||"pro";
     </form>
     <p class="muted small" style="text-align:center">${mode==="in"?`New here? <a href="#" id="auSw">Join the Exchange</a>`:`Already have an account? <a href="#" id="auSw">Sign in</a>`}</p>
   </div>`;
+  if(mode==="up")fillAuth();else if(L.prefill){const el=$("#auE");if(el&&L.prefill.email)el.value=L.prefill.email}
   $("#auSw").onclick=e=>{e.preventDefault();L.authMode=mode==="in"?"up":"in";vAuth()};
   app.querySelectorAll("[data-sd]").forEach(b=>b.onclick=()=>{L.authSide=b.dataset.sd;vAuth()});
   $("#auF").onsubmit=async e=>{e.preventDefault();const err=m=>{const x=$("#auErr");x.textContent=m;x.style.display="block"};const btn=$("#auF button[type=submit]");btn.disabled=true;
@@ -306,7 +314,7 @@ function vAuth(){const mode=L.authMode||"in",side=L.authSide||"pro";
 }
 
 /* ---------- boot ---------- */
-async function start(session){L.user=session.user;L.token=session.access_token;
+async function start(session){L.user=session.user;L.token=session.access_token;try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
   const prof=(await q(sb.from("profiles").select("*").eq("user_id",L.user.id)))[0];
   L.role=TEAM.includes(L.user.email)?"admin":prof?prof.role:"pro";
   if(L.role==="client"){const m=await q(sb.from("company_members").select("company_id").eq("user_id",L.user.id));L.companyId=m[0]&&m[0].company_id}
