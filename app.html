@@ -174,6 +174,13 @@ textarea{resize:vertical;min-height:90px}
 .meta3{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
 .meta3 span+span::before{content:"·";margin-right:14px;margin-left:-8px}
 .pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.cogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}
+.cotile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;font:inherit;color:inherit;min-width:0}
+.cotile:hover{border-color:var(--brand)}
+.cotile .colog{width:44px;height:44px;font-size:15px}
+.cotile .tl{font-size:12.5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+.cotile .tags{display:flex;flex-wrap:wrap;gap:4px}
+.cotile .tag{font-size:11px;padding:2px 7px}
 .mini{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;font:inherit;color:inherit;transition:border-color .15s,box-shadow .15s}
 .mini:hover{border-color:var(--brand-2);box-shadow:var(--shadow)}
 .mini .t{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
@@ -299,7 +306,7 @@ body.taster #tbar{display:flex}
 #tbar .tbtxt{flex:1;min-width:0}
 @media (max-width:420px){#tbar .tbtxt{display:none}}
 body.taster .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-body.taster .seg{display:none}
+body.taster header .seg{display:none}
 .tsteps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:st}
 .tsteps li{display:flex;gap:12px;align-items:flex-start;counter-increment:st}
 .tsteps li::before{content:counter(st);flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--brand-2);font-weight:700;font-size:13px;box-shadow:inset 0 0 0 1px rgba(200,169,106,.45)}
@@ -2087,28 +2094,61 @@ function coName(k){return k.anon?coDisplay({...k,anon:true}):k.name}
 function coMatchQ(k,live,q){q=(q||"").trim().toLowerCase();if(!q)return true;
   const hay=[coName(k),k.tagline,k.about,k.anon?"":k.hq,STAGES[k.stage],SECTOR_LABEL[k.sector],...(k.cats||[]),...live.map(r=>[r.title,r.region,LEVELS[r.lvl]].join(" "))].join(" ").toLowerCase();
   return q.split(/\s+/).every(w=>hay.includes(w))}
-function vCompanies(mode){mode=mode||"hiring";
-  const p=S.cand,my=groupOf(p.lvl),hiring=mode==="hiring";
-  const all=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];const lvlHit=live.some(r=>r.lvl===p.lvl),grpHit=live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,live,lvlHit,grpHit,secHit:sectorFit(k.sector,p.sector||"Food")}})
-    .sort((a,b)=>(b.secHit-a.secHit)||(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit)||(b.live.length-a.live.length));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies. Apply for a role or tell them you'd like to work there, and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Tell any of them you'd like to work there and they'll see your anonymous profile. <a href="#companies">See only companies with live vacancies</a>.`}</p></div>
-  <div style="max-width:760px;margin-bottom:14px"><input type="search" id="coQ" value="${esc(S.coQ||"")}" placeholder="${hiring?"Search by company, role, category or region":"Search by company, category, stage or region"}" aria-label="Search companies" autocomplete="off" style="width:100%"></div>
-  <div class="list" id="coList" style="max-width:760px"></div>`;
-  const draw=()=>{const q=S.coQ||"",list=all.filter(x=>coMatchQ(x.k,x.live,q)),box=$("#coList");
-    box.innerHTML=list.length?`${q.trim()?`<p class="muted small">${list.length} ${list.length===1?"company":"companies"} matching "${esc(q.trim())}"</p>`:""}`+list.map(({k,live,lvlHit,secHit})=>{const name=coName(k),on=!!S.interest[k.id],ap=(S.applied[k.id]||[]).filter(t=>live.some(r=>r.title===t));return `<div class="item">
+/* how well a company fits the candidate's profile: level, region, pay, stage, categories */
+function coFit(k,live,p){p=p||S.cand;let n=0;const why=[];
+  if(!sectorFit(k.sector,p.sector||"Food"))n-=50;
+  const pb=bandNums(p.band),plo=pb[0]||0,phi=pb[1]||pb[0]||9999;
+  let best=0,bw=[];live.forEach(r=>{let x=0;const w=[];
+    if(r.lvl===p.lvl){x+=40;w.push("your level")}else if(LEVELS[r.lvl]&&groupOf(r.lvl)===groupOf(p.lvl)){x+=18;w.push("your function")}
+    if(r.region&&p.region&&r.region===p.region){x+=15;w.push(p.region)}else if(/national/i.test(r.region||"")){x+=7}
+    const rb=bandNums(r.base);if(rb.length&&plo){const rlo=rb[0],rhi=rb[1]||rb[0];if(rhi>=plo&&rlo<=phi){x+=10;w.push("your salary band")}}
+    if(x>best){best=x;bw=w}});
+  n+=best;why.push(...bw);
+  const ps=p.prefStages||[];if(ps.includes("ANY")||ps.includes(k.stage)){n+=12;if(!ps.includes("ANY"))why.push(STAGES[k.stage])}
+  const lc=x=>String(x).toLowerCase(),pc=(p.prefCats||[]).map(lc),hit=(k.cats||[]).filter(c=>pc.includes(lc(c)));n+=Math.min(hit.length,2)*8;if(hit.length)why.push(hit[0]);
+  return {n,why:why.slice(0,3)}}
+function coFitTag(f,live){return !live.length?"":f.n>=60?`<span class="tag hit">Strong match</span>`:f.n>=35?`<span class="tag brand">Good match</span>`:""}
+function coCard(x,hiring){const {k,live,f}=x,name=coName(k),on=!!S.interest[k.id],ap=(S.applied[k.id]||[]).filter(t=>live.some(r=>r.title===t));return `<div class="item">
     <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?CTX_LOGO:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]||""} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
-      <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${live.length?(secHit&&lvlHit?`<span class="tag hit">Hiring your level</span>`:`<span class="tag hit">Hiring now</span>`):!hiring?`<span class="tag">Open to great talent</span>`:""}</div></div>
+      <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${live.length?(coFitTag(f,live)||`<span class="tag hit">Hiring now</span>`):!hiring?`<span class="tag">Open to great talent</span>`:""}</div></div>
+    ${live.length&&f.why.length?`<p class="small muted" style="margin:0">Matches ${esc(f.why.join(", "))}</p>`:""}
     <p style="font-weight:600">${esc(k.tagline)}</p>
     ${live.map(r=>`<div class="openrole"><b>${esc(r.title)}${ap.includes(r.title)?` <span class="tag hit" style="margin-left:6px">Applied</span>`:""}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
     <details><summary class="small" style="cursor:pointer;font-weight:600">About ${k.anon?"this company":esc(k.name)} and why join</summary><div class="stack" style="gap:8px;margin-top:8px"><p class="small">${esc(k.about)}</p><p class="small"><b>Why join now.</b> ${esc(k.why)}</p><div class="row" style="gap:6px">${(k.cats||[]).map(c=>`<span class="tag brand">${esc(c)}</span>`).join("")}${k.size?`<span class="tag">${esc(k.size)}</span>`:""}</div></div></details>
     <div class="row">${live.length?`<button class="btn sm" data-apply="${k.id}">${ap.length?`Applied for ${ap.length} role${ap.length>1?"s":""} · change`:"Apply for a role"}</button>`:""}
       ${on?`<span class="tag hit">Interested in working here</span><button class="btn quiet sm" data-int="${k.id}">Withdraw</button>`:`<button class="btn ${live.length?"line":""} sm" data-int="${k.id}">I'm interested in working for ${k.anon?"this company":esc(k.name)}</button>`}</div>
-  </div>`}).join(""):q.trim()?`<div class="empty"><h2>No companies match "${esc(q.trim())}"</h2><p class="muted">${hiring?"Nobody with a live vacancy matches that. Try every company on the Exchange, including those not advertising right now.":"Try a different word, like a category, a state or a stage."}</p>${hiring?`<a class="btn" href="#allcos">Search all companies</a>`:""}</div>`:`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`;
-    const keep=()=>{const y=SC.scrollTop;draw();SC.scrollTop=y};
-    box.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
+  </div>`}
+function coTile(x){const {k,live,f}=x,on=!!S.interest[k.id],ap=(S.applied[k.id]||[]).filter(t=>live.some(r=>r.title===t)).length;
+  return `<button type="button" class="cotile" data-cot="${k.id}">${k.anon?CTX_LOGO:coLogo(k)}
+    <b style="font-family:var(--display);font-weight:600;font-size:15px;line-height:1.2">${esc(coName(k))}</b>
+    <span class="muted" style="font-size:12px">${STAGES[k.stage]||""}${k.anon?"":" · "+esc(k.hq)}</span>
+    <span class="tags">${live.length?`<span class="tag hit">${live.length} vacanc${live.length>1?"ies":"y"}</span>`:`<span class="tag">Open to great talent</span>`}${coFitTag(f,live)}</span>
+    <p class="tl">${esc(k.tagline)}</p>
+    ${ap?`<span class="tag hit">Applied</span>`:on?`<span class="tag hit">Interested</span>`:""}</button>`}
+function vCompanies(mode){mode=mode||"hiring";
+  const p=S.cand,hiring=mode==="hiring";S.coView=S.coView||{};const vw=S.coView[mode]||(hiring?"list":"grid");
+  const all=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];return {k,live,f:coFit(k,live,p)}})
+    .sort((a,b)=>(b.f.n-a.f.n)||(b.live.length-a.live.length));
+  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies, with the best matches to your profile first. Apply for a role or tell them you'd like to work there, and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Tap one to see more and tell them you'd like to work there. <a href="#companies">See only companies with live vacancies</a>.`}</p></div>
+  <div class="row" style="max-width:760px;margin-bottom:14px;flex-wrap:nowrap;gap:8px"><input type="search" id="coQ" value="${esc(S.coQ||"")}" placeholder="${hiring?"Search roles, brands, regions":"Search brands, categories, regions"}" aria-label="Search companies" autocomplete="off" style="flex:1;min-width:0">
+    <div class="seg" id="coVw" role="group" aria-label="View" style="flex:none;width:auto"><button type="button" data-v="grid" aria-pressed="${vw==="grid"}">Grid</button><button type="button" data-v="list" aria-pressed="${vw==="list"}">List</button></div></div>
+  <div id="coList" style="max-width:${vw==="grid"?"1100px":"760px"}"></div>`;
+  $("#coVw").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.coView[mode]=b.dataset.v;try{localStorage.setItem(STORE+"-coview",JSON.stringify(S.coView))}catch(e){}vCompanies(mode)});
+  const bindCard=(root,again)=>{
+    root.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
       if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();sendInterest(k,"","");toast(`${k.anon?"They'll":coName(k)+" will"} see your anonymous profile and get a notification`)}
-      save();keep()});
-    box.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>openApply(b.dataset.apply,keep))};
+      save();again()});
+    root.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>openApply(b.dataset.apply,again))};
+  const openCo=id=>{const x=all.find(y=>y.k.id===id);if(!x)return;const show=()=>{const f=coFit(x.k,x.live,p);x.f=f;
+      layer.innerHTML=`<div class="scrim" id="coS"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(coName(x.k))}" style="max-width:600px;padding:14px"><div class="list">${coCard(x,hiring)}</div><div class="row" style="justify-content:flex-end"><button class="btn line" id="coX">Close</button></div></div></div>`;
+      $("#coX").onclick=()=>layer.innerHTML="";$("#coS").onclick=e=>{if(e.target.id==="coS")layer.innerHTML=""};
+      bindCard(layer,()=>{draw();if(layer.innerHTML)show()})};show()};
+  const draw=()=>{const q=S.coQ||"",list=all.filter(x=>coMatchQ(x.k,x.live,q)),box=$("#coList");if(!box)return;
+    const head=q.trim()?`<p class="muted small">${list.length} ${list.length===1?"company":"companies"} matching "${esc(q.trim())}"</p>`:"";
+    box.innerHTML=list.length?head+(vw==="grid"?`<div class="cogrid">${list.map(coTile).join("")}</div>`:`<div class="list">${list.map(x=>coCard(x,hiring)).join("")}</div>`)
+      :q.trim()?`<div class="empty"><h2>No companies match "${esc(q.trim())}"</h2><p class="muted">${hiring?"Nobody with a live vacancy matches that. Try every company on the Exchange, including those not advertising right now.":"Try a different word, like a category, a state or a stage."}</p>${hiring?`<a class="btn" href="#allcos">Search all companies</a>`:""}</div>`:`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`;
+    const keep=()=>{const y=SC.scrollTop;draw();SC.scrollTop=y};
+    bindCard(box,keep);box.querySelectorAll("[data-cot]").forEach(b=>b.onclick=()=>openCo(b.dataset.cot))};
   draw();
   $("#coQ").addEventListener("input",e=>{S.coQ=e.target.value;draw()});
 }
@@ -2421,7 +2461,7 @@ function render(){ensureCustom();
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
 function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,applied:S.applied,applies:S.applies,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.applied=d.applied||{};S.applies=d.applies||null;S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};try{S.coView=JSON.parse(localStorage.getItem(STORE+"-coview")||"null")||{}}catch(e){}S.applied=d.applied||{};S.applies=d.applies||null;S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
