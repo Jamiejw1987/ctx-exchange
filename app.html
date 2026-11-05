@@ -938,7 +938,7 @@ function bindDeck(x,next){
 document.addEventListener("keydown",e=>{if(!deckGo||layer.innerHTML||$("#coach")||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;if(e.key==="ArrowRight")deckGo(true);if(e.key==="ArrowLeft")deckGo(false)});
 const modeSeg=(id,mode)=>`<div class="seg" id="${id}" role="group" aria-label="View"><button type="button" data-m="grid" aria-pressed="${mode==="grid"}">Grid</button><button type="button" data-m="swipe" aria-pressed="${mode==="swipe"}">Swipe</button></div>`;
 
-const DS={mode:"grid",shown:24};
+const DS={mode:"swipe",shown:24};
 function vDiscover(){
   const q=queue(),x=q[0],empty=`<div class="empty"><h2>You're all caught up</h2><p class="muted">You've reviewed everyone who matches right now. Turn on alerts and we'll tell you when someone new joins.</p>${TASTER?`<button class="btn" data-invite>Request your invitation</button>`:`<a class="btn" href="#alerts">Set up alerts</a>`}</div>`;
   app.innerHTML=`<div class="disc">
