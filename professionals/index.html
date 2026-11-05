@@ -787,7 +787,9 @@ function vCompany(){
         <div class="grid2"><label class="field">Name<input type="text" id="f_contact" value="${esc(co.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="f_contactTitle" value="${esc(co.contactTitle)}" autocomplete="organization-title"></label></div>
         <div class="authbox ${co.auth?"on":""}">
           <label class="check"><input type="checkbox" id="f_auth" ${co.auth?"checked":""}><span><b>I'm authorised to agree terms of business on behalf of ${esc(co.name||"my company")} and its associated companies.</b></span></label>
-          <p class="muted small" id="authNote">${co.auth?`Confirmed by ${esc(co.auth.name)}${co.auth.title?", "+esc(co.auth.title):""} on ${esc(co.auth.at)}. This is kept on your activity record.`:"Add your name and job title above, then tick to confirm. If someone else signs agreements for your company, ask them to complete this step."}</p>
+          <p class="muted small" id="authNote">${co.auth?`Confirmed by ${esc(co.auth.name)}${co.auth.title?", "+esc(co.auth.title):""} on ${esc(co.auth.at)}. This is kept on your activity record.`:"Add your name and job title above, then tick to confirm. If someone else signs agreements for your company, send the terms to them instead."}</p>
+          ${co.auth?"":(S.sigReq&&S.sigReq.status==="sent"&&!termsOK()?`<div class="protect">${lockIcon}<span><b>Sent to ${esc(S.sigReq.name)} (${esc(S.sigReq.title)}) to sign.</b> You can carry on and browse, shortlist and chat. Reveals unlock once they've signed.</span></div><div class="row"><button type="button" class="btn line sm" id="f_noauth">Send to someone else</button>${contactBtn("Contact Jamie and Connor")}</div>`:
+            `<div class="row" style="margin-top:4px"><span class="small"><b>Not authorised?</b></span><button type="button" class="btn line sm" id="f_noauth">Send to someone who can sign</button>${contactBtn("Contact Jamie and Connor")}</div>`)}
         </div>
         <p class="small" id="authErr" style="color:var(--bad);display:none"></p>
         <div class="row"><button class="btn" type="submit">Save and see matches</button><button type="button" class="btn quiet" id="reset">Reset demo</button></div>
@@ -826,7 +828,8 @@ function vCompany(){
   $("#f_auth").onchange=e=>{if(e.target.checked){if(co.contact.trim().length<3||!co.contactTitle.trim()){e.target.checked=false;authErr("Add your name and job title first.");return}
       co.auth={name:co.contact.trim(),title:co.contactTitle.trim(),at:new Date().toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})};logEvent(`Authority to agree terms confirmed by ${co.auth.name}, ${co.auth.title}`,co.auth.name);toast("Authority confirmed")}
     else{co.auth=null}authErr("");save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);counts()};
-  $("#coForm").addEventListener("submit",e=>{e.preventDefault();if(!co.auth){authErr("Tick to confirm you're authorised to agree terms for your company.");$("#f_auth").closest(".authbox").scrollIntoView({block:"center",behavior:"smooth"});return}save();location.hash="discover"});
+  const na=$("#f_noauth");if(na)na.onclick=()=>sendForSignature("company");bindContact(app,"Signing terms");
+  $("#coForm").addEventListener("submit",e=>{e.preventDefault();if(!co.auth&&!(S.sigReq&&S.sigReq.status==="sent")&&!termsOK()){authErr("Tick to confirm you're authorised to agree terms, or send the terms to someone who can sign.");$("#f_auth").closest(".authbox").scrollIntoView({block:"center",behavior:"smooth"});return}save();location.hash="discover"});
 }
 
 const PF={sec:"",q:"",grp:"all",lvl:"all",region:"all",stage:"all",open:"all",sort:"match",shown:24,mode:"grid"};
@@ -1282,7 +1285,7 @@ function showAgreement(a,{fresh=false}={}){const to=[a.by.email,...a.cc].filter(
   $("#agP").onclick=()=>{document.body.classList.add("printing");window.print();setTimeout(()=>document.body.classList.remove("printing"),400)};
   return new Promise(r=>{$("#agX").onclick=()=>{layer.innerHTML="";r()}})}
 function signLink(){return location.origin+location.pathname+"#sign"}
-function sendForSignature(){
+function sendForSignature(from){
   const r=S.sigReq||{};
   layer.innerHTML=`<div class="scrim"><form class="modal" id="sdF" role="dialog" aria-modal="true" aria-labelledby="sdT" style="max-width:520px">
     <div class="stack" style="gap:4px"><span class="kicker">Terms of engagement</span><h2 id="sdT">Send to someone who can sign</h2>
@@ -1292,12 +1295,12 @@ function sendForSignature(){
     <label class="field">Message <small>Optional</small><textarea id="sdM" style="min-height:64px" placeholder="We'd like to start meeting candidates on the Exchange. Can you sign these?">${esc(r.note||"")}</textarea></label>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="sdX">Back</button><button class="btn" type="submit">Send for signature</button></div>
     <p class="muted small">Questions about the terms? ${contactBtn()}</p></form></div>`;
-  $("#sdX").onclick=()=>openTermsGate();bindContact(layer,"Terms");
+  $("#sdX").onclick=()=>{if(from==="company")layer.innerHTML="";else openTermsGate()};bindContact(layer,"Terms");
   $("#sdF").onsubmit=e=>{e.preventDefault();const em=$("#sdE").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Enter a valid work email");return}
     S.sigReq={name:$("#sdN").value.trim(),title:$("#sdJ").value.trim(),email:em,note:$("#sdM").value.trim(),by:S.company.contact||"Your team",at:Date.now(),status:"sent"};
     logEvent(`Terms sent for signature to ${S.sigReq.name}, ${S.sigReq.title} (${em})`,S.company.contact);
     notify("admin",`${S.company.name||"A client"} sent the terms to ${S.sigReq.name} (${S.sigReq.title}) to sign`,"clients");
-    save();layer.innerHTML="";toast(`Terms sent to ${S.sigReq.name}`);if(view()==="terms")vTerms();counts()};
+    save();layer.innerHTML="";toast(`Terms sent to ${S.sigReq.name}`);if(view()==="terms")vTerms();else if(view()==="company"){const y=SC.scrollTop;vCompany();SC.scrollTop=y}counts()};
 }
 function vSign(){
   const r=S.sigReq;
