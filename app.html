@@ -1462,10 +1462,10 @@ function openTermsGate(onDone,chaseRef,onBroker){
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
   return `<div class="doc" id="printDoc"><div><span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A7A55;font-weight:700">Consumer Talent Exchange</span><h3>Signed terms of engagement</h3></div>
-    <dl class="dmeta"><dt>Reference</dt><dd>${esc(a.ref)}</dd><dt>Client</dt><dd>${esc(a.co||"Client")} and its associated companies</dd><dt>Supplier</dt><dd>Consumer Talent Group</dd><dt>Basis</dt><dd>${esc(a.kind)}</dd><dt>Signed</dt><dd>${esc(when)}</dd></dl>
+    <dl class="dmeta"><dt>Reference</dt><dd>${esc(a.ref)}</dd><dt>Client</dt><dd>${esc(a.co||"Client")} and its associated companies</dd><dt>Supplier</dt><dd>Staff Selection UK Ltd, trading as Consumer Talent (registered office: 2 Hawk Road, Dewsbury, WF12 7AY)</dd><dt>Basis</dt><dd>${esc(a.kind)}</dd><dt>Signed</dt><dd>${esc(when)}</dd></dl>
     <div><h4>Fees</h4><table><tr><td>Salary up to $99,999</td><td style="text-align:right"><b>${T.t1}%</b></td></tr><tr><td>$100,000 to $199,999</td><td style="text-align:right"><b>${T.t2}%</b></td></tr><tr><td>$200,000 plus</td><td style="text-align:right"><b>${T.t3}%</b></td></tr><tr><td>Free replacement period</td><td style="text-align:right"><b>${T.repl} weeks</b></td></tr><tr><td>Payment terms</td><td style="text-align:right"><b>${T.pay} days</b></td></tr></table></div>
     ${termsHTML().replace('id="termsBox" tabindex="0"','')}
-    <div class="sig"><div><span class="muted">Signed for the client</span><b>${esc(a.by.name)}</b>${esc(a.by.name)}, ${esc(a.by.title)}<br>${esc(a.by.email||"")}</div><div><span class="muted">For Consumer Talent Group</span><b>Jamie Wood</b>Jamie Wood, Founder and CEO<br>jamie@consumer-talent.com</div></div>
+    <div class="sig"><div><span class="muted">Signed for the client</span><b>${esc(a.by.name)}</b>${esc(a.by.name)}, ${esc(a.by.title)}<br>${esc(a.by.email||"")}</div><div><span class="muted">For Staff Selection UK Ltd t/a Consumer Talent</span><b>Jamie Wood</b>Jamie Wood, Founder and CEO<br>jamie@consumer-talent.com</div></div>
   </div>`}
 function showAgreement(a,{fresh=false}={}){const to=[a.by.email,...a.cc].filter(Boolean);
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="agT" style="max-width:640px">
