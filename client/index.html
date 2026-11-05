@@ -1873,16 +1873,16 @@ function vInvites(){autoLetIn();
       <div class="steps">${LSTEPS.map((s,i)=>`<div class="${i<=l.status?"on":""}">${s}</div>`).join("")}</div>
       ${l.link&&l.status<3?`<div class="muted small">Link <span style="color:var(--ink)">${l.link}</span> sent ${esc(l.sent)}. Expires in 72 hours and works once.</div>`:""}
     </div>`).join("")}</div></div>`};
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Invites</span><h1>Turn interest into sign-ups</h1>
-    <p class="muted">Professionals are let in automatically: the moment they sign up they get a magic link by email and text and can build their profile straight away. Companies still need your approval. Approve one and they get their link; decline and they don't get in.</p></div>
-  <div class="grid3" style="margin-bottom:18px">${[["Registered interest",L.length],["Companies to approve",L.filter(l=>l.type==="client"&&l.status===0).length],["Profiles complete",n(3)]].map(([k,v])=>`<div class="card"><div class="muted small">${k}</div><div class="num" style="font-family:var(--display);font-size:34px;font-weight:600">${v}</div></div>`).join("")}</div>
-  <div class="cols">${block("cand","Professionals",`${L.filter(l=>l.type==="cand").length} people`)}${block("client","Companies",`${L.filter(l=>l.type==="client").length} companies`)}</div>
-  <form class="card stack" id="addLead" style="margin-top:18px"><h2>Add someone who registered interest</h2>
-    <div class="grid3"><label class="field">Type<select id="nl_t"><option value="cand">Candidate</option><option value="client">Company</option></select></label>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Invites</span><h1>Company sign-ups</h1>
+    <p class="muted">Companies that want to join the Exchange. Approve one and they get a magic link by email and text to set up their account. Decline and they don't get in. Professionals join automatically, so they don't appear here.</p></div>
+  <div class="grid3" style="margin-bottom:18px">${[["Companies registered",L.filter(l=>l.type==="client").length],["Waiting for approval",L.filter(l=>l.type==="client"&&l.status===0).length],["Set up and live",L.filter(l=>l.type==="client"&&l.status>=3).length]].map(([k,v])=>`<div class="card"><div class="muted small">${k}</div><div class="num" style="font-family:var(--display);font-size:34px;font-weight:600">${v}</div></div>`).join("")}</div>
+  <div style="max-width:860px">${block("client","Companies",`${L.filter(l=>l.type==="client").length} companies`)}</div>
+  <form class="card stack" id="addLead" style="margin-top:18px;max-width:860px"><h2>Add a company that registered interest</h2>
+    <div class="grid3"><input type="hidden" id="nl_t" value="client">
       <label class="field">Full name<input type="text" id="nl_n" required placeholder="e.g. Jenna Carter"></label>
       <label class="field">Email<input type="email" id="nl_e" required placeholder="name@email.com"></label>
       <label class="field">Mobile<input type="tel" id="nl_p" placeholder="+1 555 000 0000"></label>
-      <label class="field">Role or company<input type="text" id="nl_d" placeholder="e.g. Brand Manager · Denver, CO"></label>
+      <label class="field">Title and company<input type="text" id="nl_d" placeholder="e.g. VP Sales · Prairie Mill Snacks"></label>
       <label class="field">Source<select id="nl_s"><option>Apollo email campaign</option><option>WhatsApp reply</option><option>Website sign-up</option><option>Referral from member</option><option>Phone call</option></select></label></div>
     <div><button class="btn" type="submit">Add</button></div></form>`;
   app.querySelectorAll("[data-ldec]").forEach(b=>b.onclick=()=>{const l=S.leads.find(x=>x.id===b.dataset.ldec);l.status=-1;save();vInvites();counts();toast(`${l.name} declined`)});
