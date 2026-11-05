@@ -47,7 +47,9 @@ create or replace function public.support_notify() returns trigger language plpg
 declare tok text:=private.setting('postmark_token'); rcpt text; who text;
 begin
   who:=coalesce(nullif(new.name,''),new.email,'Someone')||case when coalesce(new.company,'')<>'' then ' ('||new.company||')' else '' end;
-  if new.topic='Terms proposal' and new.payload is not null then
+  if new.topic='Retained or project enquiry' then
+    insert into public.notifications(audience,text,go) values('admin','Message from '||who||': wants to discuss '||case new.payload->>'kind' when 'Retained search' then 'a retained search' when 'Project' then 'a project' else 'retained search or project work' end||' instead of the standard terms. "'||left(regexp_replace(new.body,'^[^:]*:\s*',''),110)||case when length(new.body)>110 then '…' else '' end||'"','clients');
+  elsif new.topic='Terms proposal' and new.payload is not null then
     insert into public.notifications(audience,text,go) values('admin','Message from '||who||': terms proposal of '||(new.payload->>'t1')||'/'||(new.payload->>'t2')||'/'||(new.payload->>'t3')||'% fees, '||(new.payload->>'repl')||'-week replacement, '||(new.payload->>'pay')||'-day payment. Reply by email.','clients');
   else
     insert into public.notifications(audience,text,go) values('admin','Message from '||who||': "'||left(new.body,120)||case when length(new.body)>120 then '…' else '' end||'"','dash');

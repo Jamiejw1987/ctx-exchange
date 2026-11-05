@@ -409,6 +409,24 @@ vTerms=function(){_vTerms();
       const by={name:nm,title:ti,email:L.user.email,at:Date.now()};S.terms=Object.assign({},by,{custom:true,tiers:d.final});
       logEvent(`Signed agreed custom terms: ${tierRow(d.final)}`,nm);issueAgreement("Agreed custom terms",{...d.final},by,()=>{counts();vTerms()})}}};
 termsOK=function(){return !!S.terms};   // in the live app, terms count once they're signed
+// "Would you rather talk about retained search or a project?" box on the Terms page
+const _vTerms2=vTerms;
+vTerms=function(){_vTerms2();const col=app.querySelector(".cols > .stack");if(!col||$("#rpF"))return;
+  const f=document.createElement("form");f.id="rpF";f.className="card stack";f.style.gap="10px";
+  f.innerHTML=`<h2 style="margin:0">Prefer retained search or a project?</h2>
+    <p class="muted small" style="margin:0">As well as the Exchange, Consumer Talent runs retained searches for senior hires and project-based campaigns for multiple roles. Would you like to discuss those instead?</p>
+    <div class="seg" role="group" aria-label="What would you like to discuss" style="width:100%"><button type="button" data-rk="Retained search" aria-pressed="true" style="flex:1">Retained search</button><button type="button" data-rk="Project" aria-pressed="false" style="flex:1">Project</button><button type="button" data-rk="Not sure yet" aria-pressed="false" style="flex:1">Not sure yet</button></div>
+    <label class="field">Tell us a little about what you need<textarea id="rpM" maxlength="3000" style="min-height:80px" placeholder="e.g. We're hiring a VP Sales and three regional managers this year."></textarea></label>
+    <p class="small" id="rpE" style="color:var(--bad);display:none"></p>
+    <div><button class="btn line" type="submit">Send to Jamie and Connor</button></div>`;
+  col.appendChild(f);let kind="Retained search";
+  f.querySelectorAll("[data-rk]").forEach(b=>b.onclick=()=>{kind=b.dataset.rk;f.querySelectorAll("[data-rk]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))});
+  f.onsubmit=async e=>{e.preventDefault();const m=$("#rpM").value.trim();if(m.length<3){const x=$("#rpE");x.textContent="Add a line about what you need.";x.style.display="block";return}
+    const b=f.querySelector("[type=submit]");b.disabled=true;
+    const {error}=await sb.from("support_msgs").insert({name:S.company.contact||"",email:L.user.email,company:S.company.name,topic:"Retained or project enquiry",body:`${kind}: ${m}`,payload:{kind}});
+    if(error){b.disabled=false;return toast("That didn't send. Please try again.")}
+    f.innerHTML=`<h2 style="margin:0">Thanks, we'll be in touch</h2><p class="muted small" style="margin:0">Jamie or Connor will reply to ${esc(L.user.email)}, usually within a working day.</p>`;
+    logEvent(`Asked to discuss ${kind.toLowerCase()} instead of standard terms`,S.company.contact||"");toast("Sent to Jamie and Connor")}};
 VIEWS.terms=vTerms;
 
 /* ---------- Consumer Talent: terms requests ---------- */
