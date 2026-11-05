@@ -426,6 +426,8 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 
 /* modal */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.7);display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.mclose{position:sticky;top:0;align-self:flex-end;margin:-14px -14px -42px 0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:6;flex:none;display:grid;place-items:center;box-shadow:var(--shadow)}
+.mclose:hover{border-color:var(--brand)}
 .modal{background:var(--surface);border-radius:18px;max-width:640px;width:100%;max-height:100%;overflow:auto;padding:26px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow)}
 .terms{border:1px solid var(--line);border-radius:12px;max-height:300px;overflow:auto;padding:16px 18px;font-size:13.5px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
 .terms h4{font-size:13.5px}
@@ -889,7 +891,7 @@ function openProfile(id){
   const pz=$("#mPass");if(pz)pz.onclick=()=>{S.decided[id]="pass";save();layer.innerHTML="";toast(`Passed on ${c.user}`);VIEWS[view()]();counts()};
   const k=$("#mKeep");if(k)k.onclick=()=>{S.shortlist.push(id);S.decided[id]="keep";logEvent(`Shortlisted ${c.user}`,S.company.contact);save();layer.innerHTML="";toast(`${c.user} added to your shortlist`);VIEWS[view()]();counts()};
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&layer.innerHTML&&!$("#termsBox"))layer.innerHTML=""});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&layer.innerHTML)layer.innerHTML=""});
 
 let JDV=null;
 const JD_EXTRA=["JBP","joint business plan","RGM","revenue growth management","trade spend","trade promotion","DSD","direct store delivery","broker","distributor","P&L","category management","category captain","shopper marketing","Nielsen","Circana","IRI","SPINS","Retail Link","84.51","Numerator","S&OP","co-man","co-manufacturing","forecasting","pricing","promotions","innovation","new product development","NPD","brand management","media","retail media","Amazon","DTC","e-commerce","CPG","FMCG","food safety","SQF","lean","six sigma","supply chain","procurement","logistics","budget","team leadership","national accounts","key accounts","club","grocery","mass","convenience","natural","foodservice","private label","Canada","Mexico","bilingual","Spanish","French"];
@@ -1041,6 +1043,8 @@ function contactUs(topic="Terms"){
     logEvent(`Message to Consumer Talent (${topic}) emailed to ${CT_TEAM.map(t=>t[1]).join(", ")}${em?", reply to "+em:""}`,who);
     save();layer.innerHTML="";toast("Sent to Jamie and Connor. They'll be in touch.")};
 }
+/* every pop-up gets a close button at the top, so nobody gets stuck */
+new MutationObserver(()=>{layer.querySelectorAll(".modal").forEach(m=>{if(m.querySelector(":scope > .mclose"))return;const b=document.createElement("button");b.type="button";b.className="mclose";b.setAttribute("aria-label","Close");b.textContent="×";b.onclick=()=>{layer.innerHTML="";if(typeof counts==="function")counts()};m.prepend(b)})}).observe(document.getElementById("layer"),{childList:true,subtree:true});
 function notify(to,t,go){S.notes.unshift({id:"n"+Date.now()+Math.random().toString(36).slice(2,5),to,t,go,at:Date.now(),read:false});bellCount()}
 function sideKey(){return S.mode==="cand"?"cand":S.mode==="admin"?"admin":"client"}
 function bellCount(){const el=$("#bellN");if(el){const n=(S.notes||[]).filter(x=>x.to===sideKey()&&!x.read).length;el.textContent=n?String(n):""}}
