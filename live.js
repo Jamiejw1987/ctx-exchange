@@ -189,10 +189,29 @@ vInvites=function(){const R=L.rows,P=R.cos.filter(c=>c.status==="pending"),D=R.c
     <div class="row">${dec?`<span class="tag">Declined</span><button class="btn quiet sm" data-ok="${c.id}">Approve after all</button>`:`<button class="btn good sm" data-ok="${c.id}">Approve</button><button class="btn line sm" data-no="${c.id}">Decline</button>`}</div></div></div>`};
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Sign-ups</span><h1>Company sign-ups</h1><p class="muted">Companies that have created an account. Approve one and they can browse and request introductions straight away. Decline and they can't get in. Professionals join automatically, so they don't appear here.</p></div>
   <div class="stack" style="max-width:860px;gap:14px"><div class="card stack"><h2>Waiting for approval <span class="badge num">${P.length}</span></h2><div class="list">${P.map(c=>card(c)).join("")||`<p class="muted">Nobody waiting. New sign-ups appear here and in your notifications.</p>`}</div></div>
-  ${D.length?`<div class="card stack"><h2>Declined</h2><div class="list">${D.map(c=>card(c,true)).join("")}</div></div>`:""}</div>`;
+  ${D.length?`<div class="card stack"><h2>Declined</h2><div class="list">${D.map(c=>card(c,true)).join("")}</div></div>`:""}
+  <div class="card stack" id="acctCard"><div class="row" style="justify-content:space-between;gap:10px"><h2 style="margin:0">All accounts <span class="badge num">${acctRows().length}</span></h2><input type="search" id="acctQ" placeholder="Search name, email or company" style="max-width:280px" value="${esc(L.acctQ||"")}"></div>
+    <p class="muted small" style="margin:0">Delete test, spam or unwanted sign-ups. Anyone with an accepted introduction is on the protection record, so they can't be deleted here. Remove a company's access in Client accounts instead.</p>
+    <div class="list" id="acctList"></div></div></div>`;
+  drawAccts();$("#acctQ").oninput=e=>{L.acctQ=e.target.value;drawAccts()};
   app.querySelectorAll("[data-ok]").forEach(b=>b.onclick=async()=>{b.disabled=true;await setAccess(b.dataset.ok,"active",{histWhat:"Approved"},"Consumer Talent");toast("Approved. They can use the Exchange now.")});
   app.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{b.disabled=true;const co=R.cos.find(c=>c.id===b.dataset.no);await q(sb.from("companies").update({status:"declined"}).eq("id",co.id));co.status="declined";refreshSoon(50);toast("Declined")})};
 VIEWS.invites=vInvites;
+function acctRows(){const R=L.rows;if(!R.profs)return [];const team=["jamie@consumer-talent.com","connor@consumer-talent.com"];
+  return R.profs.filter(p=>!team.includes((p.email||"").toLowerCase())).map(p=>{const cids=R.mem.filter(m=>m.user_id===p.user_id).map(m=>m.company_id);const co=R.cos.find(c=>cids.includes(c.id));
+    const prot=R.intros.some(i=>i.accepted_at&&(i.pro_id===p.user_id||cids.includes(i.company_id)));
+    return {id:p.user_id,name:p.name||"",email:p.email||"",type:p.role==="client"?"Company":"Professional",co:co?co.name:"",st:co?co.status:"",at:p.created_at,prot}}).sort((a,b)=>new Date(b.at)-new Date(a.at))}
+function drawAccts(){const el=$("#acctList");if(!el)return;const qq=(L.acctQ||"").trim().toLowerCase();
+  const rows=acctRows().filter(r=>!qq||[r.name,r.email,r.co].join(" ").toLowerCase().includes(qq));
+  el.innerHTML=rows.slice(0,100).map(r=>`<div class="item"><div class="line1"><div><b>${esc(r.name||r.email)}</b> <span class="tag">${r.type}</span>${r.co?` <span class="muted small">${esc(r.co)}${r.st&&r.st!=="approved"?" · "+esc(r.st):""}</span>`:""}
+      <div class="muted small">${esc(r.email)} · joined ${esc(fmtDay(new Date(r.at)))}</div></div>
+    <div class="row">${r.prot?`<span class="tag" title="Has an accepted introduction">On protection record</span>`:`<button class="btn line sm" data-del="${r.id}">Delete</button>`}</div></div></div>`).join("")||`<p class="muted">No accounts${qq?" match that search":" yet"}.</p>`;
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
+    if(b.dataset.arm!=="1"){b.dataset.arm="1";b.textContent="Tap again to delete";b.style.color="var(--bad)";b.style.borderColor="var(--bad)";setTimeout(()=>{if(b.isConnected&&b.dataset.arm==="1"){b.dataset.arm="";b.textContent="Delete";b.style.color="";b.style.borderColor=""}},4000);return}
+    b.disabled=true;b.textContent="Deleting...";const r=acctRows().find(x=>x.id===b.dataset.del);
+    const {error}=await sb.rpc("admin_delete_account",{uid:b.dataset.del});
+    if(error){b.disabled=false;b.dataset.arm="";b.textContent="Delete";toast(error.message);return}
+    toast(`${r?r.name||r.email:"Account"} deleted`);await hydrate();vInvites();counts()})}
 allDeals=function(){const R=L.rows;if(!R.intros)return [];const lastBy={};(R.events||[]).forEach(e=>{if(e.intro_id)lastBy[e.intro_id]=ago(e.at)});
   return R.intros.map(i=>{const c=POOL.find(p=>p.id===i.pro_id);if(!c)return null;const co=R.cos.find(x=>x.id===i.company_id)||{name:"?"};const cs=i.client_state||{};
     let s=i.accepted_at?(co.terms?3:2):1;if(cs.cstage&&cs.cstage>s)s=cs.cstage;const st=[0,0,1,2,3,5][s];
