@@ -875,7 +875,7 @@ function vPool(){
    .sort((a,b)=>PF.sort==="match"?b.score-a.score:PF.sort==="new"?(b.c.isNew-a.c.isNew)||(b.score-a.score):LV.indexOf(a.c.lvl)-LV.indexOf(b.c.lvl));
   const lvOpts=(PF.grp==="all"?LV:GROUPS.find(g=>g[0]===PF.grp)[1]);
   app.innerHTML=`<div class="pagehead"><span class="kicker">Talent pool</span><h1>${visible().length} senior food and drink professionals across North America</h1>
-    <p class="muted">Every member is personally vetted by Consumer Talent. Profiles stay anonymous until you both agree to reveal.</p></div>
+    <p class="muted">Every profile stays anonymous until you both agree to reveal.</p></div>
   <div class="row" style="gap:8px;margin-bottom:16px">${GROUPS.map(([g,ls])=>{const n=visible().filter(c=>ls.includes(c.lvl)).length;return `<button class="pick radio" data-grp="${esc(g)}" aria-pressed="${PF.grp===g}">${g} <span class="badge num">${n}</span></button>`}).join("")}<button class="pick radio" data-grp="all" aria-pressed="${PF.grp==="all"}">Everyone <span class="badge num">${visible().length}</span></button></div>
   <div class="protect" style="margin-bottom:14px">${lockIcon}<span><b>Your own team is never shown here.</b> Anyone who works at ${esc(S.company.name||"your company")}, or has asked not to be shown to you, is left out of these results. They can't see your company either.</span></div>
   <div class="filters">
@@ -1863,19 +1863,19 @@ function vTermsAdmin(){
 /* ================= CONSUMER TALENT (ADMIN) ================= */
 const LSTEPS=["Interest registered","Magic link sent","Link opened","Profile complete"];
 function newLink(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let x="";for(let i=0;i<6;i++)x+=c[Math.floor(Math.random()*c.length)];return "cte.link/j/"+x.slice(0,3)+"-"+x.slice(3)}
-function vInvites(){
+function autoLetIn(){(S.leads||[]).forEach(l=>{if(l.type==="cand"&&l.status===0){l.status=1;l.link=l.link||newLink();l.sent="Automatically, on sign-up"}})}
+function vInvites(){autoLetIn();
   const L=S.leads,n=k=>L.filter(l=>l.status>=k).length;
   const block=(type,title,sub)=>{const rows=L.filter(l=>l.type===type);return `<div class="card stack"><div class="line1" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h2>${title}</h2><span class="muted small">${sub}</span></div>
     <div class="list">${rows.map(l=>`<div class="item" style="background:var(--soft)">
       <div class="line1"><div class="row" style="flex-wrap:nowrap;min-width:0">${type==="client"?coLogo({name:l.company,logo:l.company===S.company.name?S.company.logo:""}):`<span class="avatar">${personIcon}</span>`}<div style="min-width:0"><b>${esc(l.name)}</b><div class="muted small">${esc(l.detail)}</div><div class="muted small">${esc(l.source)} · ${esc(l.at)}</div></div></div>
-        <div class="row">${l.status===0?`<button class="btn sm" data-send="${l.id}">Send magic link</button>`:l.status<3?`<button class="btn line sm" data-send="${l.id}">Resend</button><button class="btn quiet sm" data-as="${l.id}">Open as ${esc(l.name.split(" ")[0])}</button>`:`<span class="tag hit">Signed up</span>`}</div></div>
+        <div class="row">${l.status===0?`<button class="btn sm" data-send="${l.id}">Approve and send link</button><button class="btn line sm" data-ldec="${l.id}">Decline</button>`:l.status<0?`<span class="tag">Declined</span><button class="btn quiet sm" data-lund="${l.id}">Undo</button>`:l.status<3?`<button class="btn line sm" data-send="${l.id}">Resend</button><button class="btn quiet sm" data-as="${l.id}">Open as ${esc(l.name.split(" ")[0])}</button>`:`<span class="tag hit">Signed up</span>`}</div></div>
       <div class="steps">${LSTEPS.map((s,i)=>`<div class="${i<=l.status?"on":""}">${s}</div>`).join("")}</div>
       ${l.link&&l.status<3?`<div class="muted small">Link <span style="color:var(--ink)">${l.link}</span> sent ${esc(l.sent)}. Expires in 72 hours and works once.</div>`:""}
     </div>`).join("")}</div></div>`};
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Invites</span><h1>Turn interest into sign-ups</h1>
-    <p class="muted">When a professional or company registers interest, send them a magic link. One tap signs them in and takes them straight to building their profile. No passwords.</p></div>
-  <div class="grid3" style="margin-bottom:18px">${[["Registered interest",L.length],["Links sent",n(1)],["Profiles complete",n(3)]].map(([k,v])=>`<div class="card"><div class="muted small">${k}</div><div class="num" style="font-family:var(--display);font-size:34px;font-weight:600">${v}</div></div>`).join("")}</div>
-  <div class="card" style="margin-bottom:18px"><div class="toggle" style="border:0;padding:0"><div><b>Send magic links automatically</b><p class="muted small">Anyone who registers interest gets their link straight away, by email and text.</p></div><label class="switch"><input type="checkbox" id="auto" ${S.autoSend?"checked":""} aria-label="Send magic links automatically"><span></span></label></div></div>
+    <p class="muted">Professionals are let in automatically: the moment they sign up they get a magic link by email and text and can build their profile straight away. Companies still need your approval. Approve one and they get their link; decline and they don't get in.</p></div>
+  <div class="grid3" style="margin-bottom:18px">${[["Registered interest",L.length],["Companies to approve",L.filter(l=>l.type==="client"&&l.status===0).length],["Profiles complete",n(3)]].map(([k,v])=>`<div class="card"><div class="muted small">${k}</div><div class="num" style="font-family:var(--display);font-size:34px;font-weight:600">${v}</div></div>`).join("")}</div>
   <div class="cols">${block("cand","Professionals",`${L.filter(l=>l.type==="cand").length} people`)}${block("client","Companies",`${L.filter(l=>l.type==="client").length} companies`)}</div>
   <form class="card stack" id="addLead" style="margin-top:18px"><h2>Add someone who registered interest</h2>
     <div class="grid3"><label class="field">Type<select id="nl_t"><option value="cand">Candidate</option><option value="client">Company</option></select></label>
@@ -1885,19 +1885,20 @@ function vInvites(){
       <label class="field">Role or company<input type="text" id="nl_d" placeholder="e.g. Brand Manager · Denver, CO"></label>
       <label class="field">Source<select id="nl_s"><option>Apollo email campaign</option><option>WhatsApp reply</option><option>Website sign-up</option><option>Referral from member</option><option>Phone call</option></select></label></div>
     <div><button class="btn" type="submit">Add</button></div></form>`;
-  $("#auto").onchange=e=>{S.autoSend=e.target.checked;save();toast(S.autoSend?"New sign-ups will get their link automatically":"Automatic links turned off")};
+  app.querySelectorAll("[data-ldec]").forEach(b=>b.onclick=()=>{const l=S.leads.find(x=>x.id===b.dataset.ldec);l.status=-1;save();vInvites();counts();toast(`${l.name} declined`)});
+  app.querySelectorAll("[data-lund]").forEach(b=>b.onclick=()=>{const l=S.leads.find(x=>x.id===b.dataset.lund);l.status=0;save();vInvites();counts()});
   app.querySelectorAll("[data-send]").forEach(b=>b.onclick=()=>sendLink(b.dataset.send));
   app.querySelectorAll("[data-as]").forEach(b=>b.onclick=()=>openAs(b.dataset.as));
   $("#addLead").addEventListener("submit",e=>{e.preventDefault();const t=$("#nl_t").value,nm=$("#nl_n").value.trim(),d=$("#nl_d").value.trim();
     const l={id:"l"+Date.now(),type:t,name:nm,email:$("#nl_e").value.trim(),phone:$("#nl_p").value.trim(),detail:d||(t==="cand"?"Candidate":"Company"),company:t==="client"?(d.split("·").pop().trim()||nm):"",source:$("#nl_s").value,at:"Just now",status:0};
-    S.leads.unshift(l);if(S.autoSend){l.status=1;l.link=newLink();l.sent="Just now";toast(`Magic link sent to ${nm}`)}else toast(`${nm} added`);save();vInvites()});
+    S.leads.unshift(l);if(t==="cand"){l.status=1;l.link=newLink();l.sent="Just now";toast(`${nm} is in. Magic link sent automatically.`)}else toast(`${nm} added. Approve them to send their link.`);save();vInvites()});
 }
 function sendLink(id){
   const l=S.leads.find(x=>x.id===id),first=l.name.split(" ")[0],link=l.link||newLink();
   const ch={email:true,sms:!!l.phone,wa:false};
   const body=l.type==="cand"
     ?`Hi ${first}, thanks for registering interest in the Consumer Talent Exchange, the private network for senior food and drink leaders in North America. Your profile stays anonymous: companies only learn who you are if you accept an introduction. Tap below to sign in and build your profile. It takes about 5 minutes.`
-    :`Hi ${first}, thanks for your interest in the Consumer Talent Exchange. You'll get private access to a vetted, anonymous pool of senior food and drink talent across sales, marketing, insights and operations. Tap below to sign in and set up ${esc(l.company||"your company")}'s profile. You only pay if you hire.`;
+    :`Hi ${first}, thanks for your interest in the Consumer Talent Exchange. You'll get private access to an anonymous pool of senior food and drink talent across sales, marketing, insights and operations. Tap below to sign in and set up ${esc(l.company||"your company")}'s profile. You only pay if you hire.`;
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mlT">
     <div class="stack" style="gap:4px"><span class="kicker">Magic link</span><h2 id="mlT">Send ${esc(l.name)} a sign-in link</h2><p class="muted small">${esc(l.email)}${l.phone?" · "+esc(l.phone):""}</p></div>
     <div class="field">Send by<div class="picks" id="chs">${[["email","Email"],["sms","Text message"],["wa","WhatsApp"]].map(([k,t])=>`<button type="button" class="pick" data-k="${k}" aria-pressed="${ch[k]}">${t}</button>`).join("")}</div></div>
@@ -2575,11 +2576,12 @@ async function sbToken(){let a=sbGet();if(!a)return null;if(Date.now()<a.exp-600
   const r=await fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:a.refresh_token})});
   if(!r.ok){sbSet(null);return null}const j=await r.json();a={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email||a.email};sbSet(a);return a.access_token}
 const WLF={st:"all",side:"all",sector:"all",q:""};
-const wlActions=x=>{const st=x.status||"pending";return `<div class="row" style="width:100%;gap:8px">${st==="pending"?`<button class="btn sm" data-wla="${x.id}:approved">Approve</button><button class="btn line sm" data-wla="${x.id}:declined">Decline</button>`:`<span class="tag ${st==="approved"?"hit":""}">${st==="approved"?"Approved":"Declined"}</span><button class="btn quiet sm" data-wla="${x.id}:pending">Undo</button>`}</div>`};let WL=null,WLerr="";
+const wlSt=x=>x.side==="pro"?(x.status==="declined"?"declined":"approved"):(x.status||"pending");
+const wlActions=x=>{const st=wlSt(x);if(x.side==="pro")return `<div class="row" style="width:100%;gap:8px">${st==="approved"?`<span class="tag hit">Joined automatically</span><button class="btn quiet sm" data-wla="${x.id}:declined">Remove</button>`:`<span class="tag">Removed</span><button class="btn quiet sm" data-wla="${x.id}:approved">Undo</button>`}</div>`;return `<div class="row" style="width:100%;gap:8px">${st==="pending"?`<button class="btn sm" data-wla="${x.id}:approved">Approve</button><button class="btn line sm" data-wla="${x.id}:declined">Decline</button>`:`<span class="tag ${st==="approved"?"hit":""}">${st==="approved"?"Approved":"Declined"}</span><button class="btn quiet sm" data-wla="${x.id}:pending">Undo</button>`}</div>`};let WL=null,WLerr="";
 async function loadWL(){WLerr="";try{const t=await sbToken();if(!t){WL=null;return}
   const r=await fetch(SB_URL+"/rest/v1/waitlist?select=*&order=created_at.desc&limit=5000",{headers:{apikey:SB_KEY,Authorization:"Bearer "+t}});
   if(!r.ok){WLerr=r.status===401?"Your login has expired. Sign in again.":"Couldn't load the waiting list ("+r.status+").";if(r.status===401)sbSet(null);WL=null;return}
-  WL=await r.json();S.wlNew=WL.filter(x=>(x.status||"pending")==="pending").length;}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
+  WL=await r.json();S.wlNew=WL.filter(x=>wlSt(x)==="pending").length;}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
 function vWaitlist(){const a=sbGet();
   if(!a){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Everyone who's joined the waiting list from the landing page or the tasters. Sign in to see them.</p></div>
     <form class="card stack" id="sbF" style="max-width:420px" novalidate><h2>Team sign-in</h2>
@@ -2594,12 +2596,12 @@ function vWaitlist(){const a=sbGet();
         sbSet({access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email});await loadWL();vWaitlist();counts()}
       catch(x){err.textContent="Couldn't reach the database. Check your connection.";err.style.display="block";b.disabled=false;b.textContent="Sign in"}};return}
   if(WL===null&&!WLerr){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Loading...</p></div>`;loadWL().then(()=>{if(view()==="waitlist"){vWaitlist();counts()}});return}
-  const rows=(WL||[]).filter(x=>(WLF.st==="all"||(x.status||"pending")===WLF.st)&&(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
+  const rows=(WL||[]).filter(x=>(WLF.st==="all"||wlSt(x)===WLF.st)&&(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
   const all=WL||[],nC=all.filter(x=>x.side==="client").length,nP=all.filter(x=>x.side==="pro").length,wk=all.filter(x=>Date.now()-new Date(x.created_at)<7*864e5).length;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Signed in as ${esc(a.email||"")}. <a href="#" id="sbOut">Sign out</a></p></div>
   <div class="stack" style="max-width:860px;gap:16px">
     ${WLerr?`<div class="alert warn"><span>${esc(WLerr)}</span></div>`:""}
-    <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${all.filter(x=>(x.status||"pending")==="pending").length}</b><span>To review</span></div></div>
+    <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${all.filter(x=>wlSt(x)==="pending").length}</b><span>Companies to review</span></div></div>
     <div class="card stack">
       <div class="row" style="gap:8px"><select id="wlT" aria-label="Status"><option value="all">Any status</option><option value="pending" ${WLF.st==="pending"?"selected":""}>To review</option><option value="approved" ${WLF.st==="approved"?"selected":""}>Approved</option><option value="declined" ${WLF.st==="declined"?"selected":""}>Declined</option></select><select id="wlS" aria-label="Side"><option value="all">Everyone</option><option value="client" ${WLF.side==="client"?"selected":""}>Hiring teams</option><option value="pro" ${WLF.side==="pro"?"selected":""}>Professionals</option></select>
         <select id="wlC" aria-label="Sector"><option value="all">Food and drink</option><option ${WLF.sector==="Food"?"selected":""}>Food</option><option ${WLF.sector==="Drink"?"selected":""}>Drink</option></select>
@@ -2617,8 +2619,8 @@ function vWaitlist(){const a=sbGet();
   app.querySelectorAll("[data-wla]").forEach(b=>b.onclick=async()=>{const [id,st]=b.dataset.wla.split(":");b.disabled=true;
     try{const t=await sbToken();const r=await fetch(SB_URL+"/rest/v1/waitlist?id=eq."+id,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:"Bearer "+t,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify({status:st})});
       const j=r.ok?await r.json():[];if(!r.ok||!j.length){toast("Couldn't update. Run the latest SQL in Supabase.");b.disabled=false;return}
-      const x=WL.find(y=>String(y.id)===id);if(x)x.status=st;S.wlNew=WL.filter(y=>(y.status||"pending")==="pending").length;const y0=SC.scrollTop;vWaitlist();(SC.scrollTop=y0);counts();
-      toast(st==="approved"?"Approved":st==="declined"?"Declined":"Moved back to review")}catch(e){toast("Couldn't reach the database");b.disabled=false}});
+      const x=WL.find(y=>String(y.id)===id);if(x)x.status=st;S.wlNew=WL.filter(y=>wlSt(y)==="pending").length;const y0=SC.scrollTop;vWaitlist();(SC.scrollTop=y0);counts();
+      toast(st==="approved"?"Approved":st==="declined"?"Removed":"Moved back to review")}catch(e){toast("Couldn't reach the database");b.disabled=false}});
   $("#wlX").onclick=()=>{const cols=["created_at","status","side","name","email","company","role","title","region","sector","hiring","linkedin","source"];
     const csv=[cols.join(","),...rows.map(x=>cols.map(c=>`"${String(x[c]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
     const u=URL.createObjectURL(new Blob([csv],{type:"text/csv"})),l=document.createElement("a");l.href=u;l.download="ctx-waiting-list.csv";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)};
@@ -2633,7 +2635,7 @@ const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","Fo
 function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){try{ensureApplies()}catch(e){}try{ensureAccess()}catch(e){}try{Object.keys(S.intros).forEach(k=>{if(S.intros[k].review==="pending")sendIntroNow(k)})}catch(e){}bellCount();
   const fy=completeness().pct===100;
-  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",q:(()=>{try{return Object.values(S.access||{}).filter(x=>x.status==="requested").length||""}catch(e){return ""}})(),a:(S.applies||[]).filter(x=>x.status==="new").length||"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
+  const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",q:(()=>{try{return Object.values(S.access||{}).filter(x=>x.status==="requested").length||""}catch(e){return ""}})(),a:(S.applies||[]).filter(x=>x.status==="new").length||"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.type==="client"&&l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
@@ -2683,7 +2685,7 @@ function nudge(){if(!TASTER)return;let seen=false;try{seen=!!localStorage.getIte
   const pro=TASTER==="candidate";
   layer.innerHTML=`<div class="scrim" id="ngS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ngT" style="max-width:440px;align-self:end">
     <div class="stack" style="gap:6px"><span class="kicker">Founding members</span><h2 id="ngT">Like what you see?</h2>
-      <p class="muted">${pro?"Join as a founding member and we'll be in touch personally before the Exchange opens. It's free, and your employer will never see you.":"Join as a founding member and we'll set up your company before the Exchange opens, with your first picks ready on day one."}</p></div>
+      <p class="muted">${pro?"Join as a founding member and you're in straight away. It's free, and your employer will never see you.":"Join as a founding member and we'll set up your company before the Exchange opens, with your first picks ready on day one."}</p></div>
     <div class="stack" style="gap:8px"><a class="btn" href="${joinURL()}" style="justify-content:center">Become a founding member</a><button type="button" class="btn line" id="ngX" style="justify-content:center">Keep exploring</button></div></div></div>`;
   $("#ngX").onclick=()=>layer.innerHTML="";$("#ngS").onclick=e=>{if(e.target.id==="ngS")layer.innerHTML=""}}
 let nudgeArmed=false;
