@@ -1307,20 +1307,23 @@ function openTermsGate(onDone,chaseRef,onBroker){
     ${S.sigReq&&S.sigReq.status==="sent"?`<div class="protect">${lockIcon}<span><b>Waiting for ${esc(S.sigReq.name)} to sign.</b> Sent to ${esc(S.sigReq.email)} ${esc(new Date(S.sigReq.at).toLocaleDateString([], {day:"numeric",month:"short"}))}. If you're authorised yourself, you can sign below instead.</span></div>`:""}
     <label class="check"><input type="checkbox" id="sAuth" ${S.company.auth&&S.company.auth.name===S.company.contact?"checked":""}><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
-    <div class="row"><button class="btn" id="sGo" disabled>Sign and continue</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
+    <p class="small" id="sErr" style="color:var(--bad);display:none"></p>
+    <div class="row"><button class="btn" id="sGo">Sign and continue</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
     <div class="card stack" style="border:2px solid var(--brand);gap:10px;padding:18px"><h3 style="font-size:19px">Not authorised to sign, but still want to chat? No problem!</h3>
       <p class="small">You can still start chatting. Either send the terms to someone who can sign, or chat through Jamie and Connor at Consumer Talent, who'll look after the conversation until your terms are signed. Names stay hidden until terms are in place.</p>
       <div class="row">${onBroker?`<button type="button" class="btn" id="sBroker">Chat through Jamie and Connor</button>`:""}<button type="button" class="btn line" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send terms to someone else":"Send terms to someone who can sign"}</button></div>
       <div>${contactBtn("Questions? Contact Jamie and Connor")}</div></div>
   </div></div>`;
-  let read=false;const box=$("#termsBox");
-  const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim())&&$("#sAuth").checked&&$("#sRead").checked)};
-  box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
-  ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
+  const box=$("#termsBox");$("#scrollNote").textContent="Scroll through the terms above, then fill in your details below.";
+  const missing=()=>{const m=[];if($("#sName").value.trim().length<3)m.push("your full name");if(!$("#sTitle").value.trim())m.push("your job title");if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim()))m.push("a valid work email");if(!$("#sAuth").checked)m.push("tick that you're authorised to sign");if(!$("#sRead").checked)m.push("tick that you've read and agree to the terms");return m};
+  const err=t=>{const e=$("#sErr");e.textContent=t;e.style.display=t?"block":"none"};
+  ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=()=>err(""));["sAuth","sRead"].forEach(i=>$("#"+i).onchange=()=>err(""));
   $("#sX").onclick=()=>layer.innerHTML="";$("#sAlt").onclick=()=>layer.innerHTML="";
   $("#sDel").onclick=()=>sendForSignature();bindContact(layer,"Terms");
   const sb=$("#sBroker");if(sb)sb.onclick=()=>{layer.innerHTML="";notify("admin",`${S.company.name||"A client"} is chatting through you while their terms are unsigned. Look after the conversation and get terms signed.`,"intros");logEvent("Chose to chat through Jamie and Connor until terms are signed",S.company.contact);onBroker()};
-  $("#sGo").onclick=()=>{S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
+  $("#sGo").onclick=()=>{const m=missing();if(m.length){err("To sign, add "+m.join(", ")+".");$("#sErr").scrollIntoView({block:"center",behavior:"smooth"});return}
+    if(S.sigReq&&S.sigReq.status==="sent"){S.sigReq.status="superseded";logEvent(`Signed directly, so the request sent to ${S.sigReq.name} was cancelled`,$("#sName").value.trim())}
+    S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
   return `<div class="doc" id="printDoc"><div><span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A7A55;font-weight:700">Consumer Talent Exchange</span><h3>Signed terms of engagement</h3></div>
