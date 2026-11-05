@@ -1005,7 +1005,7 @@ function vShortlist(){
   S.shortlist=S.shortlist.filter(id=>POOL.some(p=>p.id===id));
   const items=S.shortlist.map(id=>{const c=POOL.find(p=>p.id===id);return {c,...score(c),i:S.intros[id]}});
   app.innerHTML=`<div class="pagehead"><span class="kicker">Shortlist</span><h1>People you'd like to meet</h1>
-    <p class="muted">Browsing and shortlisting are anonymous and free. Starting a chat counts as a reveal, so it needs signed terms. A fee applies only when you hire.</p></div>
+    <p class="muted">Browsing and shortlisting are anonymous and free. Starting a chat counts as a reveal, so it needs signed terms, or you can chat through Jamie and Connor while terms are sorted. A fee applies only when you hire.</p></div>
   <div class="cols"><div class="list">${items.length?items.map(x=>{const st=x.i?x.i.stage:0;return `<div class="item">
       <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div>
         <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">${termsOK()?"Request introduction":"Sign terms to chat"}</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?(x.i.review==="pending"?`<span class="tag new">With Consumer Talent for review</span>`:x.i.review==="declined"?`<span class="tag">Not taken forward</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:x.i.review==="passed"?`<span class="tag">They declined</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:`<span class="tag new">Sent to them · waiting for their reply</span>`):`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
@@ -1053,8 +1053,8 @@ function openBell(){const k=sideKey(),list=(S.notes||[]).filter(x=>x.to===k);
   const na=$("#nAll");if(na)na.onclick=()=>{list.forEach(x=>x.read=true);save();bellCount();openBell()};
   app.ownerDocument.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{const x=S.notes.find(n=>n.id===b.dataset.n);x.read=true;save();bellCount();layer.innerHTML="";if(x.go&&location.hash!=="#"+x.go)location.hash=x.go;else render()})}
 function introRole(c){const co=S.company;return co.roles.find(r=>r.lvl===c.lvl)||co.roles[0]||{title:co.always?`${LEVELS[c.lvl]} (always looking for great talent)`:LEVELS[c.lvl],base:""}}
-function startIntro(id){if(TASTER==="candidate"){openInvite("intro");return}
-  if(!termsOK()){const c0=POOL.find(p=>p.id===id);chaseTerms(c0);openTermsGate(()=>startIntro(id),refOf(c0.user));return}
+function startIntro(id,brokered){if(TASTER==="candidate"){openInvite("intro");return}
+  if(!termsOK()&&!brokered){const c0=POOL.find(p=>p.id===id);chaseTerms(c0);openTermsGate(()=>startIntro(id),refOf(c0.user),()=>startIntro(id,true));return}
   const c=POOL.find(p=>p.id===id),co=S.company,def=introRole(c);
   layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
     <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
@@ -1064,7 +1064,7 @@ function startIntro(id){if(TASTER==="candidate"){openInvite("intro");return}
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="riX">Cancel</button><button class="btn" type="submit">Send request</button></div></form></div>`;
   $("#riX").onclick=()=>layer.innerHTML="";
   $("#riF").onsubmit=e=>{e.preventDefault();const r=co.roles.find(x=>x.id===$("#riR").value)||def;
-    S.intros[id]={stage:1,review:"pending",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[],role:r.title||LEVELS[c.lvl],base:r.base||"",note:$("#riW").value.trim(),by:co.contact||"Your team"};
+    S.intros[id]={brokered:!!brokered&&!termsOK(),stage:1,review:"pending",ref:"CTE-"+String(++refN).padStart(5,"0"),at:Date.now(),msgs:[],role:r.title||LEVELS[c.lvl],base:r.base||"",note:$("#riW").value.trim(),by:co.contact||"Your team"};
     logEvent(`Requested introduction to ${refOf(c.user)} for ${S.intros[id].role} (${S.intros[id].ref})`,co.contact);
     notify("admin",`${co.name||"A client"} wants an introduction to ${refOf(c.user)} (${LEVELS[c.lvl]}) for ${S.intros[id].role}`,"intros");
     layer.innerHTML="";save();counts();if(view()==="shortlist")vShortlist();toast("Request sent to Consumer Talent for review");
@@ -1125,7 +1125,7 @@ function vChats(){
         <div class="line1" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(st>=3?c.name:c.user)}</b><div class="muted small">${LEVELS[c.lvl]} · ${esc(c.region)} · Ref ${esc(i.ref)}</div></div>
           <div class="row">${st===2?(i.revealAsked&&!i.revealNo?`<span class="tag new">Waiting for them to agree</span>`:`<button class="btn sm" id="bReveal">Reveal identities</button>`):""}${st>=3&&st<5?`<button class="btn sm" id="bIv">Schedule interview</button><button class="btn line sm" id="bOffer">Report an offer</button>`:""}<button class="btn line sm" id="bFb">${i.fb&&i.fb.client?"Edit feedback":"Give feedback"}</button><button class="btn quiet sm" id="bProf">View profile</button></div></div>
         <div class="steps">${STEPS.map((s,k)=>`<div class="${k<=st?"on":""}">${s}</div>`).join("")}</div>
-        ${st<3?`<div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Names, employers, emails, phone numbers and links are blocked until you both agree to reveal. ${termsOK()?"Your terms are in place, so you can reveal whenever you're both ready.":`You'll need agreed terms before revealing. ${TASTER==="candidate"?`<a href="#" data-invite>Ask us about terms</a>`:`<a href="#terms">Review terms</a>`}`}</span></div>`:""}
+        ${st<3?`<div class="protect">${lockIcon}<span><b>Anonymous chat${i.brokered&&!termsOK()?" through Jamie and Connor":""}.</b> ${i.brokered&&!termsOK()?"Jamie and Connor at Consumer Talent are looking after this conversation until your terms are signed. ":""}Names, employers, emails, phone numbers and links are blocked until you both agree to reveal. ${termsOK()?"Your terms are in place, so you can reveal whenever you're both ready.":`You'll need agreed terms before revealing. ${TASTER==="candidate"?`<a href="#" data-invite>Ask us about terms</a>`:`<a href="#terms">Review terms</a>`}`}</span></div>`:""}
         ${st===5?`<div class="reveal"><span class="name">Placed</span><span>${esc(i.offer.summary)}</span></div>`:""}
       </div>
       <div class="msgs" id="msgs">${i.msgs.map(m=>m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}</b>`:`Waiting for ${esc(c.user)} to pick a time:`}</span>${m.booked?"":`<div class="row">${m.opts.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`
@@ -1291,10 +1291,10 @@ function chaseTerms(c){
   notify("admin",`${co.name||"A client"} wants to chat with ${ref} (${LEVELS[c.lvl]}) but hasn't signed terms. Push them to sign.`,"clients");
   logEvent(`Emailed Jamie and Connor: ${subj}`,"Consumer Talent");save();
 }
-function openTermsGate(onDone,chaseRef){
+function openTermsGate(onDone,chaseRef,onBroker){
   layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="stack" style="gap:4px"><span class="kicker">Before you start chatting</span><h2 id="tT">Agree terms to chat with candidates</h2>
-    <p class="muted small">Browsing anonymous profiles is free. Chatting with a candidate counts as a reveal, so terms are needed first. You sign once for ${esc(S.company.name||"your company")}, and a fee applies only on a successful hire.</p></div>
+    <p class="muted small">Browsing anonymous profiles is free. Chatting with a candidate counts as a reveal, so terms are needed first, or you can chat through Jamie and Connor. You sign once for ${esc(S.company.name||"your company")}, and a fee applies only on a successful hire.</p></div>
     ${chaseRef?`<div class="protect">${lockIcon}<span><b>We've let Jamie and Connor know you'd like to chat with ${esc(chaseRef)}.</b> They'll be in touch to help get your terms signed, or you can sign below now.</span></div>`:""}
     ${termsHTML()}
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
@@ -1304,8 +1304,10 @@ function openTermsGate(onDone,chaseRef){
     <label class="check"><input type="checkbox" id="sAuth" ${S.company.auth&&S.company.auth.name===S.company.contact?"checked":""}><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
     <div class="row"><button class="btn" id="sGo" disabled>Sign and continue</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
-    <div class="card stack" style="background:var(--soft);gap:8px"><b>Not authorised to sign?</b><span class="muted small">Send the terms to someone who can sign. Until they do, you can keep browsing and shortlisting anonymously, but you can't start chats or reveal anyone.</span>
-      <div class="row"><button type="button" class="btn sm" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Send to someone who can sign"}</button>${contactBtn("Or contact Jamie and Connor")}</div></div>
+    <div class="card stack" style="border:2px solid var(--brand);gap:10px;padding:18px"><h3 style="font-size:19px">Not authorised to sign, but still want to chat? No problem!</h3>
+      <p class="small">You can still start chatting. Either send the terms to someone who can sign, or chat through Jamie and Connor at Consumer Talent, who'll look after the conversation until your terms are signed. Names stay hidden until terms are in place.</p>
+      <div class="row">${onBroker?`<button type="button" class="btn" id="sBroker">Chat through Jamie and Connor</button>`:""}<button type="button" class="btn line" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send terms to someone else":"Send terms to someone who can sign"}</button></div>
+      <div>${contactBtn("Questions? Contact Jamie and Connor")}</div></div>
   </div></div>`;
   let read=false;const box=$("#termsBox");
   const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim())&&$("#sAuth").checked&&$("#sRead").checked)};
@@ -1313,6 +1315,7 @@ function openTermsGate(onDone,chaseRef){
   ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
   $("#sX").onclick=()=>layer.innerHTML="";$("#sAlt").onclick=()=>layer.innerHTML="";
   $("#sDel").onclick=()=>sendForSignature();bindContact(layer,"Terms");
+  const sb=$("#sBroker");if(sb)sb.onclick=()=>{layer.innerHTML="";notify("admin",`${S.company.name||"A client"} is chatting through you while their terms are unsigned. Look after the conversation and get terms signed.`,"intros");logEvent("Chose to chat through Jamie and Connor until terms are signed",S.company.contact);onBroker()};
   $("#sGo").onclick=()=>{S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
