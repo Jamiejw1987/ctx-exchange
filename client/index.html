@@ -498,7 +498,7 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
   </div>
 </section>
 </div>
-<div id="tbar"><a href="#" id="tbHome" class="tbhome">← Exchange</a><span class="tbtxt">Taster · nothing you enter is shared</span><button type="button" class="btn sm" data-invite>Become a founding member</button></div>
+<div id="tbar"><a href="#" id="tbHome" class="tbhome">← Exchange</a><span class="tbtxt">Preview · nothing you enter is shared</span><button type="button" class="btn sm" data-invite>Become a founding member</button></div>
 <div id="layer"></div>
 
 <script>
@@ -2343,12 +2343,12 @@ window.addEventListener("hashchange",render);
 render();
 if(TASTER){
   $("#tbHome").href=/\/(client|professionals)\/?(index\.html)?$/.test(location.pathname)?"../":"./";
-  $("#demoTxt").textContent="Taster · the professionals and companies you'll see are fictional samples";
+  $("#demoTxt").textContent="Preview · the professionals and companies you'll see are fictional samples";
   const seenKey=STORE+"-seen";let seen=false;try{seen=!!localStorage.getItem(seenKey)}catch(e){}
   const W=TASTER==="client"?{k:"For hiring teams",h:"Find your next hire",p:"Private introductions to senior food and drink leaders across North America. Here's a free taster.",steps:[["Tell us about your company","Add your name, a one-line pitch and a role you're hiring."],["See who's in your space","Your For you picks unlock as soon as your profile's ready."],["Shortlist the people you'd like to meet","Browse the pool, or swipe through your strongest fits."]],go:"Start with my company",to:"company"}
-   :{k:"For professionals",h:"Your next move, in confidence",p:"Be seen by the food and drink brands hiring senior talent, without your name or employer ever being shown. Here's a two-minute taster.",steps:[["Build your anonymous profile","Your role, your wins and the brands you'd move for."],["See exactly what companies see","Your name, employer and contact details stay hidden."],["Browse the brands hiring now","Register interest anonymously, or accept introductions in confidence."]],go:"Build my profile",to:"candidate"};
+   :{k:"For professionals",h:"Your next move, in confidence",p:"Be seen by the food and drink brands hiring great talent. Your name and employer are never shown without your approval. Sign up now!",steps:[["Build your anonymous profile","Your role, your wins and the brands you'd move for."],["See exactly what companies see","Your name, employer and contact details stay hidden."],["Browse the brands hiring now","Register interest anonymously, or accept introductions in confidence."]],go:"Build my profile",to:"candidate"};
   if(!seen){layer.innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="twT" style="max-width:460px">
-    <div class="stack" style="gap:6px"><span class="kicker">${W.k} · Taster</span><h2 id="twT">${W.h}</h2><p class="muted">${W.p}</p></div>
+    <div class="stack" style="gap:6px"><span class="kicker">${TASTER==="candidate"?W.k+" · Always Free!":W.k}</span><h2 id="twT">${W.h}</h2><p class="muted">${W.p}</p></div>
     <ol class="tsteps">${W.steps.map(([b,t])=>`<li><div><b>${b}</b><span>${t}</span></div></li>`).join("")}</ol>
     <p class="muted small">Nothing you type is shared with anyone. When you're ready, request your invitation and we'll be in touch personally.</p>
     <button class="btn" id="twGo" style="justify-content:center">${W.go}</button></div></div>`;
