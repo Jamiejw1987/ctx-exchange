@@ -11,7 +11,7 @@ revoke all on schema private from public, anon, authenticated;
 create table if not exists private.settings(key text primary key, value text not null);
 insert into private.settings(key,value) values
   ('mail_from','Consumer Talent Exchange <noreply@consumer-talent.com>'),
-  ('app_url','https://jamiejw1987.github.io/ctx-exchange/exchange/'),
+  ('app_url','https://exchange.consumer-talent.com/exchange/'),
   ('admin_emails','jamie@consumer-talent.com,connor@consumer-talent.com')
 on conflict(key) do nothing;
 
