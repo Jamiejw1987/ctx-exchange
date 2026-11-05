@@ -944,6 +944,7 @@ function vDiscover(){
   app.innerHTML=`<div class="disc">
     <aside class="stack">
       <div class="pagehead" style="margin:0"><span class="kicker">Discover</span><h1>${esc(S.company.name||"Your picks")}</h1><p class="muted small">${DS.mode==="swipe"?"Your strongest fits, one at a time. Swipe right to shortlist, left to pass.":"Your strongest fits. Tap a profile to read it, then shortlist or pass."}</p></div>
+      <div class="card small" style="padding:12px 14px;background:var(--soft)"><b>Discover or Talent pool?</b><p class="muted" style="margin-top:4px">Discover only shows people who match the levels on your profile, best fit first. Once you shortlist or pass on someone they drop off, so you can work through until you're all caught up. To search and filter everyone on the Exchange, use the <a href="#pool">Talent pool</a>.</p></div>
       <div class="field">Show${picks("filter",["all",...S.company.levels],S.filter,{radio:true,label:l=>l==="all"?"Strongest fits":LEVELS[l]})}</div>
       <p class="muted small num">${q.length} profiles to review · ${S.shortlist.length} shortlisted</p>
     </aside>
