@@ -275,8 +275,8 @@ VIEWS.auth=vAuth;
 
 /* ---------- sign in / join ---------- */
 // arriving from the landing page: open in Join mode, with what they already typed
-try{const q=new URLSearchParams(location.search),j=q.get("join");if(j){L.authMode="up";L.authSide=j==="company"?"client":"pro";history.replaceState(null,"",location.pathname+location.hash)}
-  const pf=JSON.parse(localStorage.getItem("ctx_join")||"null");if(pf){L.prefill=pf;L.authMode="up";L.authSide=pf.side==="client"?"client":"pro"}}catch(e){}
+try{const q=new URLSearchParams(location.search),j=q.get("join");if(j){L.joinIntent=true;L.authMode="up";L.authSide=j==="company"?"client":"pro";history.replaceState(null,"",location.pathname+location.hash)}
+  const pf=JSON.parse(localStorage.getItem("ctx_join")||"null");if(pf){L.joinIntent=true;L.prefill=pf;L.authMode="up";L.authSide=pf.side==="client"?"client":"pro"}}catch(e){}
 function fillAuth(){const p=L.prefill;if(!p)return;const set=(id,v)=>{const el=$("#"+id);if(el&&v&&!el.value)el.value=v};
   set("auN",p.name);set("auE",p.email);set("auC",p.company);set("auT",p.title);
   const r=$("#auR");if(r&&p.region&&[...r.options].some(o=>o.text===p.region))r.value=p.region;
@@ -369,6 +369,15 @@ async function pushPrompt(){let seen=false;try{seen=localStorage.getItem("ctx_pu
     :pushCardHTML(st)+`<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn quiet sm" id="puNo">Got it</button></div>`;
   document.body.appendChild(d);d.querySelector("#puNo").onclick=close;bindPush(d,close)}
 
+function authSwitch(session){$("#tabs").innerHTML="";try{$("#sideLbl").textContent=""}catch(e){}const who=session.user.email;
+  app.innerHTML=`<div style="max-width:460px;margin:20px auto" class="card stack"><span class="kicker">Join the Exchange</span>
+    <h1 style="margin:0">You're already signed in</h1>
+    <p class="muted">This browser is signed in as <b>${esc(who)}</b>. To create a new account${L.prefill&&L.prefill.email?` for <b>${esc(L.prefill.email)}</b>`:""}, sign out first.</p>
+    <button class="btn" id="swOut" style="justify-content:center">Sign out and create the new account</button>
+    <button class="btn line" id="swStay" style="justify-content:center">Continue as ${esc(who)}</button></div>`;
+  $("#swOut").onclick=async()=>{L.authMode="up";L.authSide=L.prefill&&L.prefill.side==="client"?"client":(L.authSide||"pro");await disablePush();await sb.auth.signOut({scope:"local"});L.role=null;vAuth()};
+  $("#swStay").onclick=async()=>{L.joinIntent=false;await start(session)}}
+
 /* ---------- boot ---------- */
 async function start(session){L.user=session.user;L.token=session.access_token;
   if(pushOK()&&Notification.permission==="granted")pushSub().then(s=>s&&savePushSub(s)).catch(()=>{});setTimeout(pushPrompt,2500);try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
@@ -416,5 +425,6 @@ try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("error_descript
 sb.auth.onAuthStateChange((ev,session)=>{if(session)L.token=session.access_token;if(ev==="PASSWORD_RECOVERY"){L.recovering=true;setTimeout(authNewPw,0)}if(ev==="SIGNED_OUT"){L.role=null;vAuth()}});
 (async()=>{const {data}=await sb.auth.getSession();if(location.hash.includes("access_token")||location.hash.includes("error="))history.replaceState(null,"",location.pathname);
   if(L.recovering&&data.session)return authNewPw();
+  if(data.session&&L.joinIntent)return authSwitch(data.session);
   if(data.session)await start(data.session);else vAuth()})();
 })();
