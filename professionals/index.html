@@ -938,18 +938,24 @@ function bindDeck(x,next){
 document.addEventListener("keydown",e=>{if(!deckGo||layer.innerHTML||$("#coach")||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;if(e.key==="ArrowRight")deckGo(true);if(e.key==="ArrowLeft")deckGo(false)});
 const modeSeg=(id,mode)=>`<div class="seg" id="${id}" role="group" aria-label="View"><button type="button" data-m="grid" aria-pressed="${mode==="grid"}">Grid</button><button type="button" data-m="swipe" aria-pressed="${mode==="swipe"}">Swipe</button></div>`;
 
+const DS={mode:"grid",shown:24};
 function vDiscover(){
-  const q=queue(),x=q[0];
+  const q=queue(),x=q[0],empty=`<div class="empty"><h2>You're all caught up</h2><p class="muted">You've reviewed everyone who matches right now. Turn on alerts and we'll tell you when someone new joins.</p>${TASTER?`<button class="btn" data-invite>Request your invitation</button>`:`<a class="btn" href="#alerts">Set up alerts</a>`}</div>`;
   app.innerHTML=`<div class="disc">
     <aside class="stack">
-      <div class="pagehead" style="margin:0"><span class="kicker">Discover</span><h1>${esc(S.company.name||"Your picks")}</h1><p class="muted small">Your strongest fits, one at a time. Swipe right to shortlist, left to pass.</p></div>
+      <div class="pagehead" style="margin:0"><span class="kicker">Discover</span><h1>${esc(S.company.name||"Your picks")}</h1><p class="muted small">${DS.mode==="swipe"?"Your strongest fits, one at a time. Swipe right to shortlist, left to pass.":"Your strongest fits. Tap a profile to read it, then shortlist or pass."}</p></div>
       <div class="field">Show${picks("filter",["all",...S.company.levels],S.filter,{radio:true,label:l=>l==="all"?"Strongest fits":LEVELS[l]})}</div>
       <p class="muted small num">${q.length} profiles to review · ${S.shortlist.length} shortlisted</p>
     </aside>
-    <section class="deck" id="deck">${deckHTML(x,q.length,`<div class="empty"><h2>You're all caught up</h2><p class="muted">You've reviewed everyone who matches right now. Turn on alerts and we'll tell you when someone new joins.</p>${TASTER?`<button class="btn" data-invite>Request your invitation</button>`:`<a class="btn" href="#alerts">Set up alerts</a>`}</div>`)}</section>
+    <section>
+      <div class="row" style="justify-content:flex-end;margin-bottom:12px">${modeSeg("dmode",DS.mode)}</div>
+      ${DS.mode==="swipe"?`<div class="deck" id="deck">${deckHTML(x,q.length,empty)}</div>`:
+        q.length?`<div class="pool">${q.slice(0,DS.shown).map(miniCard).join("")}</div>${q.length>DS.shown?`<div style="text-align:center;margin-top:18px"><button class="btn line" id="dMoreD">Show more (${q.length-DS.shown} left)</button></div>`:""}`:empty}
+    </section>
   </div>`;
-  bindPicks(app,S,()=>vDiscover());
-  bindDeck(x,vDiscover);
+  bindPicks(app,S,()=>{DS.shown=24;vDiscover()});
+  app.querySelectorAll("#dmode [data-m]").forEach(b=>b.onclick=()=>{DS.mode=b.dataset.m;vDiscover()});
+  if(DS.mode==="swipe")bindDeck(x,vDiscover);else{deckGo=null;app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openProfile(b.dataset.open));const m=$("#dMoreD");if(m)m.onclick=()=>{DS.shown+=24;const y=SC.scrollTop;vDiscover();SC.scrollTop=y}}
 }
 const viewed={};
 function logOnce(k,c){if(viewed[c.id])return;viewed[c.id]=1;logEvent(`Viewed anonymous profile ${c.user}`,S.company.contact)}
