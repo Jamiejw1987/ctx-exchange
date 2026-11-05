@@ -782,6 +782,7 @@ function vCompany(){
       <div class="section"><h3>Candidates you're interested in <span>Tick every level you'd consider</span></h3>
         ${levelPicks("levels",co.levels)}
         <div class="row" style="justify-content:space-between;align-items:baseline"><div class="field" style="margin:0">Open vacancies <small>Professionals see these when you request an introduction.</small></div></div>
+        ${co.roles.some(r=>r.title.trim())?(!termsOK()?`<div class="protect">${lockIcon}<span><b>Not advertised yet.</b> Your vacancies are saved, but they'll only be advertised to professionals on Companies hiring once your terms are signed.</span></div>`:co.anon?`<div class="protect">${lockIcon}<span><b>Not advertised while you're anonymous.</b> Professionals can still find you and register interest under Companies. Turn off anonymous mode to advertise your vacancies on Companies hiring.</span></div>`:`<div class="protect" style="border-color:var(--good)"><span><b style="color:var(--good)">Advertised.</b> Your vacancies are live for professionals on Companies hiring.</span></div>`):""}
         <div class="vacs">${co.always?`<div class="vac" style="border-color:var(--brand)"><div style="min-width:0"><b>Always looking for great talent</b><div class="muted small">Shown on your profile, so people know you're open to the right person</div></div><button type="button" class="x" id="alwaysOff" aria-label="Remove always looking for great talent">×</button></div>`:""}${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div>${(r.kw||[]).length?`<div class="small" style="margin-top:4px;color:var(--good)">Job description added · ${r.kw.length} keywords for matching</div>`:""}</div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):co.always?"":`<p class="muted small">No vacancies right now? You can still show you're open to the right people.</p>`}</div>
         <div class="row"><button type="button" class="btn line sm" id="addRole">+ Add a vacancy</button>${co.always?"":`<button type="button" class="btn sm" id="alwaysOn">Always looking for great talent</button>`}</div>
       </div>
@@ -2020,7 +2021,7 @@ function vDash(){
 /* ---------------- companies hiring (professional side) ---------------- */
 const COMPANIES=[
  {id:"k1",self:true},
- {id:"k2",name:"Harbor & Pine Confectionery",stage:"EST",hq:"Hershey, PA",revenue:"$300–500M",size:"1,100 people",cats:["Chocolate","Confectionery"],
+ {id:"k2",signed:false,name:"Harbor & Pine Confectionery",stage:"EST",hq:"Hershey, PA",revenue:"$300–500M",size:"1,100 people",cats:["Chocolate","Confectionery"],
   tagline:"A 90-year-old chocolate maker relaunching with a new commercial team.",
   about:"Family-owned chocolate and seasonal candy business sold through grocery, mass and drug. New ownership in 2025 brought fresh investment in brand, innovation and route to market.",
   why:"Build the national accounts team from the ground up, with the backing of a heritage brand and a clear three-year growth plan.",
@@ -2065,32 +2066,40 @@ const COMPANIES=[
   about:"Founder-led better-for-you beverage brand in Whole Foods, Sprouts and Target, with a strong DTC subscription business.",
   why:"Join before the national push, with equity and the chance to build the commercial team.",
   roles:[{title:"Head of E-commerce",lvl:"HEC",region:"West",base:"$160–180k + bonus + equity"},{title:"National Account Manager, Natural",lvl:"NAM",region:"National",base:"$120–140k + bonus + equity"}]},
- {id:"k8",name:"Golden Kernel Popcorn Co.",stage:"SME",hq:"Minneapolis, MN",revenue:"$40–60M",size:"95 people",cats:["Popcorn","Salty snacks"],
+ {id:"k8",name:"Golden Kernel Popcorn Co.",stage:"CHAL",hq:"Minneapolis, MN",revenue:"$40–60M",size:"95 people",cats:["Popcorn","Salty snacks"],
   tagline:"Small-batch popcorn with a big following in the Midwest.",
   about:"Ready-to-eat popcorn brand moving from regional favorite to national player, with new distribution at Target and Kroger.",
   why:"A founder who wants senior people to build the playbook, not follow one.",
-  roles:[{title:"VP of Marketing",lvl:"VPM",region:"National",base:"$190–220k + bonus + equity"},{title:"Market Manager, Upper Midwest",lvl:"MM",region:"Midwest",base:"$85–100k + bonus"}]}
+  roles:[{title:"VP of Marketing",lvl:"VPM",region:"National",base:"$190–220k + bonus + equity"},{title:"Market Manager, Upper Midwest",lvl:"MM",region:"Midwest",base:"$85–100k + bonus"}]},
+ {id:"k12",name:"Prairie Mill Snacks",stage:"START",hq:"Minneapolis, MN",revenue:"$5–10M",size:"18 people",cats:["Better-for-you","Chips & crisps"],
+  tagline:"Small-batch kettle chips made with regenerative potatoes.",about:"Founder-led start-up selling into natural and independent grocery across the Midwest, with a first regional Kroger test this spring.",why:"Join early and help shape the commercial plan as the brand goes regional.",roles:[]},
+ {id:"k13",anon:true,stage:"PEVC",hq:"",revenue:"$80–120M",size:"240 people",cats:["Frozen foods","Plant-based"],
+  tagline:"A PE-backed frozen and plant-based business building out its leadership team.",about:"Frozen meals and plant-based protein sold in grocery and club across the US and Canada. Recently acquired by a growth equity firm.",why:"A new investor, a clear plan to double in four years, and senior roles opening across sales and marketing.",roles:[]},
+ {id:"k14",signed:false,name:"Coastline Confections",stage:"PUB",hq:"Charlotte, NC",revenue:"$500M+",size:"2,400 people",cats:["Confectionery","Chocolate"],
+  tagline:"Publicly traded candy and gum maker with brands in 60,000 stores.",about:"Gum, mints and seasonal chocolate sold through mass, drug, grocery and convenience across North America.",why:"Big brands, big customers, and a commercial team investing in revenue growth management.",roles:[{title:"Key Account Manager, Publix",lvl:"KAM",region:"Southeast",base:"$100–120k + bonus"}]}
 ];
-function coFull(k){if(!k.self)return {sector:"Food",...k};const co=S.company;return {id:k.id,sector:co.sector||"Food",name:co.name,stage:co.stage,hq:co.hq,revenue:co.revenue,size:co.size,cats:co.cats,tagline:co.tagline,about:co.about,why:co.why,logo:co.logo,anon:co.anon,
+function coSigned(k){return k.self?termsOK():k.signed!==false}
+function coLive(k){return (k.roles||[]).filter(r=>(r.title||"").trim())}
+function coHiring(k){return coSigned(k)&&!k.anon&&coLive(k).length>0}
+function coFull(k){if(!k.self)return {sector:"Food",...k};const co=S.company;return {self:true,id:k.id,sector:co.sector||"Food",name:co.name,stage:co.stage,hq:co.hq,revenue:co.revenue,size:co.size,cats:co.cats,tagline:co.tagline,about:co.about,why:co.why,logo:co.logo,anon:co.anon,
   roles:co.roles.filter(r=>r.title.trim()).map(r=>({...r,base:r.base||({r1:"$130–150k + bonus",r2:"$210–240k + bonus + equity",r3:"$110–130k + bonus + equity",r4:"$165–185k + bonus"})[r.id]||""}))}}
-function vCompanies(){
-  const p=S.cand,my=groupOf(p.lvl);
-  const list=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))).map(k=>{const lvlHit=k.roles.some(r=>r.lvl===p.lvl),grpHit=k.roles.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,lvlHit,grpHit,secHit:sectorFit(k.sector,p.sector||"Food")}})
-    .sort((a,b)=>(b.secHit-a.secHit)||(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Companies hiring</span><h1>Brands hiring on the Exchange</h1><p class="muted">Register interest in any of them. They'll see your anonymous profile, never your name or employer, and only you decide whether to reveal.</p></div>
-  <div class="list" style="max-width:760px">${list.map(({k,lvlHit,grpHit,secHit})=>{const name=k.anon?coDisplay({...k,anon:true}):k.name,on=!!S.interest[k.id];return `<div class="item">
-    <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?CTX_LOGO:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
-      <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${secHit&&lvlHit?`<span class="tag hit">Hiring your level</span>`:secHit&&grpHit?`<span class="tag">Hiring in your field</span>`:""}</div></div>
+function vCompanies(mode){mode=mode||"hiring";
+  const p=S.cand,my=groupOf(p.lvl),hiring=mode==="hiring";
+  const list=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];const lvlHit=live.some(r=>r.lvl===p.lvl),grpHit=live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===my);return {k,live,lvlHit,grpHit,secHit:sectorFit(k.sector,p.sector||"Food")}})
+    .sort((a,b)=>(b.secHit-a.secHit)||(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit)||(b.live.length-a.live.length));
+  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies. Register interest and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Register interest in any of them and they'll see your anonymous profile. ${hiring?"":`<a href="#companies">See only companies with live vacancies</a>.`}`}</p></div>
+  <div class="list" style="max-width:760px">${list.length?list.map(({k,live,lvlHit,grpHit,secHit})=>{const name=k.anon?coDisplay({...k,anon:true}):k.name,on=!!S.interest[k.id];return `<div class="item">
+    <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?CTX_LOGO:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]||""} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
+      <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${live.length?(secHit&&lvlHit?`<span class="tag hit">Hiring your level</span>`:`<span class="tag hit">Hiring now</span>`):!hiring?`<span class="tag">Open to great talent</span>`:""}</div></div>
     <p style="font-weight:600">${esc(k.tagline)}</p>
-    ${k.roles.map(r=>`<div class="openrole"><b>${esc(r.title)}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
+    ${live.map(r=>`<div class="openrole"><b>${esc(r.title)}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
     <details><summary class="small" style="cursor:pointer;font-weight:600">About ${k.anon?"this company":esc(k.name)} and why join</summary><div class="stack" style="gap:8px;margin-top:8px"><p class="small">${esc(k.about)}</p><p class="small"><b>Why join now.</b> ${esc(k.why)}</p><div class="row" style="gap:6px">${(k.cats||[]).map(c=>`<span class="tag brand">${esc(c)}</span>`).join("")}${k.size?`<span class="tag">${esc(k.size)}</span>`:""}</div></div></details>
     <div class="row">${on?`<span class="tag hit">Interest registered</span><button class="btn quiet sm" data-int="${k.id}">Withdraw</button>`:`<button class="btn sm" data-int="${k.id}">I'm interested</button>`}</div>
-  </div>`}).join("")}</div>`;
+  </div>`}).join(""):`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`}</div>`;
   app.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
     if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();toast(`We'll show ${k.anon?"them":k.name} your anonymous profile`)}
-    save();const y=SC.scrollTop;vCompanies();(SC.scrollTop=y)});
+    save();const y=SC.scrollTop;vCompanies(mode);(SC.scrollTop=y)});
 }
-
 /* ---------------- company team ---------------- */
 const DEPTS=["Sales","Marketing","People and HR","Finance","Operations","E-commerce","Leadership"];
 const ROLES={"Admin":"Manages the account, team and terms","Hiring manager":"Browses, shortlists and chats for their roles","Viewer":"Can view shortlists and conversations"};
@@ -2313,11 +2322,11 @@ function vWaitlist(){const a=sbGet();
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={allcos:()=>vCompanies("all"),interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:()=>vCompanies("hiring"),introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
-const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
+const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]];
 const ADMIN_TABS=[["dash","Dashboard"],["interviews","Interviews"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
-const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
+const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["allcos","Companies"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){bellCount();
   const fy=completeness().pct===100;
@@ -2325,7 +2334,7 @@ function counts(){bellCount();
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="allcos"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
