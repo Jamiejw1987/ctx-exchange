@@ -2092,7 +2092,7 @@ function coFull(k){if(!k.self)return {sector:"Food",...k};const co=S.company;ret
   roles:co.roles.filter(r=>r.title.trim()).map(r=>({...r,base:r.base||({r1:"$130–150k + bonus",r2:"$210–240k + bonus + equity",r3:"$110–130k + bonus + equity",r4:"$165–185k + bonus"})[r.id]||""}))}}
 function coName(k){return k.anon?coDisplay({...k,anon:true}):k.name}
 function coMatchQ(k,live,q){q=(q||"").trim().toLowerCase();if(!q)return true;
-  const hay=[coName(k),k.tagline,k.about,k.anon?"":k.hq,STAGES[k.stage],SECTOR_LABEL[k.sector],...(k.cats||[]),...live.map(r=>[r.title,r.region,LEVELS[r.lvl]].join(" "))].join(" ").toLowerCase();
+  const hay=[coName(k),k.tagline,k.about,k.anon?"":k.hq,k.anon?"":US_ST[coState(k)]||"",STAGES[k.stage],SECTOR_LABEL[k.sector],...(k.cats||[]),...live.map(r=>[r.title,r.region,LEVELS[r.lvl]].join(" "))].join(" ").toLowerCase();
   return q.split(/\s+/).every(w=>hay.includes(w))}
 /* how well a company fits the candidate's profile: level, region, pay, stage, categories */
 function coFit(k,live,p){p=p||S.cand;let n=0;const why=[];
@@ -2125,32 +2125,72 @@ function coTile(x){const {k,live,f}=x,on=!!S.interest[k.id],ap=(S.applied[k.id]|
     <span class="tags">${live.length?`<span class="tag hit">${live.length} vacanc${live.length>1?"ies":"y"}</span>`:`<span class="tag">Open to great talent</span>`}${coFitTag(f,live)}</span>
     <p class="tl">${esc(k.tagline)}</p>
     ${ap?`<span class="tag hit">Applied</span>`:on?`<span class="tag hit">Interested</span>`:""}</button>`}
+const US_ST={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"Washington DC",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",ON:"Ontario",QC:"Quebec",BC:"British Columbia",AB:"Alberta",MB:"Manitoba",SK:"Saskatchewan",NS:"Nova Scotia"};
+function coState(k){if(k.anon||!k.hq)return "";const m=String(k.hq).match(/,\s*([A-Z]{2})\b/);return m?m[1]:String(k.hq).split(",").pop().trim()}
+const CF={q:"",sec:"all",state:"all",hire:"all",stage:"all",cat:"all",fn:"all",sort:"match"};
 function vCompanies(mode){mode=mode||"hiring";
   const p=S.cand,hiring=mode==="hiring";S.coView=S.coView||{};const vw=S.coView[mode]||(hiring?"list":"grid");
-  const all=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];return {k,live,f:coFit(k,live,p)}})
-    .sort((a,b)=>(b.f.n-a.f.n)||(b.live.length-a.live.length));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?"Brands with live vacancies":"Every brand on the Exchange"}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies, with the best matches to your profile first. Apply for a role or tell them you'd like to work there, and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`All the companies registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Tap one to see more and tell them you'd like to work there. <a href="#companies">See only companies with live vacancies</a>.`}</p></div>
-  <div class="row" style="max-width:760px;margin-bottom:14px;flex-wrap:nowrap;gap:8px"><input type="search" id="coQ" value="${esc(S.coQ||"")}" placeholder="${hiring?"Search roles, brands, regions":"Search brands, categories, regions"}" aria-label="Search companies" autocomplete="off" style="flex:1;min-width:0">
-    <div class="seg" id="coVw" role="group" aria-label="View" style="flex:none;width:auto"><button type="button" data-v="grid" aria-pressed="${vw==="grid"}">Grid</button><button type="button" data-v="list" aria-pressed="${vw==="list"}">List</button></div></div>
-  <div id="coList" style="max-width:${vw==="grid"?"1100px":"760px"}"></div>`;
+  if(S.coQ&&!CF.q)CF.q=S.coQ;
+  const all=COMPANIES.map(coFull).filter(k=>(k.name||k.anon)&&!(k.name&&proBlocks(k.name))&&(!hiring||coHiring(k))).map(k=>{const live=coHiring(k)?coLive(k):[];return {k,live,f:coFit(k,live,p)}});
+  const uniq=a=>[...new Set(a.filter(Boolean))];
+  const states=uniq(all.map(x=>coState(x.k))).sort((a,b)=>(US_ST[a]||a).localeCompare(US_ST[b]||b)),cats=uniq(all.flatMap(x=>x.k.cats||[])).sort(),
+    stages=CO_STAGES.filter(st=>all.some(x=>x.k.stage===st)),fns=GROUPS.map(g=>g[0]).filter(g=>all.some(x=>x.live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===g)));
+  const catCount={};all.forEach(x=>(x.k.cats||[]).forEach(c=>catCount[c]=(catCount[c]||0)+1));
+  const popular=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>e[0]);
+  const opt=(v,l,cur)=>`<option value="${esc(v)}" ${cur===v?"selected":""}>${esc(l)}</option>`;
+  app.innerHTML=`<div class="pagehead"><span class="kicker">${hiring?"Companies hiring":"Companies"}</span><h1>${hiring?`${all.length} food and drink brands with live vacancies`:`${all.length} food and drink brands on the Exchange`}</h1><p class="muted">${hiring?`Companies that have shared who they are and posted real vacancies, with the best matches to your profile first. Apply for a role or tell them you'd like to work there, and they'll see your anonymous profile, never your name or employer, unless you approve. <a href="#allcos">See every company on the Exchange</a>.`:`Every company registered on the Exchange, including those staying anonymous and those not advertising a vacancy right now. Tap one to see more and tell them you'd like to work there. <a href="#companies">See only companies with live vacancies</a>.`}</p></div>
+  <div class="row" style="gap:8px;margin-bottom:16px" id="cfStage">${stages.map(st=>`<button class="pick radio" data-cst="${st}" aria-pressed="${CF.stage===st}">${esc(STAGES[st])} <span class="badge num">${all.filter(x=>x.k.stage===st).length}</span></button>`).join("")}<button class="pick radio" data-cst="all" aria-pressed="${CF.stage==="all"}">Every stage <span class="badge num">${all.length}</span></button></div>
+  <div class="filters">
+    <input type="text" class="q" id="coQ" placeholder="Search: Kroger, protein, Texas..." value="${esc(CF.q)}" aria-label="Search companies" autocomplete="off">
+    <select id="cfSec" aria-label="Sector">${[["all","Food and drink"],["Food","Food"],["Drink","Drink"]].map(([v,l])=>opt(v,l,CF.sec)).join("")}</select>
+    <select id="cfState" aria-label="State"><option value="all">All states</option>${states.map(st=>opt(st,US_ST[st]||st,CF.state)).join("")}${all.some(x=>!coState(x.k))?opt("none","Not disclosed (anonymous)",CF.state):""}</select>
+    ${hiring?"":`<select id="cfHire" aria-label="Hiring">${[["all","Hiring or not"],["yes","Hiring now"],["no","Not advertising"]].map(([v,l])=>opt(v,l,CF.hire)).join("")}</select>`}
+    <select id="cfCat" aria-label="Category"><option value="all">All categories</option>${cats.map(c=>opt(c,c,CF.cat)).join("")}</select>
+    <select id="cfFn" aria-label="Hiring for"><option value="all">Any function</option>${fns.map(g=>opt(g,"Hiring in "+g,CF.fn)).join("")}</select>
+    <select id="cfSort" aria-label="Sort">${[["match","Best match first"],["roles","Most vacancies"],["az","A to Z"]].map(([v,l])=>opt(v,l,CF.sort)).join("")}</select>
+  </div>
+  <div class="row" style="gap:6px;margin-bottom:12px"><span class="muted small">Popular:</span>${popular.map(c=>`<button type="button" class="sug${CF.cat===c?" add":""}" data-ccat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+  <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:nowrap"><p class="muted small num" id="cfCount"></p><div class="row" style="gap:8px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" id="cfClear" hidden>Clear filters</button>
+    <div class="seg" id="coVw" role="group" aria-label="View" style="flex:none;width:auto"><button type="button" data-v="grid" aria-pressed="${vw==="grid"}">Grid</button><button type="button" data-v="list" aria-pressed="${vw==="list"}">List</button></div></div></div>
+  <div id="coList" style="max-width:${vw==="grid"?"none":"760px"}"></div>`;
   $("#coVw").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.coView[mode]=b.dataset.v;try{localStorage.setItem(STORE+"-coview",JSON.stringify(S.coView))}catch(e){}vCompanies(mode)});
   const bindCard=(root,again)=>{
     root.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{const id=b.dataset.int,k=coFull(COMPANIES.find(x=>x.id===id));
       if(S.interest[id]){delete S.interest[id];toast("Interest withdrawn")}else{S.interest[id]=Date.now();sendInterest(k,"","");toast(`${k.anon?"They'll":coName(k)+" will"} see your anonymous profile and get a notification`)}
       save();again()});
     root.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>openApply(b.dataset.apply,again))};
-  const openCo=id=>{const x=all.find(y=>y.k.id===id);if(!x)return;const show=()=>{const f=coFit(x.k,x.live,p);x.f=f;
+  const openCo=id=>{const x=all.find(y=>y.k.id===id);if(!x)return;const show=()=>{
       layer.innerHTML=`<div class="scrim" id="coS"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(coName(x.k))}" style="max-width:600px;padding:14px"><div class="list">${coCard(x,hiring)}</div><div class="row" style="justify-content:flex-end"><button class="btn line" id="coX">Close</button></div></div></div>`;
       $("#coX").onclick=()=>layer.innerHTML="";$("#coS").onclick=e=>{if(e.target.id==="coS")layer.innerHTML=""};
       bindCard(layer,()=>{draw();if(layer.innerHTML)show()})};show()};
-  const draw=()=>{const q=S.coQ||"",list=all.filter(x=>coMatchQ(x.k,x.live,q)),box=$("#coList");if(!box)return;
-    const head=q.trim()?`<p class="muted small">${list.length} ${list.length===1?"company":"companies"} matching "${esc(q.trim())}"</p>`:"";
-    box.innerHTML=list.length?head+(vw==="grid"?`<div class="cogrid">${list.map(coTile).join("")}</div>`:`<div class="list">${list.map(x=>coCard(x,hiring)).join("")}</div>`)
-      :q.trim()?`<div class="empty"><h2>No companies match "${esc(q.trim())}"</h2><p class="muted">${hiring?"Nobody with a live vacancy matches that. Try every company on the Exchange, including those not advertising right now.":"Try a different word, like a category, a state or a stage."}</p>${hiring?`<a class="btn" href="#allcos">Search all companies</a>`:""}</div>`:`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`;
+  const pass=x=>{const k=x.k;
+    if(!coMatchQ(k,x.live,CF.q))return false;
+    if(CF.sec!=="all"&&!sectorFit(k.sector,CF.sec))return false;
+    if(CF.state!=="all"&&(CF.state==="none"?coState(k)!=="":coState(k)!==CF.state))return false;
+    if(!hiring&&CF.hire!=="all"&&(CF.hire==="yes")!==(x.live.length>0))return false;
+    if(CF.stage!=="all"&&k.stage!==CF.stage)return false;
+    if(CF.cat!=="all"&&!(k.cats||[]).includes(CF.cat))return false;
+    if(CF.fn!=="all"&&!x.live.some(r=>LEVELS[r.lvl]&&groupOf(r.lvl)===CF.fn))return false;
+    return true};
+  const sorter=(a,b)=>CF.sort==="az"?coName(a.k).localeCompare(coName(b.k)):CF.sort==="roles"?(b.live.length-a.live.length)||(b.f.n-a.f.n):(b.f.n-a.f.n)||(b.live.length-a.live.length);
+  const draw=()=>{const list=all.filter(pass).sort(sorter),box=$("#coList");if(!box)return;S.coQ=CF.q;
+    const active=CF.q.trim()||["sec","state","hire","stage","cat","fn"].some(k=>CF[k]!=="all"&&!(hiring&&k==="hire"));
+    $("#cfCount").textContent=`Showing ${list.length} of ${all.length}`;$("#cfClear").hidden=!active;
+    app.querySelectorAll("[data-cst]").forEach(b=>b.setAttribute("aria-pressed",String(CF.stage===b.dataset.cst)));
+    app.querySelectorAll("[data-ccat]").forEach(b=>b.classList.toggle("add",CF.cat===b.dataset.ccat));
+    box.innerHTML=list.length?(vw==="grid"?`<div class="cogrid">${list.map(coTile).join("")}</div>`:`<div class="list">${list.map(x=>coCard(x,hiring)).join("")}</div>`)
+      :active?`<div class="empty"><h2>No companies match those filters</h2><p class="muted">${hiring?"Nobody with a live vacancy matches. Try a broader search, or look at every company on the Exchange, including those not advertising right now.":"Try a broader search or clear a filter."}</p><div class="row" style="justify-content:center"><button class="btn line" id="cfClear2">Clear filters</button>${hiring?`<a class="btn" href="#allcos">Search all companies</a>`:""}</div></div>`
+      :`<div class="empty"><h2>No live vacancies right now</h2><p class="muted">Check back soon, or browse every company on the Exchange and register interest.</p><a class="btn" href="#allcos">See all companies</a></div>`;
+    const c2=$("#cfClear2");if(c2)c2.onclick=clear;
     const keep=()=>{const y=SC.scrollTop;draw();SC.scrollTop=y};
     bindCard(box,keep);box.querySelectorAll("[data-cot]").forEach(b=>b.onclick=()=>openCo(b.dataset.cot))};
+  const clear=()=>{Object.assign(CF,{q:"",sec:"all",state:"all",hire:"all",stage:"all",cat:"all",fn:"all"});S.coQ="";vCompanies(mode)};
+  $("#cfClear").onclick=clear;
+  $("#coQ").addEventListener("input",e=>{CF.q=e.target.value;draw()});
+  [["cfSec","sec"],["cfState","state"],["cfHire","hire"],["cfCat","cat"],["cfFn","fn"],["cfSort","sort"]].forEach(([id,k])=>{const el=$("#"+id);if(el)el.onchange=e=>{CF[k]=e.target.value;draw()}});
+  app.querySelectorAll("[data-cst]").forEach(b=>b.onclick=()=>{CF.stage=b.dataset.cst;draw()});
+  app.querySelectorAll("[data-ccat]").forEach(b=>b.onclick=()=>{CF.cat=CF.cat===b.dataset.ccat?"all":b.dataset.ccat;const sel=$("#cfCat");if(sel)sel.value=CF.cat;draw()});
   draw();
-  $("#coQ").addEventListener("input",e=>{S.coQ=e.target.value;draw()});
 }
 function openApply(id,rer){const k=coFull(COMPANIES.find(x=>x.id===id)),live=coLive(k),cur=S.applied[id]||[];
   layer.innerHTML=`<div class="scrim"><form class="modal" id="apF" role="dialog" aria-modal="true" aria-labelledby="apT" style="max-width:480px">
