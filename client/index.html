@@ -2026,7 +2026,7 @@ function vDash(){
     <p class="muted">Every deal across every client, from intro request to placement, and every deal that dropped out, with who pulled out and why. Last 8 weeks.</p></div>
   <div class="kpis">
     ${kpi("Deals in process",open.length,"Requested to offer out")}
-    ${kpi("Interviewing",open.filter(d=>d.st===3).length,`${iv[weeks-1]} interviews this week`)}
+    ${kpi("Interviewing",open.filter(d=>d.st===3).length,`${iv[weeks-1]} interview${iv[weeks-1]===1?"":"s"} this week`)}
     ${kpi("Offers out",open.filter(d=>d.st===4).length,"Waiting on decisions")}
     ${kpi("Placed",placed.length,`${money(won)} in fees`)}
     ${kpi("Dropped out",drops.length,closedN?`${Math.round(drops.length/closedN*100)}% of finished deals`:"")}

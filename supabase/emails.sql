@@ -72,6 +72,8 @@ begin
     end loop;
     return new;
   end if;
+  -- booked/cancelled interviews already get a calendar email of their own
+  if new.audience in ('user','company') and (new.text like 'Interview booked:%' or new.text like 'Interview cancelled:%') then return new; end if;
   if new.audience='user' then
     subj:=left(new.text,120);
     body:='Sign in to the Exchange to see it. Your name and employer stay hidden until you choose to share them.';

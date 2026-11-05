@@ -14,3 +14,5 @@ The tasters and demo use fictional sample data. The live app uses real accounts 
 
 - `supabase/emails.sql`: email alerts through Postmark (every notification also goes by email; chat emails max one per 15 minutes; the Postmark token lives in the private.settings table, never in this repo). Sign-up confirmation and password-reset emails go through Postmark via Supabase Auth SMTP settings.
 - `supabase/functions/push/`: edge function that sends phone/desktop push notifications (Web Push, VAPID). The database calls it for every notification; devices opt in from the bell or the prompt after sign-in. On iPhone the Exchange must be added to the Home Screen first (iOS 16.4+).
+- `supabase/interviews.sql`: interview booking (propose times, choose, new times, reschedule, cancel, outcome, private feedback), calendar invite emails with .ics, contact sharing at booking, time zones.
+- `supabase/admin.sql`: admin delete-account, Contact us messages, profile email sync.

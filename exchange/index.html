@@ -2033,7 +2033,7 @@ function vDash(){
     <p class="muted">Every deal across every client, from intro request to placement, and every deal that dropped out, with who pulled out and why. Last 8 weeks.</p></div>
   <div class="kpis">
     ${kpi("Deals in process",open.length,"Requested to offer out")}
-    ${kpi("Interviewing",open.filter(d=>d.st===3).length,`${iv[weeks-1]} interviews this week`)}
+    ${kpi("Interviewing",open.filter(d=>d.st===3).length,`${iv[weeks-1]} interview${iv[weeks-1]===1?"":"s"} this week`)}
     ${kpi("Offers out",open.filter(d=>d.st===4).length,"Waiting on decisions")}
     ${kpi("Placed",placed.length,`${money(won)} in fees`)}
     ${kpi("Dropped out",drops.length,closedN?`${Math.round(drops.length/closedN*100)}% of finished deals`:"")}
@@ -2752,6 +2752,7 @@ async function hydrateClient(uid){
   const [pubs,privs,intros,picks,applies,events]=await Promise.all([q(sb.from("pro_public").select("*")),q(sb.from("pro_private").select("user_id,name,email,phone,current")),
     q(sb.from("intros").select("*").eq("company_id",co.id)),q(sb.from("picks").select("*").eq("company_id",co.id)),q(sb.from("applies").select("*").eq("company_id",co.id)),
     q(sb.from("events").select("*").eq("company_id",co.id).order("at",{ascending:false}).limit(300))]);
+  L.ivs=await q(sb.from("interviews").select("*").eq("company_id",co.id).order("created_at"));
   const pv=Object.fromEntries(privs.map(p=>[p.user_id,p]));
   setArr(POOL,pubs.filter(p=>p.user_id!==uid).map(p=>toPool(p,pv[p.user_id])));setArr(DATA,POOL);for(const k in REFID)delete REFID[k];POOL.forEach(p=>REFID[p.user]=p.id);
   const ids=intros.map(i=>i.id);const msgs=ids.length?await q(sb.from("messages").select("*").in("intro_id",ids).order("id")):[];
@@ -2780,6 +2781,8 @@ async function hydratePro(uid){
   S.interest={};S.applied={};L.rows.applies={};
   applies.forEach(a=>{L.rows.applies[a.company_id+"|"+a.role]=a;if(a.status!=="new")return;if(!a.role)S.interest[a.company_id]=ago(a.created_at);else (S.applied[a.company_id]=S.applied[a.company_id]||[]).push(a.role)});
   const ids=intros.map(i=>i.id);const msgs=ids.length?await q(sb.from("messages").select("*").in("intro_id",ids).order("id")):[];
+  L.ivs=await q(sb.from("interviews").select("*").eq("pro_id",uid).order("created_at"));
+  L.ivFb=Object.fromEntries((await q(sb.from("iv_feedback").select("iv_id").eq("author",uid))).map(f=>[f.iv_id,1]));
   S.creqs=[];S.cthreads={};
   intros.sort((a,b)=>ago(b.created_at)-ago(a.created_at)).forEach(i=>{const co=list.find(c=>c.id===i.company_id)||{name:"A company",anon:true,cats:[],stage:"CHAL"};
     S.creqs.push({id:i.id,coId:i.company_id,at:ago(i.created_at),co:co.name||"",role:i.role,base:i.base,stage:co.stage,hq:co.hq,why:co.why||co.tagline||"",status:i.status==="sent"?"new":i.status==="declined"?"no":"yes",prior:i.prior||undefined,closed:i.closed?(i.closed.by==="pro"?"pro":"client"):undefined,ref:i.ref,fromApply:i.from_apply});
@@ -2788,7 +2791,7 @@ async function hydratePro(uid){
 async function hydrateAdmin(){
   const [cos,mem,profs,pubs,privs,intros,events]=await Promise.all([q(sb.from("companies").select("*").order("created_at",{ascending:false})),q(sb.from("company_members").select("*")),q(sb.from("profiles").select("*")),
     q(sb.from("pro_public").select("*")),q(sb.from("pro_private").select("*")),q(sb.from("intros").select("*")),q(sb.from("events").select("*").order("at").limit(5000))]);
-  L.rows={cos,mem,profs,intros,events};
+  L.rows={cos,mem,profs,intros,events};L.ivs=await q(sb.from("interviews").select("*").order("created_at"));
   const pv=Object.fromEntries(privs.map(p=>[p.user_id,p]));
   setArr(POOL,pubs.map(p=>toPool(p,pv[p.user_id])));setArr(DATA,POOL);for(const k in REFID)delete REFID[k];POOL.forEach(p=>REFID[p.user]=p.id);
   const st={approved:"active",suspended:"suspended",requested:"requested",denied:"denied",declined:"denied",pending:"pending"};
@@ -2919,13 +2922,14 @@ function drawAccts(){const el=$("#acctList");if(!el)return;const qq=(L.acctQ||""
     toast(`${r?r.name||r.email:"Account"} deleted`);await hydrate();vInvites();counts()})}
 allDeals=function(){const R=L.rows;if(!R.intros)return [];const lastBy={};(R.events||[]).forEach(e=>{if(e.intro_id)lastBy[e.intro_id]=ago(e.at)});
   return R.intros.map(i=>{const c=POOL.find(p=>p.id===i.pro_id);if(!c)return null;const co=R.cos.find(x=>x.id===i.company_id)||{name:"?"};const cs=i.client_state||{};
-    let s=i.accepted_at?(co.terms?3:2):1;if(cs.cstage&&cs.cstage>s)s=cs.cstage;const st=[0,0,1,2,3,5][s];
+    let s=i.accepted_at?(co.terms?3:2):1;if(cs.cstage&&cs.cstage>s)s=cs.cstage;let st=[0,0,1,2,3,5][s];if(cs.offerOut&&st<4)st=4;
     let drop=null;if(i.status==="declined")drop={by:"Candidate",why:"Declined the introduction",ago:Math.floor((Date.now()-ago(i.declined_at||i.created_at))/864e5)};
     else if(i.status==="blocked")drop={by:"Consumer Talent",why:"Blocked automatically (their employer)",ago:Math.floor((Date.now()-ago(i.created_at))/864e5)};
     else if(i.closed)drop={by:i.closed.by==="pro"?"Candidate":"Client",why:(i.prior&&i.prior.prior==="Yes"&&cs.priorDecision==="end")?"Interviewed them in the last 6 months":i.closed.by==="pro"?"Decided not to take it forward":"Decided to go separate ways",ago:Math.floor((Date.now()-ago(i.closed.at||i.created_at))/864e5)};
     const v=cs.offer&&cs.offer.summary?+((cs.offer.summary.match(/Package \$([\d,]+)/)||[0,"0"])[1].replace(/,/g,"")):pkg(c);const R2=rateFor(co.name,null,v);const fee=Math.round(v*R2.pct/100);
     const last=Math.floor((Date.now()-(lastBy[i.id]||ago(i.created_at)))/864e5);const alerts=[];if(!drop&&st===2&&last>=7)alerts.push(["warn",`Quiet ${last} days after reveal`]);if(!drop&&st===4)alerts.push(["new","Chase offer decision"]);if(st===5)alerts.push(["hit","Invoice due"]);
-    return {id:i.id,co:co.name,c,st,start:Math.floor((Date.now()-ago(i.created_at))/864e5),last,ivAgo:null,live:false,drop,v,pct:R2.pct,custom:R2.custom,fee,wfee:fee,alerts}}).filter(Boolean)};
+    const ivd=(L.ivs||[]).filter(v=>v.intro_id===i.id&&v.starts_at&&(v.status==="booked"||v.status==="held")).map(v=>new Date(v.starts_at).getTime());if(ivd.length&&st<3&&!drop)st=3;
+    return {id:i.id,co:co.name,c,st,start:Math.floor((Date.now()-ago(i.created_at))/864e5),last,ivAgo:ivd.length?Math.max(0,Math.floor((Date.now()-Math.max(...ivd))/864e5)):null,live:false,drop,v,pct:R2.pct,custom:R2.custom,fee,wfee:fee,alerts}}).filter(Boolean)};
 register=function(){const R=L.rows;if(!R.events)return [];const g={};
   R.events.forEach(e=>{if(!e.pro_id||!e.company_id)return;const k=e.pro_id+"|"+e.company_id;(g[k]=g[k]||{pid:e.pro_id,cid:e.company_id,ev:[]}).ev.push({at:ago(e.at),what:e.what})});
   return Object.values(g).map(r=>{const c=POOL.find(p=>p.id===r.pid);const co=R.cos.find(x=>x.id===r.cid);if(!c||!co)return null;const last=Math.max(...r.ev.map(e=>e.at)),until=plus12(new Date(last)),revealed=r.ev.some(isReveal);
@@ -2965,6 +2969,7 @@ vCandMsgs=function(){
       <div class="protect">${lockIcon}<span><b>Private chat.</b> Contact details and links are blocked. ${esc(p.current||"Your employer")} can never see your profile.</span></div></div>
       <div class="msgs" id="msgs">${msgs.map(m=>`<div class="m ${m.f==="sys"||m.f==="blk"?"sys":m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(coDisplay(co))}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
       ${r.closed?`<div class="closedbar">${r.closed==="pro"?"You went separate ways.":"The company decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="Write a message..." aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="btn quiet sm" id="bEnd">Not for me, close this chat</button></div>`}</div></div>`;
+  {const pn=ivProPanel(r,co),th=app.querySelector(".thead");if(pn&&th){const d=document.createElement("div");d.className="stack";d.style.gap="8px";d.innerHTML=pn;th.appendChild(d)}bindIvPro(r,co)}
   const box=$("#msgs");box.scrollTop=box.scrollHeight;
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.t;vCandMsgs()});
   const f=$("#cmp");if(f)f.addEventListener("submit",async e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
@@ -2976,10 +2981,89 @@ vCandMsgs=function(){
 VIEWS.messages=vCandMsgs;
 function confirmInline(b,txt){if(b.dataset.armed)return true;b.dataset.armed="1";b.textContent=txt;setTimeout(()=>{delete b.dataset.armed},4000);return false}
 
+/* ---------- interviews: booking inside the chat ---------- */
+const IVK={video:"Video interview",phone:"Phone interview",in_person:"In-person interview"};
+const myTZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone}catch(e){return ""}})();
+const fmtSlot=iso=>new Date(iso).toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit",timeZoneName:"short"});
+const ivsFor=introId=>(L.ivs||[]).filter(v=>v.intro_id===introId);
+const ivActive=introId=>ivsFor(introId).filter(v=>v.status==="proposed"||v.status==="new_times"||v.status==="booked"||(v.status==="held"&&false));
+const ivPast=v=>v.starts_at&&new Date(v.starts_at)<new Date();
+const ivWhere=v=>v.kind==="video"?(v.location?`Video link: <a href="${esc(/^https?:\/\//i.test(v.location)?v.location:"https://"+v.location)}" target="_blank" rel="noopener">${esc(v.location)}</a>`:""):v.kind==="phone"?esc(v.location||"Phone call"):`Address: ${esc(v.location)}`;
+async function ivCall(fn,args,ok){const {error}=await sb.rpc(fn,args);if(error){toast(error.message.replace(/^.*?:\s*/,""));return false}if(ok)toast(ok);await refresh();return true}
+function ivICS(v,title){const t=d=>new Date(d).toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");const e=x=>String(x||"").replace(/\\/g,"\\\\").replace(/[;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
+  const end=new Date(new Date(v.starts_at).getTime()+v.minutes*60000);
+  const ics=["BEGIN:VCALENDAR","PRODID:-//Consumer Talent//Exchange//EN","VERSION:2.0","BEGIN:VEVENT",`UID:${v.id}@consumer-talent.com`,`SEQUENCE:${v.seq}`,`DTSTAMP:${t(Date.now())}`,`DTSTART:${t(v.starts_at)}`,`DTEND:${t(end)}`,
+    `SUMMARY:${e(title)}`,`LOCATION:${e(v.kind==="phone"?(v.location||"Phone call"):v.location)}`,`DESCRIPTION:${e("Arranged through the Consumer Talent Exchange. "+(v.note||""))}`,"END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));a.download="interview.ics";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function ivReason(title,go){layer.innerHTML=`<div class="scrim" id="irS"><form class="modal stack" id="irF" style="max-width:440px;gap:12px"><h2 style="margin:0">${esc(title)}</h2>
+  <label class="field">Reason <small>Optional, shared with the other side</small><textarea id="irT" maxlength="500" style="min-height:80px"></textarea></label>
+  <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="irX">Back</button><button class="btn" type="submit">${esc(title)}</button></div></form></div>`;
+  $("#irX").onclick=()=>layer.innerHTML="";$("#irF").onsubmit=async e=>{e.preventDefault();e.target.querySelector("[type=submit]").disabled=true;const ok=await go($("#irT").value.trim());if(ok)layer.innerHTML="";else e.target.querySelector("[type=submit]").disabled=false}}
+// company: suggest times (new interview, or change times on an existing one)
+function ivPropose(i,c,v){const pad=n=>String(n).padStart(2,"0"),loc=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const kind=v?v.kind:"video",slots=v&&v.status!=="booked"?v.slots.map(x=>loc(new Date(x))):[];const rnd=v?v.round:ivsFor(i.dbId).filter(x=>x.status!=="cancelled").length+1;
+  layer.innerHTML=`<div class="scrim" id="ipS"><form class="modal stack" id="ipF" role="dialog" aria-modal="true" aria-labelledby="ipT" style="max-width:520px;gap:12px">
+    <div class="stack" style="gap:4px"><span class="kicker">${v?"Change interview":"Schedule interview"} · Round ${rnd}</span><h2 id="ipT" style="margin:0">Interview with ${esc(c.name||c.user)}</h2>
+      <p class="muted small" style="margin:0">Suggest up to three times. They'll pick one, and both of you get a calendar invite with each other's contact details.</p></div>
+    <div class="seg" role="group" aria-label="Interview type" style="width:100%">${Object.entries(IVK).map(([k,l])=>`<button type="button" data-k="${k}" aria-pressed="${k===kind}" style="flex:1">${l.replace(" interview","")}</button>`).join("")}</div>
+    <div class="stack" style="gap:8px"><b class="small">Times <span class="muted">(your time zone: ${esc(myTZ.replace(/_/g," "))})</span></b>
+      ${[0,1,2].map(n=>`<input type="datetime-local" class="ipSl" aria-label="Time option ${n+1}" value="${slots[n]||""}" ${n===0?"required":""}>`).join("")}</div>
+    <div class="grid2"><label class="field">Length<select id="ipM">${[30,45,60,90].map(m=>`<option value="${m}" ${(v?v.minutes:45)===m?"selected":""}>${m} minutes</option>`).join("")}</select></label>
+      <label class="field"><span id="ipLl">Video link</span><input type="text" id="ipL" value="${esc(v?v.location:"")}" maxlength="500"></label></div>
+    <label class="field">Note for them <small>Optional</small><textarea id="ipN" maxlength="1000" style="min-height:70px" placeholder="e.g. You'll meet Sarah, our VP Sales, and Tom from HR.">${esc(v?v.note:"")}</textarea></label>
+    <p class="small" id="ipE" style="color:var(--bad);display:none"></p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="ipX">Cancel</button><button class="btn" type="submit">${v?"Send new times":"Send times"}</button></div></form></div>`;
+  let k=kind;const lbl=()=>{$("#ipLl").textContent=k==="video"?"Video link":k==="phone"?"Phone details (optional)":"Address";$("#ipL").placeholder=k==="video"?"Teams, Zoom or Google Meet link":k==="phone"?"e.g. We'll call your mobile":"Full address"};lbl();
+  layer.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{k=b.dataset.k;layer.querySelectorAll("[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));lbl()});
+  $("#ipX").onclick=()=>layer.innerHTML="";
+  $("#ipF").onsubmit=async e=>{e.preventDefault();const err=m=>{const x=$("#ipE");x.textContent=m;x.style.display="block"};
+    const sl=[...layer.querySelectorAll(".ipSl")].map(x=>x.value).filter(Boolean).map(x=>new Date(x));
+    if(!sl.length)return err("Add at least one time.");if(sl.some(d=>isNaN(d)||d<new Date(Date.now()+30*60000)))return err("Every time needs to be at least 30 minutes from now.");
+    const b=e.target.querySelector("[type=submit]");b.disabled=true;
+    const ok=await ivCall("iv_propose",{p_intro:i.dbId,p_kind:k,p_slots:sl.map(d=>d.toISOString()),p_minutes:+$("#ipM").value,p_location:$("#ipL").value.trim(),p_note:$("#ipN").value.trim(),p_iv:v?v.id:null,p_tz:myTZ},v?"New times sent":"Times sent. They'll be told straight away.");
+    if(ok)layer.innerHTML="";else b.disabled=false}}
+// company: interview cards at the top of the chat
+function ivClientPanel(i,c){const list=ivsFor(i.dbId).filter(v=>v.status!=="cancelled"&&!(v.status==="held"));const nm=c.name||c.user;
+  return list.map(v=>{const head=`<b>${IVK[v.kind]} · Round ${v.round}</b>`;
+    if(v.status==="proposed")return `<div class="card stack ivc" style="padding:12px 14px;gap:6px">${head}<span class="small">Waiting for ${esc(nm)} to choose: ${v.slots.map(x=>esc(fmtSlot(x))).join(" · ")}</span><div class="row"><button class="btn line sm" data-ivchg="${v.id}">Change times</button><button class="btn quiet sm" data-ivcan="${v.id}">Cancel</button></div></div>`;
+    if(v.status==="new_times")return `<div class="card stack ivc" style="padding:12px 14px;gap:6px;border-color:var(--warn,#e0b354)">${head}<span class="small">${esc(nm)} asked for different times.${v.new_times_note?` “${esc(v.new_times_note)}”`:""}</span><div class="row"><button class="btn sm" data-ivchg="${v.id}">Suggest new times</button><button class="btn quiet sm" data-ivcan="${v.id}">Cancel</button></div></div>`;
+    if(v.status==="booked"&&!ivPast(v))return `<div class="card stack ivc" style="padding:12px 14px;gap:6px;border-color:var(--good,#5bbf8a)">${head}<span><b>Booked: ${esc(fmtSlot(v.starts_at))}</b> · ${v.minutes} minutes</span><span class="small">${ivWhere(v)}</span><div class="row"><button class="btn line sm" data-ivcal="${v.id}">Add to calendar</button><button class="btn line sm" data-ivchg="${v.id}">Reschedule</button><button class="btn quiet sm" data-ivcan="${v.id}">Cancel</button></div></div>`;
+    if(v.status==="booked")return `<div class="card stack ivc" style="padding:12px 14px;gap:8px">${head}<b>How did it go?</b><span class="muted small">${esc(fmtSlot(v.starts_at))}. Tell Consumer Talent what happens next.</span><textarea data-ivfb="${v.id}" maxlength="2000" style="min-height:60px" placeholder="Optional notes on the interview (only Consumer Talent sees these)"></textarea><div class="row"><button class="btn sm" data-ivout="${v.id}:next">Another round</button><button class="btn good sm" data-ivout="${v.id}:offer">Making an offer</button><button class="btn line sm" data-ivout="${v.id}:no">Not progressing</button></div></div>`;
+    return ""}).join("")}
+function bindIvClient(i,c){
+  app.querySelectorAll("[data-ivchg]").forEach(b=>b.onclick=()=>ivPropose(i,c,ivsFor(i.dbId).find(v=>v.id===b.dataset.ivchg)));
+  app.querySelectorAll("[data-ivcan]").forEach(b=>b.onclick=()=>ivReason("Cancel interview",r=>ivCall("iv_cancel",{p_iv:b.dataset.ivcan,p_reason:r},"Interview cancelled. They've been told.")));
+  app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivsFor(i.dbId).find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]} with ${c.name||c.user}`)});
+  app.querySelectorAll("[data-ivout]").forEach(b=>b.onclick=async()=>{const [id,o]=b.dataset.ivout.split(":");if(o==="no"&&!confirmInline(b,"Tap again: this closes the chat"))return;
+    const fb=(app.querySelector(`[data-ivfb="${id}"]`)||{}).value||"";b.disabled=true;
+    await ivCall("iv_outcome",{p_iv:id,p_outcome:o,p_feedback:fb},o==="offer"?"Great news. Jamie or Connor will be in touch.":o==="next"?"Noted. Schedule the next round when you're ready.":"Noted. The chat has been closed.")})}
+// professional: interview cards at the top of the chat
+function ivProPanel(r,co){const list=ivsFor(r.id).filter(v=>v.status!=="cancelled");const cn=coDisplay(co);
+  return list.map(v=>{const head=`<b>${IVK[v.kind]} · Round ${v.round}</b>`;
+    if(v.status==="proposed")return `<div class="card stack ivc" style="padding:12px 14px;gap:8px;border-color:var(--gold,#c8a96a)">${head}<span class="small">${esc(cn)} would like to interview you for ${v.minutes} minutes${v.kind==="in_person"&&v.location?` at ${esc(v.location)}`:""}. Choose a time that suits you (shown in your time zone).</span>${v.note?`<span class="small muted">“${esc(v.note)}”</span>`:""}
+      <div class="row" style="flex-wrap:wrap">${v.slots.map(x=>`<button class="btn sm" data-ivpick="${v.id}|${x}">${esc(fmtSlot(x))}</button>`).join("")}</div><div class="row"><button class="btn quiet sm" data-ivnew="${v.id}">None of these work</button></div></div>`;
+    if(v.status==="new_times")return `<div class="card stack ivc" style="padding:12px 14px;gap:6px">${head}<span class="small">You asked for different times. ${esc(cn)} will suggest new ones.</span></div>`;
+    if(v.status==="booked"&&!ivPast(v))return `<div class="card stack ivc" style="padding:12px 14px;gap:6px;border-color:var(--good,#5bbf8a)">${head}<span><b>Booked: ${esc(fmtSlot(v.starts_at))}</b> · ${v.minutes} minutes</span><span class="small">${ivWhere(v)}</span><div class="row"><button class="btn line sm" data-ivcal="${v.id}">Add to calendar</button><button class="btn quiet sm" data-ivcan="${v.id}">Cancel</button></div></div>`;
+    if(ivPast(v)&&!(L.ivFb||{})[v.id]&&!(L.ivFbDone||{})[v.id])return `<div class="card stack ivc" style="padding:12px 14px;gap:8px">${head}<b>How did it go?</b><span class="muted small">Only Consumer Talent sees this. It helps us support you.</span><textarea data-ivpfb="${v.id}" maxlength="2000" style="min-height:60px"></textarea><div class="row"><button class="btn sm" data-ivpsend="${v.id}">Send</button></div></div>`;
+    return ""}).join("")}
+function bindIvPro(r,co){
+  app.querySelectorAll("[data-ivpick]").forEach(b=>b.onclick=async()=>{const [id,slot]=b.dataset.ivpick.split("|");if(!confirmInline(b,"Tap again to confirm "+fmtSlot(slot)))return;b.disabled=true;await ivCall("iv_choose",{p_iv:id,p_slot:slot},"Booked. Calendar invite on its way by email.")});
+  app.querySelectorAll("[data-ivnew]").forEach(b=>b.onclick=()=>ivReason("Ask for new times",t=>ivCall("iv_new_times",{p_iv:b.dataset.ivnew,p_note:t},"Asked for new times")));
+  app.querySelectorAll("[data-ivcan]").forEach(b=>b.onclick=()=>ivReason("Cancel interview",t=>ivCall("iv_cancel",{p_iv:b.dataset.ivcan,p_reason:t},"Interview cancelled. They've been told.")));
+  app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivsFor(r.id).find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]} with ${coDisplay(co)}`)});
+  app.querySelectorAll("[data-ivpsend]").forEach(b=>b.onclick=async()=>{const id=b.dataset.ivpsend,t=(app.querySelector(`[data-ivpfb="${id}"]`)||{}).value||"";if(!t.trim())return toast("Write a few words first");b.disabled=true;
+    (L.ivFbDone=L.ivFbDone||{})[id]=1;if(!await ivCall("iv_pro_feedback",{p_iv:id,p_feedback:t.trim()},"Thanks. Sent to Consumer Talent."))delete L.ivFbDone[id];vCandMsgs()})}
+
 /* ---------- company chat: real messages, no simulated replies ---------- */
 const _vChats=vChats;
 vChats=function(){_vChats();
   ["#bIv","#bOffer","[data-ivnew]"].forEach(s=>app.querySelectorAll(s).forEach(x=>x.remove()));
+  {const id=S.activeChat,i=S.intros[id],c=POOL.find(p=>p.id===id);const th=app.querySelector(".thead");
+   if(i&&c&&th){const canBook=i.stage>=3&&!i.closed&&!ivActive(i.dbId).length&&termsOK();
+     const row=th.querySelector(".line1 .row");if(row&&canBook){const b=document.createElement("button");b.className="btn sm";b.id="bIvLive";b.textContent="Schedule interview";row.prepend(b);b.onclick=()=>ivPropose(i,c,null)}
+     const pn=ivClientPanel(i,c);if(pn){const d=document.createElement("div");d.className="stack";d.style.gap="8px";d.innerHTML=pn;th.appendChild(d)}
+     app.querySelectorAll(".blkcard .muted.small").forEach(x=>x.textContent=i.stage>=3?"Use Schedule interview at the top and contact details are shared automatically.":"Schedule interview is available once you can see their name.");
+     bindIvClient(i,c)}}
   const f=$("#cmp");if(!f)return;const nf=f.cloneNode(true);f.replaceWith(nf);
   nf.addEventListener("submit",async e=>{e.preventDefault();const id=S.activeChat,i=S.intros[id],c=POOL.find(p=>p.id===id);const v=$("#cmpT").value.trim();if(!v||!i)return;
     if(CONTACT_RE.test(v)){i.msgs.push(blockedContact("client",S.company.name||"A client",i.stage>=3?c.name:refOf(c.user)));save();vChats();return}
@@ -3154,6 +3238,7 @@ contactUs=function(topic="Question",preset=""){const back=layer.innerHTML;
 
 /* ---------- boot ---------- */
 async function start(session){L.user=session.user;L.token=session.access_token;
+  try{const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(tz&&(session.user.user_metadata||{}).tz!==tz){sb.from("profiles").update({tz}).eq("user_id",session.user.id).then(()=>{})}}catch(e){}
   if(pushOK()&&Notification.permission==="granted")pushSub().then(s=>s&&savePushSub(s)).catch(()=>{});setTimeout(pushPrompt,2500);try{localStorage.removeItem("ctx_join")}catch(e){}L.prefill=null;
   const prof=(await q(sb.from("profiles").select("*").eq("user_id",L.user.id)))[0];
   L.role=TEAM.includes(L.user.email)?"admin":prof?prof.role:"pro";
@@ -3176,7 +3261,7 @@ async function refresh(){if(!L.user||L.busy||L.pending){refreshSoon(500);return}
 window.CTX_refresh=refresh;
 let chan=null;
 function subscribe(){if(chan)sb.removeChannel(chan);chan=sb.channel("ctx-live");
-  ["messages","intros","notifications","applies","companies","picks"].forEach(t=>chan.on("postgres_changes",{event:"*",schema:"public",table:t},()=>refreshSoon(350)));
+  ["messages","intros","notifications","applies","companies","picks","interviews"].forEach(t=>chan.on("postgres_changes",{event:"*",schema:"public",table:t},()=>refreshSoon(350)));
   chan.subscribe()}
 
 // header: who's signed in, sign out; hide the demo-only switch
