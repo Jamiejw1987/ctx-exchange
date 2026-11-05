@@ -507,10 +507,10 @@ const LEVELS={CCO:"Chief Commercial Officer",VPS:"VP of Sales",VPNA:"VP of Natio
 const GROUPS=[["Sales leadership",["CCO","VPS","VPNA","NAD","KAM","NAM"]],["Field sales",["RSD","RSM","MM","SM"]],["Marketing & brand",["CMO","VPM","MD","BD","BM"]],["Digital & e-commerce",["VPD","HEC"]],["Insights & category",["VPCI","CID","CATD","CATM"]],["Finance & operations",["VPFPA","VPO","OD"]]];
 const LV=GROUPS.flatMap(g=>g[1]);
 const groupOf=l=>GROUPS.find(g=>g[1].includes(l))[0];
-const STAGES={START:"Start-up",CHAL:"Challenger / emerging",EST:"Established",PUB:"Publicly traded",SME:"Funded scale-up"};
-const CO_STAGES=["START","CHAL","EST","PUB"];
-const stageFam=x=>(x==="START"||x==="CHAL"||x==="SME")?"SME":"EST";
-const STAGE_PHRASE={START:"start-up",CHAL:"challenger brand",EST:"established brand",PUB:"publicly traded company",SME:"funded scale-up"};
+const STAGES={START:"Start-up",CHAL:"Challenger / Emerging",PEVC:"PE/VC backed",EST:"Established",PUB:"Publicly traded",SME:"Funded scale-up"};
+const CO_STAGES=["START","CHAL","PEVC","EST","PUB"];
+const stageFam=x=>(x==="START"||x==="CHAL"||x==="PEVC"||x==="SME")?"SME":"EST";
+const STAGE_PHRASE={START:"start-up",CHAL:"challenger brand",PEVC:"PE/VC-backed brand",EST:"established brand",PUB:"publicly traded company",SME:"funded scale-up"};
 const REGIONS=["National","Northeast","Midwest","South","Southeast","Southwest","West","Mountain West","Canada","Mexico"];
 const RETAIL=["Costco","Kroger","Walmart","Target","Sprouts","Whole Foods","Albertsons","Publix","Sam's Club","CVS","Convenience","E-commerce"];
 const CATS=["Salty snacks","Confectionery","Ambient & pantry","Better-for-you","Protein snacks","Bakery","RTD coffee & tea","Energy & functional","Sparkling & still water","Craft beer","Spirits","Wine","Non-alcoholic","Juice & smoothies"];
