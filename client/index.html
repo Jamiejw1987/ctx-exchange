@@ -1633,7 +1633,7 @@ function vProfile(){
           <label class="field">Years in the industry<input type="number" min="0" max="50" id="p_yrs" value="${esc(p.yrs)}"></label>
           <label class="field">People you manage<input type="number" min="0" max="500" id="p_team" value="${esc(p.team)}"></label>
           <label class="field">Base salary<select id="p_band">${BANDS.map(b=>`<option ${b===toBand(p.band)?"selected":""}>${b}</option>`).join("")}</select></label>
-          <label class="field">Availability<select id="p_notice">${["Available now","1 month notice","2 months notice","3 months notice"].map(b=>`<option ${b===p.notice?"selected":""}>${b}</option>`).join("")}</select></label>
+          <label class="field">Availability<select id="p_notice">${["Available now","2 weeks notice","4 weeks notice","1 month notice","2 months notice","3 months notice"].map(b=>`<option ${b===p.notice?"selected":""}>${b}</option>`).join("")}</select></label>
         </div>
         <div class="field">Where you are${picks("open",["Actively looking","Open to the right move","Quietly exploring"],p.open,{radio:true})}</div>
       </div>
