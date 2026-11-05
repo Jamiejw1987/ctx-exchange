@@ -11,3 +11,5 @@
 - `supabase-js.min.js` – Supabase client library (v2.45.4), bundled so the app doesn't depend on a CDN
 
 The tasters and demo use fictional sample data. The live app uses real accounts only.
+
+- `supabase/emails.sql`: email alerts through Postmark (every notification also goes by email; chat emails max one per 15 minutes; the Postmark token lives in the private.settings table, never in this repo). Sign-up confirmation and password-reset emails go through Postmark via Supabase Auth SMTP settings.
