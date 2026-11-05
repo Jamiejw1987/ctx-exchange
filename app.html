@@ -426,6 +426,11 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
 
 /* modal */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.7);display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ivd{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+.blkcard{align-self:stretch;border:1px dashed var(--warn);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.blkcard .btn{align-self:flex-start}
+.hlbtn{border:0;background:transparent;color:inherit;opacity:.75;cursor:pointer;font-size:14px;padding:0 0 0 6px}
+.m.hlon{box-shadow:0 0 0 2px var(--warn)}
 .mclose{position:sticky;top:0;align-self:flex-end;margin:-14px -14px -42px 0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:6;flex:none;display:grid;place-items:center;box-shadow:var(--shadow)}
 .mclose:hover{border-color:var(--brand)}
 .modal{background:var(--surface);border-radius:18px;max-width:640px;width:100%;max-height:100%;overflow:auto;padding:26px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow)}
@@ -1134,8 +1139,8 @@ function vChats(){
         ${st===5?`<div class="reveal"><span class="name">Placed</span><span>${esc(i.offer.summary)}</span></div>`:""}
         ${i.priorRecent&&!i.priorDecision&&!i.closed?`<div class="card stack" style="border:2px solid var(--warn);padding:14px;gap:8px"><b>They've interviewed with you in the last six months</b><span class="small">${i.prior&&i.prior.who?`With ${esc(i.prior.who)}. `:""}${i.prior&&i.prior.outcome?`Outcome: ${esc(i.prior.outcome)}. `:""}${i.prior&&i.prior.detail?esc(i.prior.detail):""}</span><span class="muted small">Would you like to continue the conversation?</span><div class="row"><button class="btn sm" id="pdGo">Continue conversation</button><button class="btn line sm" id="pdEnd">End conversation</button></div></div>`:""}
       </div>
-      <div class="msgs" id="msgs">${i.msgs.map(m=>m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}</b>`:`Waiting for ${esc(c.user)} to pick a time:`}</span>${m.booked?"":`<div class="row">${m.opts.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`
-        :`<div class="m ${m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(st>=3?c.name.split(" ")[0]:c.user)}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
+      <div class="msgs" id="msgs">${i.msgs.map((m,k)=>m.f==="blk"?`<div class="blkcard"><span>${esc(m.t)}</span>${st>=3&&st<5?`<button type="button" class="btn sm" data-ivnew="1">Schedule interview</button>`:`<span class="muted small">Schedule interview is available once you can see their name.</span>`}</div>`:m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?ivClientCard(m,k,c)
+        :`<div class="m ${m.f}${m.hl?" hlon":""}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(st>=3?c.name.split(" ")[0]:c.user)}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}${m.f==="me"||m.f==="them"?` <button type="button" class="hlbtn" data-hl="${k}" aria-label="${m.hl?"Remove highlight":"Highlight for interview notes"}" title="Highlight for interview notes">${m.hl?"★":"☆"}</button>`:""}</span></div>`).join("")}</div>
       ${i.priorRecent&&!i.priorDecision&&!i.closed?`<div class="closedbar">Decide above whether to continue before chatting.</div>`:i.closed?`<div class="closedbar">${i.closed.by==="client"?"You went separate ways.":"They decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="${st<3?"Message anonymously...":"Write a message..."}" aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}
     </div>
   </div>`;
@@ -1143,10 +1148,13 @@ function vChats(){
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.activeChat=b.dataset.t;vChats()});
   $("#bProf").onclick=()=>openProfile(id);$("#bFb").onclick=()=>clientFeedback(id);
   if($("#cmp"))$("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
-    if(st<3&&CONTACT_RE.test(v)){i.msgs.push({f:"sys",t:"Message not sent. Contact details and links are shared automatically once you both agree to reveal.",at:tnow()});logEvent(`Blocked a message containing contact details to ${c.user}`,S.company.contact);vChats();return}
+    if(CONTACT_RE.test(v)){i.msgs.push(blockedContact("client",S.company.name||"A client",st>=3?c.name:refOf(c.user)));save();vChats();return}
     i.msgs.push({f:"me",t:v,at:tnow()});save();vChats();
     setTimeout(()=>{i.msgs.push({f:"them",t:REPLIES[i.msgs.length%REPLIES.length],at:tnow()});save();if(view()==="chats"&&S.activeChat===id)vChats()},1600)});
   const rv=$("#bReveal");if(rv)rv.onclick=()=>termsOK()?doReveal(id):openTermsGate(()=>doReveal(id));
+  app.querySelectorAll("[data-hl]").forEach(b=>b.onclick=()=>{const m=i.msgs[+b.dataset.hl];m.hl=!m.hl;save();vChats();toast(m.hl?"Highlighted. It'll go in the interview notes.":"Highlight removed")});
+  app.querySelectorAll("[data-ivnew]").forEach(b=>b.onclick=()=>scheduleIv(id));
+  app.querySelectorAll("[data-altbook]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.altbook.split(":").map(Number),m=i.msgs[k];bookIv(m.ivid,m.alt.slots[j],m.alt.cand);vChats();toast("Interview booked")});
   const pg=$("#pdGo");if(pg)pg.onclick=()=>{i.priorDecision="continue";logEvent(`Chose to continue with ${refOf(c.user)} after their recent interview was declared`,S.company.contact);autoReveal(i,c,"You chose to continue.");notify("cand",`${S.company.name||"The company"} would like to continue the conversation`,"messages");save();vChats();counts()};
   const pe=$("#pdEnd");if(pe)pe.onclick=()=>{i.priorDecision="end";i.closed={by:"client",at:Date.now()};logEvent(`Ended the conversation with ${refOf(c.user)} after their recent interview was declared`,S.company.contact);notify("cand",`${S.company.name||"The company"} has decided not to continue this time`,"introductions");notify("admin",`${S.company.name||"A client"} ended the chat with ${refOf(c.user)} after a recent interview was declared (${i.ref})`,"intros");save();vChats();counts();toast("Conversation ended")};
   const iv=$("#bIv");if(iv)iv.onclick=()=>scheduleIv(id);
@@ -1228,20 +1236,114 @@ function vFeedback(){const co=S.company;
 
 function nextDays(){const out=[];const d=new Date();while(out.length<3){d.setDate(d.getDate()+1);if(d.getDay()%6)out.push(new Date(d))}return out}
 function scheduleIv(id){
-  const c=POOL.find(p=>p.id===id),i=S.intros[id],ds=nextDays(),hrs=[10,14,16];
+  const c=POOL.find(p=>p.id===id),i=S.intros[id],co=S.company,ds=nextDays(),hrs=[10,14,16];
   const val=(d,h)=>{const x=new Date(d);x.setHours(h,0,0,0);const p=n=>String(n).padStart(2,"0");return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())}T${p(h)}:00`};
+  const hl=i.msgs.filter(m=>m.hl);
   layer.innerHTML=`<div class="scrim"><form class="modal" id="ivF" role="dialog" aria-modal="true" aria-labelledby="ivT">
-    <div class="stack" style="gap:4px"><span class="kicker">Interview</span><h2 id="ivT">Invite ${esc(c.name)} to interview</h2><p class="muted small">Offer up to three times. ${esc(c.name.split(" ")[0])} picks one and we send calendar invites to everyone.</p></div>
-    <div class="grid2"><label class="field">Format<select id="ivFmt"><option>Video call in the Exchange</option><option>Phone call</option><option>In person</option></select></label><label class="field">Interviewer<input type="text" id="ivWho" value="${esc(S.company.contact)}"></label></div>
+    <div class="stack" style="gap:4px"><span class="kicker">Interview</span><h2 id="ivT">Invite ${esc(c.name)} to interview</h2><p class="muted small">Offer up to three times. ${esc(c.name.split(" ")[0])} picks one, or asks for a different time, and adds their contact details. The interview goes into Jamie's and Connor's calendars and invites go to everyone.</p></div>
+    <div class="grid2"><label class="field">Format<select id="ivFmt"><option>Video call in the Exchange</option><option>Phone call</option><option>In person</option></select></label><label class="field">Location or link <small>Optional</small><input type="text" id="ivLoc" placeholder="e.g. 200 W Madison St, Chicago"></label></div>
+    <div class="grid2"><label class="field">Interviewer name<input type="text" id="ivWho" value="${esc(co.contact)}" required></label><label class="field">Their job title<input type="text" id="ivTitle" value="${esc(co.contactTitle)}"></label>
+      <label class="field">Phone<input type="tel" id="ivPh" value="${esc(co.phone||S.alerts.phone||"")}" autocomplete="tel" required></label><label class="field">Email<input type="email" id="ivEm" value="${esc(co.email||S.alerts.email_to||"")}" autocomplete="email" required></label></div>
     <div class="grid3">${ds.map((d,k)=>`<label class="field">Option ${k+1}<input type="datetime-local" id="ivO${k}" value="${val(d,hrs[k])}"></label>`).join("")}</div>
+    <label class="field">Notes for the interview <small>Optional. Shared with Jamie and Connor in the calendar invite.</small><textarea id="ivN" style="min-height:60px" placeholder="e.g. Focus on Kroger JBP experience. Second round would be with the CEO.">${hl.length?esc(hl.map(m=>"“"+m.t+"”").join("\n")):""}</textarea></label>
+    ${hl.length?`<p class="muted small">${hl.length} highlighted message${hl.length>1?"s":""} from your chat added to the notes.</p>`:""}
+    <p class="small" id="ivErr" style="color:var(--bad);display:none"></p>
     <div class="row"><button class="btn" type="submit">Send interview request</button><button class="btn line" type="button" id="ivX">Cancel</button></div></form></div>`;
   $("#ivX").onclick=()=>layer.innerHTML="";
-  $("#ivF").addEventListener("submit",e=>{e.preventDefault();
-    const opts=[0,1,2].map(k=>$("#ivO"+k).value).filter(Boolean).map(v=>new Date(v).toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}));
-    const m={f:"iv",fmt:$("#ivFmt").value,who:$("#ivWho").value,opts,booked:null};i.msgs.push(m);i.stage=Math.max(i.stage,4);
-    logEvent(`Interview requested with ${c.name}`,S.company.contact);layer.innerHTML="";save();vChats();toast("Interview request sent");
-    setTimeout(()=>{m.booked=opts[0];i.msgs.push({f:"sys",t:`${c.name} booked ${opts[0]}. Calendar invites sent to ${m.who} and ${c.name}.${m.fmt.startsWith("Video")?" The video room opens in the Exchange 10 minutes before.":""}`,at:tnow()});logEvent(`Interview booked with ${c.name}: ${opts[0]}`,"Candidate");save();if(view()==="chats")vChats()},2000)});
+  $("#ivF").addEventListener("submit",e=>{e.preventDefault();const err=t=>{const x=$("#ivErr");x.textContent=t;x.style.display="block"};
+    const ph=$("#ivPh").value.trim(),em=$("#ivEm").value.trim();if(!$("#ivWho").value.trim())return err("Add the interviewer's name.");if(!okPhone(ph)||!okEmail(em))return err("Add a phone number and a valid email for the interviewer.");
+    const slots=[0,1,2].map(k=>$("#ivO"+k).value).filter(Boolean).map(iso=>({iso,label:ivLabel(iso)}));if(!slots.length)return err("Add at least one time.");
+    co.phone=ph;co.email=co.email||em;
+    const m={f:"iv",ivid:"iv"+Date.now(),fmt:$("#ivFmt").value,loc:$("#ivLoc").value.trim(),who:$("#ivWho").value.trim(),title:$("#ivTitle").value.trim(),phone:ph,email:em,notes:$("#ivN").value.trim(),slots,opts:slots.map(x=>x.label),booked:null};
+    i.msgs.push(m);i.stage=Math.max(i.stage,4);
+    const cr=credFor(id);if(cr){cr.msgs.push({...m});notify("cand",`${co.name||"The company"} would like to interview you. Pick a time.`,"messages")}
+    logEvent(`Interview requested with ${c.name}: ${slots.map(x=>x.label).join(", ")}`,co.contact);notify("admin",`${co.name||"A client"} offered interview times to ${c.name}`,"interviews");
+    layer.innerHTML="";save();vChats();toast("Interview request sent");
+    if(!cr)setTimeout(()=>{bookIv(m.ivid,slots[0],{phone:"+1 312 555 0182",email:c.name.toLowerCase().replace(/[^a-z]+/g,".")+"@email.com"});if(view()==="chats")vChats();toast(`${c.name} picked ${slots[0].label} (demo)`)},2500)});
 }
+
+/* ================= INTERVIEWS: scheduling, alternatives, contact details, calendar ================= */
+const ivLabel=iso=>new Date(iso).toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const okEmail=v=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v||"").trim()),okPhone=v=>String(v||"").replace(/\D/g,"").length>=7;
+function credFor(id){const r=S.creqs.find(x=>x.intro===id);return r&&S.cthreads[r.id]?{r,msgs:S.cthreads[r.id]}:null}
+function findIv(ivid){let cm=null,pm=null,iid=null,rid=null;
+  Object.entries(S.intros).forEach(([k,i])=>(i.msgs||[]).forEach(m=>{if(m.f==="iv"&&m.ivid===ivid){cm=m;iid=k}}));
+  Object.entries(S.cthreads).forEach(([k,ms])=>(ms||[]).forEach(m=>{if(m.f==="iv"&&m.ivid===ivid){pm=m;rid=k}}));
+  return {cm,pm,iid,rid}}
+function ivDetails(m,forPro){return `<div class="ivd"><span><b>${esc(m.who)}</b>${m.title?", "+esc(m.title):""}</span>${m.loc?`<span>${esc(m.loc)}</span>`:""}${m.booked&&m.phone?`<span>${esc(m.phone)}</span>`:""}${m.booked&&m.email?`<span>${esc(m.email)}</span>`:""}</div>`}
+function ivClientCard(m,k,c){
+  const slots=(m.slots||[]).map(x=>x.label);
+  return `<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b>${ivDetails(m)}
+    ${m.booked?`<span class="small"><b>Booked for ${esc(m.booked)}.</b> In Jamie's and Connor's Outlook calendars, and invites sent to everyone.</span>${m.cand?`<div class="ivd"><span>${esc(c.name)}</span><span>${esc(m.cand.phone)}</span><span>${esc(m.cand.email)}</span></div>`:""}`
+    :m.alt&&!m.alt.done?`<span class="small"><b>${esc(c.name)} asked for a different time.</b>${m.alt.note?` “${esc(m.alt.note)}”`:""}</span><div class="row">${m.alt.slots.map((x,j)=>`<button class="btn sm" data-altbook="${k}:${j}">Book ${esc(x.label)}</button>`).join("")}</div><div><button class="btn line sm" data-ivnew="1">Offer different times</button></div>`
+    :`<span class="small">Waiting for ${esc(c.name.split(" ")[0])} to pick a time:</span><div class="row">${slots.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`}
+function ivProCard(m,k){
+  return `<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b>${ivDetails(m,true)}
+    ${m.booked?`<span class="small"><b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar and shared your contact details with them.</span>`
+    :m.alt&&!m.alt.done?`<span class="small">You asked for a different time. We'll let you know when they confirm.</span>`
+    :`<span class="small">Pick the time that suits you:</span><div class="row">${(m.slots||[]).map((x,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(x.label)}</button>`).join("")}</div><div><button class="btn quiet sm" data-alt="${k}">None of these work? Request a different time</button></div>`}</div>`}
+function bookIv(ivid,slot,cand){const {cm,pm,iid,rid}=findIv(ivid);const m=cm||pm;if(!m)return;
+  [cm,pm].forEach(x=>{if(x){x.booked=slot.label;x.bookedIso=slot.iso;x.cand=cand;if(x.alt)x.alt.done=true}});
+  const i=iid?S.intros[iid]:null,c=iid?POOL.find(p=>p.id===iid):null,co=S.company,nm=c?c.name:refOf(S.cand.user);
+  if(i){i.stage=Math.max(i.stage,4);i.msgs.push({f:"sys",t:`Interview booked for ${slot.label}. ${nm}'s details: ${cand.phone}, ${cand.email}. Calendar invites sent to ${m.who} and ${nm}.${m.fmt.startsWith("Video")?" The video room opens here 10 minutes before.":""}`,at:tnow()})}
+  if(pm)S.cthreads[rid].push({f:"sys",t:`Interview booked for ${slot.label}. ${m.who}'s details: ${m.phone}, ${m.email}. We've added it to your calendar.`,at:tnow()});
+  const role=i&&i.role?i.role:"",notes=[m.notes,...((i&&i.msgs)||[]).filter(x=>x.hl).map(x=>"“"+x.t+"”")].filter(Boolean);
+  const ev={id:"ev"+Date.now(),ivid,title:`Interview: ${co.name||"Client"} × ${nm}${role?" · "+role:""}`,iso:slot.iso,label:slot.label,fmt:m.fmt,loc:m.loc||"",
+    client:{name:m.who,title:m.title||"",phone:m.phone,email:m.email,co:co.name||""},cand:{name:nm,ref:c?refOf(c.user):"",phone:cand.phone,email:cand.email},
+    vacancy:role,vdesc:(co.roles.find(r=>r.title===role)||{}).desc||"",notes,cals:CT_TEAM.map(t=>t[0]),at:Date.now()};
+  S.cal=S.cal||[];S.cal.unshift(ev);
+  logEvent(`Interview booked: ${nm} with ${m.who}, ${slot.label}. Added to Jamie's and Connor's Outlook calendars`,"Consumer Talent");
+  notify("admin",`Interview booked: ${nm} with ${co.name||"the client"}, ${slot.label}. Added to your Outlook calendars.`,"interviews");
+  notify("client",`Interview confirmed with ${nm} for ${slot.label}`,"chats");if(pm)notify("cand",`Interview confirmed with ${co.name||"the company"} for ${slot.label}`,"messages");
+  save();counts()}
+function contactForm(title,intro,cb){
+  const back=layer.innerHTML;const p=S.cand;
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="ccF" role="dialog" aria-modal="true" aria-labelledby="ccT" style="max-width:440px">
+    <div class="stack" style="gap:4px"><span class="kicker">Interview</span><h2 id="ccT">${esc(title)}</h2><p class="muted small">${esc(intro)}</p></div>
+    <div class="grid2"><label class="field">Mobile<input type="tel" id="ccP" value="${esc(p.phone||"")}" placeholder="+1 312 555 0100" autocomplete="tel" required></label><label class="field">Email<input type="email" id="ccE" value="${esc(p.email||"")}" placeholder="you@email.com" autocomplete="email" required></label></div>
+    <p class="small" id="ccErr" style="color:var(--bad);display:none"></p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="ccX">Back</button><button class="btn good" type="submit">Confirm</button></div></form></div>`;
+  $("#ccX").onclick=()=>layer.innerHTML="";
+  $("#ccF").onsubmit=e=>{e.preventDefault();const ph=$("#ccP").value.trim(),em=$("#ccE").value.trim();if(!okPhone(ph)||!okEmail(em)){const x=$("#ccErr");x.textContent="Add a mobile number and a valid email so they can reach you about the interview.";x.style.display="block";return}
+    p.phone=ph;p.email=em;layer.innerHTML="";cb({phone:ph,email:em})}}
+function altForm(ivid){const {cm,pm}=findIv(ivid);const m=pm||cm;
+  const val=(d,h)=>{const x=new Date(d);x.setHours(h,0,0,0);const q=n=>String(n).padStart(2,"0");return `${x.getFullYear()}-${q(x.getMonth()+1)}-${q(x.getDate())}T${q(h)}:00`};
+  const ds=nextDays().map(d=>{d.setDate(d.getDate()+2);while(d.getDay()%6===0)d.setDate(d.getDate()+1);return d});
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="alF" role="dialog" aria-modal="true" aria-labelledby="alT" style="max-width:520px">
+    <div class="stack" style="gap:4px"><span class="kicker">Interview</span><h2 id="alT">Request a different time</h2><p class="muted small">Suggest up to three times that work for you. ${esc(m.who)} will pick one.</p></div>
+    <div class="grid3">${ds.map((d,k)=>`<label class="field">Option ${k+1}<input type="datetime-local" id="alO${k}" value="${val(d,[9,12,17][k])}"></label>`).join("")}</div>
+    <label class="field">Note <small>Optional</small><input type="text" id="alN" placeholder="e.g. I'm travelling Tuesday, any time Thursday works"></label>
+    <div class="grid2"><label class="field">Your mobile<input type="tel" id="alP" value="${esc(S.cand.phone||"")}" autocomplete="tel"></label><label class="field">Your email<input type="email" id="alE" value="${esc(S.cand.email||"")}" autocomplete="email"></label></div>
+    <p class="muted small">Your contact details are only shared with them once the interview is booked.</p>
+    <p class="small" id="alErr" style="color:var(--bad);display:none"></p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="alX">Back</button><button class="btn good" type="submit">Send new times</button></div></form></div>`;
+  $("#alX").onclick=()=>layer.innerHTML="";
+  $("#alF").onsubmit=e=>{e.preventDefault();const slots=[0,1,2].map(k=>$("#alO"+k).value).filter(Boolean).map(iso=>({iso,label:ivLabel(iso)}));const ph=$("#alP").value.trim(),em=$("#alE").value.trim();
+    const err=t=>{const x=$("#alErr");x.textContent=t;x.style.display="block"};if(!slots.length)return err("Add at least one time.");if(!okPhone(ph)||!okEmail(em))return err("Add your mobile and email so they can reach you once it's booked.");
+    S.cand.phone=ph;S.cand.email=em;const alt={slots,note:$("#alN").value.trim(),cand:{phone:ph,email:em},at:Date.now()};
+    const f=findIv(ivid);[f.cm,f.pm].forEach(x=>{if(x)x.alt=alt});
+    if(f.iid){const i=S.intros[f.iid],c=POOL.find(p=>p.id===f.iid);i.msgs.push({f:"sys",t:`${c?c.name:"They"} asked for a different time and suggested ${slots.map(x=>x.label).join(", ")}.`,at:tnow()});notify("client",`${c?c.name:"The candidate"} asked for a different interview time`,"chats")}
+    if(f.rid)S.cthreads[f.rid].push({f:"sys",t:`You suggested ${slots.map(x=>x.label).join(", ")}. We'll let you know when they confirm.`,at:tnow()});
+    notify("admin",`Interview time change requested by ${refOf(S.cand.user)}`,"interviews");logEvent(`Different interview time requested: ${slots.map(x=>x.label).join(", ")}`,"Professional");
+    layer.innerHTML="";save();counts();if(view()==="messages")vCandMsgs();toast("New times sent")}}
+function blockedContact(side,who,other){
+  notify("admin",`${who} tried to share contact details in a chat with ${other}. The message was blocked.`,"intros");
+  logEvent(`Blocked a message with contact details (${who} to ${other})`,"Consumer Talent");
+  return side==="client"?{f:"blk",t:"Message not sent. To keep everyone protected, phone numbers, emails and links can't be shared in chat. Use Schedule interview, where you both add your contact details and they go straight into the invite."}
+    :{f:"sys",t:"Message not sent. Phone numbers, emails and links can't be shared in chat. You'll add your contact details when you confirm an interview time, and they go straight into the invite.",at:tnow()}}
+function icsFor(ev){const d=new Date(ev.iso),e=new Date(d.getTime()+45*60000),f=x=>x.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");const esc2=t=>String(t||"").replace(/([,;\\])/g,"\\$1").replace(/\n/g,"\\n");
+  const desc=[`Client: ${ev.client.co} · ${ev.client.name}${ev.client.title?", "+ev.client.title:""} · ${ev.client.phone} · ${ev.client.email}`,`Candidate: ${ev.cand.name} ${ev.cand.ref?"("+ev.cand.ref+")":""} · ${ev.cand.phone} · ${ev.cand.email}`,`Format: ${ev.fmt}${ev.loc?" · "+ev.loc:""}`,ev.vacancy?`Vacancy: ${ev.vacancy}${ev.vdesc?" – "+ev.vdesc:""}`:"No specific vacancy",...(ev.notes.length?["Notes:",...ev.notes]:[])].join("\n");
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Consumer Talent Exchange//EN","BEGIN:VEVENT",`UID:${ev.id}@consumer-talent.com`,`DTSTAMP:${f(new Date())}`,`DTSTART:${f(d)}`,`DTEND:${f(e)}`,`SUMMARY:${esc2(ev.title)}`,`LOCATION:${esc2(ev.loc||ev.fmt)}`,`DESCRIPTION:${esc2(desc)}`,...CT_TEAM.map(t=>`ATTENDEE;CN=${t[0]}:mailto:${t[1]}`),"END:VEVENT","END:VCALENDAR"].join("\r\n")}
+function vInterviews(){const L=S.cal||[];
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Interviews</span><h1>Booked interviews</h1><p class="muted">Every interview booked through the Exchange goes into Jamie's and Connor's Outlook calendars automatically, with both sides' contact details, the vacancy and any highlighted notes from the chat.</p></div>
+  <div class="list" style="max-width:860px">${L.length?L.map(ev=>`<div class="item"><div class="line1"><div><b style="font-family:var(--display);font-size:17px;font-weight:600">${esc(ev.title)}</b><div class="muted small">${esc(ev.label)} · ${esc(ev.fmt)}${ev.loc?" · "+esc(ev.loc):""}</div></div><div class="row" style="gap:6px">${ev.cals.map(n=>`<span class="tag hit">In ${esc(n)}'s Outlook</span>`).join("")}</div></div>
+    <div class="ivd"><span><b>Client:</b> ${esc(ev.client.co)} · ${esc(ev.client.name)}${ev.client.title?", "+esc(ev.client.title):""}</span><span>${esc(ev.client.phone)}</span><span>${esc(ev.client.email)}</span></div>
+    <div class="ivd"><span><b>Candidate:</b> ${esc(ev.cand.name)}${ev.cand.ref?" ("+esc(ev.cand.ref)+")":""}</span><span>${esc(ev.cand.phone)}</span><span>${esc(ev.cand.email)}</span></div>
+    <div class="small"><b>Vacancy:</b> ${ev.vacancy?esc(ev.vacancy):"No specific vacancy, just a chat"}</div>
+    ${ev.notes.length?`<div class="small"><b>Notes:</b><ul class="hl">${ev.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>`:""}
+    <div><button class="btn line sm" data-ics="${ev.id}">Download calendar invite (.ics)</button></div></div>`).join(""):`<div class="empty"><h2>No interviews booked yet</h2><p class="muted">When a candidate picks an interview time, it appears here and in your Outlook calendars.</p></div>`}</div>`;
+  app.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>{const ev=L.find(x=>x.id===b.dataset.ics);const blob=new Blob([icsFor(ev)],{type:"text/calendar"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=ev.title.replace(/[^\w ]+/g,"").slice(0,60)+".ics";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)})}
+
 function reportOffer(id){
   const c=POOL.find(p=>p.id===id),i=S.intros[id],T=tiers();
   const pct=v=>v>=200000?T.t3:v>=100000?T.t2:T.t1;
@@ -1675,8 +1777,8 @@ function vRequests(){
     const ii=r.intro?S.intros[r.intro]:null,named=termsOK()&&!(ii&&ii.brokered);
     S.cthreads[r.id]=[{f:"ct",t:named?`You accepted ${co.name}'s request to chat. Their terms are signed, so they can now see your name, and you're talking directly with ${co.name}. Everything here is logged on the introduction record. Jamie, Consumer Talent`:`You accepted ${coDisplay(co)}'s request to chat. Both sides stay anonymous until their terms are signed, and Jamie and Connor are looking after the conversation. Jamie, Consumer Talent`,at:tnow()},
       {f:"them",t:r.role?`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`:`Thanks for accepting. We'd love to have a chat about what we're building and where you might fit. Would a 30-minute video call work?`,at:tnow()},
-      {f:"iv",fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact,opts:nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);return d.toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}),booked:null}];
-    S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")};
+      (()=>{const sl=nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);const q=n=>String(n).padStart(2,"0");const iso=`${d.getFullYear()}-${q(d.getMonth()+1)}-${q(d.getDate())}T${q(d.getHours())}:00`;return {iso,label:ivLabel(iso)}});return r.intro?null:{f:"iv",ivid:"ivq"+Date.now(),fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact||"Hiring manager",title:co.anon?"":S.company.contactTitle||"",phone:S.company.phone||"+1 312 555 0148",email:S.company.email||"talent@northfieldsnacks.com",slots:sl,opts:sl.map(x=>x.label),booked:null}})()];
+    S.cthreads[r.id]=S.cthreads[r.id].filter(Boolean);S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")};
   app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.yes,acceptReq));
   app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{const rr=S.creqs.find(r=>r.id===b.dataset.no);rr.status="no";if(rr.intro)linkDecline(rr);save();vRequests();counts();toast("Declined. They'll be told you didn't want to move forward at this time.")});
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.go});
@@ -1691,20 +1793,21 @@ function vCandMsgs(){
     <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${r.role?esc(r.role)+(r.base?" · "+esc(r.base):""):"A chat, no specific vacancy"}</div></div></div>
       <div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Contact details and links are blocked until you both agree to reveal. ${esc(p.current||"Your employer")} can never see your profile.</span></div>
       <div class="row"><button class="btn line sm" id="bFb">${r.fb?"Edit feedback":"Give feedback"}</button></div></div>
-      <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="rv"?rvCard(m,k,co):m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar.`:"Pick the time that suits you:"}</span>${m.booked?"":`<div class="row">${m.opts.map((o,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(o)}</button>`).join("")}</div><span class="muted small">None of these work? Just reply and say when you're free.</span>`}</div>`
+      <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="rv"?rvCard(m,k,co):m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?ivProCard(m,k)
         :`<div class="m ${m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(coDisplay(co))}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
       ${r.closed?`<div class="closedbar">${r.closed==="pro"?"You went separate ways.":"The company decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="Message anonymously..." aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}</div></div>`;
   const box=$("#msgs");box.scrollTop=box.scrollHeight;
   app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.t;vCandMsgs()});
-  app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.pick.split(":").map(Number);const m=msgs[k];m.booked=m.opts[j];
-    msgs.push({f:"sys",t:`Interview booked for ${m.booked}. Calendar invites sent. The video room opens here 10 minutes before.`,at:tnow()});notify("admin",`Interview booked: ${refOf(S.cand.user)} with ${reqCo(r).name}, ${m.booked}`,"intros");save();vCandMsgs();toast("Interview booked")});
+  app.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [k,j]=b.dataset.pick.split(":").map(Number);const m=msgs[k];const slot=(m.slots||[])[j]||{iso:new Date().toISOString(),label:m.opts[j]};
+    contactForm(`Confirm ${slot.label}`,"Add your mobile and email. They're shared with the interviewer and go into the calendar invite.",cand=>{if(m.ivid&&findIv(m.ivid).cm)bookIv(m.ivid,slot,cand);else{m.booked=slot.label;m.cand=cand;msgs.push({f:"sys",t:`Interview booked for ${slot.label}. We've added it to your calendar.`,at:tnow()});notify("admin",`Interview booked: ${refOf(S.cand.user)} with ${reqCo(r).name}, ${slot.label}`,"interviews");save()}vCandMsgs();toast("Interview booked")})});
+  app.querySelectorAll("[data-alt]").forEach(b=>b.onclick=()=>{const m=msgs[+b.dataset.alt];if(!m.ivid){m.ivid="iv"+Date.now();m.slots=m.slots||[]}altForm(m.ivid)});
   $("#bFb").onclick=()=>proFeedback(r.id);
   app.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{const [k,ans]=b.dataset.rv.split(":"),m=msgs[+k],i=S.intros[m.id],c=POOL.find(x=>x.id===m.id);
     if(ans==="yes"){finishReveal(m.id);vCandMsgs();return}
     m.no=true;if(i){i.revealNo=true;i.msgs.push({f:"sys",t:`${refOf(c.user)} isn't ready to reveal yet. Keep chatting, and you can ask again later.`,at:tnow()})}
     logEvent(`${refOf(c.user)} isn't ready to reveal yet`,"Professional");notify("client",`${refOf(c.user)} isn't ready to reveal yet`,"chats");notify("admin",`${c.name} (${refOf(c.user)}) isn't ready to reveal to ${S.company.name} yet`,"intros");save();vCandMsgs()});
   if($("#cmp"))$("#cmp").addEventListener("submit",e=>{e.preventDefault();const v=$("#cmpT").value.trim();if(!v)return;
-    if(CONTACT_RE.test(v)){msgs.push({f:"sys",t:"Message not sent. Contact details and links are shared automatically once you both agree to reveal.",at:tnow()});vCandMsgs();return}
+    if(CONTACT_RE.test(v)){msgs.push(blockedContact("pro",refOf(S.cand.user),reqCo(r).name||"a company"));save();vCandMsgs();return}
     msgs.push({f:"me",t:v,at:tnow()});save();vCandMsgs();
     setTimeout(()=>{msgs.push({f:"them",t:"Thanks, that's really helpful. Looking forward to speaking.",at:tnow()});save();if(view()==="messages")vCandMsgs()},1600)});
 }
@@ -2193,10 +2296,10 @@ function vWaitlist(){const a=sbGet();
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={interviews:vInterviews,sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
-const ADMIN_TABS=[["dash","Dashboard"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
+const ADMIN_TABS=[["dash","Dashboard"],["interviews","Interviews"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["terms","Terms"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
 function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){bellCount();
@@ -2205,7 +2308,7 @@ function counts(){bellCount();
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
@@ -2213,11 +2316,11 @@ function render(){ensureCustom();
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
   Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
-  S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
+  S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
 if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
