@@ -3085,9 +3085,9 @@ async function vTeamLive(){const co=S.company;
   const row=m=>`<div class="mem"><span class="av">${esc(initials(m.name)||"?")}</span><div class="mi"><b>${esc(m.name)}${m.me?" (you)":""}</b><span>${esc(m.title||"")}${m.title?" · ":""}${m.dept?esc(m.dept)+" · ":""}${esc(m.role)}</span><span>${esc(m.email)}</span></div>
     <div class="ma"><span class="tag hit">Active</span>${adm&&!m.me?(m.role==="Admin"?`<button class="btn line sm" data-tm="${m.id}:remove_admin">Remove admin</button>`:`<button class="btn line sm" data-tm="${m.id}:make_admin">Make admin</button>`)+`<button class="btn quiet sm" data-tm="${m.id}:remove">Remove</button>`:""}</div></div>`;
   const irow=i=>`<div class="mem"><span class="av">${esc(initials(i.name||i.email)||"?")}</span><div class="mi"><b>${esc(i.name||i.email)}</b><span>${esc(i.title||"")}${i.title?" · ":""}${i.dept?esc(i.dept)+" · ":""}${esc(i.role)}</span><span>${esc(i.email)} · invited ${esc(fmtDay(new Date(i.at)))}</span></div>
-    <div class="ma"><span class="tag new">Invited</span>${adm?`<button class="btn line sm" data-ti="${i.id}:resend">Resend</button><button class="btn quiet sm" data-ti="${i.id}:cancel">Cancel</button>`:""}</div></div>`;
+    <div class="ma"><span class="tag new">Invited</span>${adm?`<button class="btn line sm" data-tcopy="${i.id}">Copy link</button><button class="btn line sm" data-ti="${i.id}:resend">Resend</button><button class="btn quiet sm" data-ti="${i.id}:cancel">Cancel</button>`:""}</div></div>`;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Team</span><h1>${esc(co.name||"Your company")} on the Exchange</h1>
-    <p class="muted">Invite colleagues to browse, shortlist, chat and book interviews for their own roles. Everyone works under one company account and one set of terms, and sees the same conversations.</p></div>
+    <p class="muted">Invite colleagues to browse, shortlist, chat and book interviews for their own roles. If an invite email doesn't arrive, use Copy link and send it to them yourself. Everyone works under one company account and one set of terms, and sees the same conversations.</p></div>
   <div class="cols"><div class="stack">
     <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Your team</h2><span class="tag">${T.members.length} active${T.invites.length?` · ${T.invites.length} invited`:""}</span></div>
       <div>${T.members.map(row).join("")}${T.invites.map(irow).join("")}</div></div>
@@ -3112,6 +3112,8 @@ async function vTeamLive(){const co=S.company;
   app.querySelectorAll("[data-tm]").forEach(b=>b.onclick=async()=>{const [id,a]=b.dataset.tm.split(":");if(a==="remove"&&!confirmInline(b,"Tap again to remove"))return;b.disabled=true;
     const {error}=await sb.rpc("team_member_action",{p_user:id,p_action:a});if(error){b.disabled=false;return toast(error.message.replace(/^.*?:\s*/,""))}
     toast(a==="remove"?"Removed from your team":a==="make_admin"?"They're now an admin":"Admin rights removed");vTeamLive()});
+  app.querySelectorAll("[data-tcopy]").forEach(b=>b.onclick=async()=>{const url=location.origin+location.pathname+"?invite="+b.dataset.tcopy;
+    try{await navigator.clipboard.writeText(url);toast("Invite link copied. Send it to them by email, Teams or text.")}catch(e){layer.innerHTML=`<div class="scrim" id="tcS"><div class="modal stack" style="max-width:480px;gap:10px"><h2 style="margin:0">Invite link</h2><p class="muted small">Copy this and send it to them.</p><input type="text" value="${esc(url)}" readonly id="tcU"><div class="row" style="justify-content:flex-end"><button class="btn" id="tcX">Done</button></div></div></div>`;$("#tcU").select();$("#tcX").onclick=()=>layer.innerHTML=""}});
   app.querySelectorAll("[data-ti]").forEach(b=>b.onclick=async()=>{const [id,a]=b.dataset.ti.split(":");b.disabled=true;
     const {error}=await sb.rpc("team_invite_action",{p_inv:id,p_action:a});if(error){b.disabled=false;return toast(error.message.replace(/^.*?:\s*/,""))}
     toast(a==="resend"?"Invite sent again":"Invite cancelled");vTeamLive()});
