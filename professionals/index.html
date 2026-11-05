@@ -747,11 +747,11 @@ function vCompany(){
         <label class="field">About us<textarea id="f_about">${esc(co.about)}</textarea></label>
         <label class="field">Why join now<textarea id="f_why">${esc(co.why)}</textarea></label>
       </div>
-      <div class="section"><h3>Who you're hiring <span>Tick every level you'd consider</span></h3>
+      <div class="section"><h3>Candidates you're interested in <span>Tick every level you'd consider</span></h3>
         ${levelPicks("levels",co.levels)}
         <div class="row" style="justify-content:space-between;align-items:baseline"><div class="field" style="margin:0">Open vacancies <small>Professionals see these when you request an introduction.</small></div></div>
-        <div class="vacs">${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):`<p class="muted small">No vacancies yet.</p>`}</div>
-        <div><button type="button" class="btn line sm" id="addRole">+ Add a vacancy</button></div>
+        <div class="vacs">${co.always?`<div class="vac" style="border-color:var(--brand)"><div style="min-width:0"><b>Always looking for great talent</b><div class="muted small">Shown on your profile, so people know you're open to the right person</div></div><button type="button" class="x" id="alwaysOff" aria-label="Remove always looking for great talent">×</button></div>`:""}${co.roles.length?co.roles.map(r=>`<div class="vac"><div style="min-width:0"><b>${esc(r.title||LEVELS[r.lvl])}</b><div class="muted small">${LEVELS[r.lvl]} · ${esc(r.region)}${r.base?` · ${esc(r.base)}`:""}${r.work?` · ${esc(r.work)}`:""}</div></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button type="button" class="btn quiet sm" data-edit="${r.id}">Edit</button><button type="button" class="x" data-del="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div></div>`).join(""):co.always?"":`<p class="muted small">No vacancies right now? You can still show you're open to the right people.</p>`}</div>
+        <div class="row"><button type="button" class="btn line sm" id="addRole">+ Add a vacancy</button>${co.always?"":`<button type="button" class="btn sm" id="alwaysOn">Always looking for great talent</button>`}</div>
       </div>
       <div class="section"><h3>What you're looking for <span>We match these against professionals' keywords</span></h3>
         <div class="field">Sectors and keywords <small>Type your own, like RTD, plant-based or club channel, or pick from the list.</small>${tagField("kwCo",co.kw)}</div>
@@ -784,7 +784,7 @@ function vCompany(){
   </div>`;
   const cover=()=>{$("#cover").innerHTML=`<div class="band">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><small>${STAGES[co.stage]} · ${co.anon?"Location shared on reveal":esc(co.hq)} · ${esc(co.revenue)}</small><h2>${esc(coDisplay(co))}</h2><p>${co.anon?"Name and logo shared when you both agree to reveal.":esc(co.tagline)}</p></div></div>
     <div class="body"><div><h4>About</h4><p>${esc(co.about)}</p></div><div><h4>Why join now</h4><p>${esc(co.why)}</p></div>
-    <div><h4>Open roles</h4><div class="stack" style="gap:6px">${co.roles.map(r=>`<div class="openrole"><b>${esc(r.title||LEVELS[r.lvl])}</b><span class="muted">${esc(r.region)}${r.base?" · "+esc(r.base):""}</span></div>`).join("")||`<span class="muted">No open roles listed</span>`}</div></div>
+    <div><h4>Open roles</h4><div class="stack" style="gap:6px">${co.always?`<div class="openrole"><b>Always looking for great talent</b></div>`:""}${co.roles.map(r=>`<div class="openrole"><b>${esc(r.title||LEVELS[r.lvl])}</b><span class="muted">${esc(r.region)}${r.base?" · "+esc(r.base):""}</span></div>`).join("")||(co.always?"":`<span class="muted">No open roles listed</span>`)}</div></div>
     <div><h4>Sells into</h4><div class="row" style="gap:6px">${co.retailers.map(r=>`<span class="tag brand">${esc(r)}</span>`).join("")}</div></div>
     ${co.kw.length?`<div><h4>Focus areas</h4><div class="row" style="gap:6px">${co.kw.map(k=>`<span class="tag kw">${esc(k)}</span>`).join("")}</div></div>`:""}</div>`};
   cover();
@@ -794,6 +794,8 @@ function vCompany(){
   app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{co.roles=co.roles.filter(r=>r.id!==b.dataset.del);save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y)});
   app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>roleForm(co.roles.find(r=>r.id===b.dataset.edit)));
   $("#addRole").onclick=()=>roleForm(null);
+  const aOn=$("#alwaysOn");if(aOn)aOn.onclick=()=>{co.always=true;save();const y=SC.scrollTop;vCompany();SC.scrollTop=y;counts();toast("Added to your open roles")};
+  const aOff=$("#alwaysOff");if(aOff)aOff.onclick=()=>{co.always=false;save();const y=SC.scrollTop;vCompany();SC.scrollTop=y;counts()};
   bindTags("kwCo",co.kw,()=>{vCompany();counts()});
   bindTags("secCo",co.cats,()=>{vCompany();counts()},SECTORS);
   $("#f_anon").onchange=e=>{co.anon=e.target.checked;save();const y=SC.scrollTop;vCompany();(SC.scrollTop=y);toast(co.anon?"You're anonymous to professionals until you reveal":"Professionals can now see your company name")};
@@ -975,13 +977,13 @@ function openBell(){const k=sideKey(),list=(S.notes||[]).filter(x=>x.to===k);
   $("#nX").onclick=()=>layer.innerHTML="";$("#nS").onclick=e=>{if(e.target.id==="nS")layer.innerHTML=""};
   const na=$("#nAll");if(na)na.onclick=()=>{list.forEach(x=>x.read=true);save();bellCount();openBell()};
   app.ownerDocument.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{const x=S.notes.find(n=>n.id===b.dataset.n);x.read=true;save();bellCount();layer.innerHTML="";if(x.go&&location.hash!=="#"+x.go)location.hash=x.go;else render()})}
-function introRole(c){const co=S.company;return co.roles.find(r=>r.lvl===c.lvl)||co.roles[0]||{title:LEVELS[c.lvl],base:""}}
+function introRole(c){const co=S.company;return co.roles.find(r=>r.lvl===c.lvl)||co.roles[0]||{title:co.always?`${LEVELS[c.lvl]} (always looking for great talent)`:LEVELS[c.lvl],base:""}}
 function startIntro(id){if(TASTER){openInvite("intro");return}
   const c=POOL.find(p=>p.id===id),co=S.company,def=introRole(c);
   layer.innerHTML=`<div class="scrim"><form class="modal" id="riF" role="dialog" aria-modal="true" aria-labelledby="riT" style="max-width:480px">
     <div class="stack" style="gap:6px"><span class="kicker">Request introduction</span><h2 id="riT">${esc(LEVELS[c.lvl])} · ${esc(refOf(c.user))}</h2>
       <p class="muted small">Consumer Talent reviews every request, usually within a few hours, then sends it to them. They'll see your company name and confirm whether they've interviewed with you before. You'll get a notification here at each step.</p></div>
-    <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")||`<option value="">${esc(LEVELS[c.lvl])}</option>`}</select></label>
+    <label class="field">Which role is this for?<select id="riR">${co.roles.filter(r=>r.title.trim()).map(r=>`<option value="${esc(r.id)}" ${r.id===def.id?"selected":""}>${esc(r.title)}</option>`).join("")||`<option value="">${co.always?"Always looking for great talent":esc(LEVELS[c.lvl])}</option>`}</select></label>
     <label class="field">Why them? <small>Optional. Shared with Consumer Talent, not with the professional.</small><textarea id="riW" style="min-height:70px" placeholder="Strong Kroger experience, and we need someone to lead the Midwest."></textarea></label>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="riX">Cancel</button><button class="btn" type="submit">Send request</button></div></form></div>`;
   $("#riX").onclick=()=>layer.innerHTML="";
@@ -1278,7 +1280,7 @@ function vTerms(){
 }
 
 /* ---------- For you ---------- */
-function completeness(){const co=S.company;const checks=TASTER?[["Company name",!!co.name.trim()],["One-line pitch",co.tagline.trim().length>10],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your categories",co.cats.length>0],["Authority to agree terms",!!co.auth]]:[["Company logo",!!co.logo],["One-line pitch",co.tagline.trim().length>10],["About us",co.about.trim().length>60],["Why join now",co.why.trim().length>30],["At least one open role",co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your categories",co.cats.length>0],["Key retailers",co.retailers.length>0],["Territories",co.regions.length>0],["Three or more categories and keywords",co.kw.length>=3],["Your contact",!!co.contact.trim()],["Authority to agree terms",!!co.auth]];
+function completeness(){const co=S.company;const checks=TASTER?[["Company name",!!co.name.trim()],["One-line pitch",co.tagline.trim().length>10],["An open role, or always looking for great talent",co.always||co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your categories",co.cats.length>0],["Authority to agree terms",!!co.auth]]:[["Company logo",!!co.logo],["One-line pitch",co.tagline.trim().length>10],["About us",co.about.trim().length>60],["Why join now",co.why.trim().length>30],["An open role, or always looking for great talent",co.always||co.roles.some(r=>r.title.trim())],["Levels you're hiring",co.levels.length>0],["Your categories",co.cats.length>0],["Key retailers",co.retailers.length>0],["Territories",co.regions.length>0],["Three or more categories and keywords",co.kw.length>=3],["Your contact",!!co.contact.trim()],["Authority to agree terms",!!co.auth]];
   return {checks,pct:Math.round(checks.filter(c=>c[1]).length/checks.length*100)}}
 function miniCard(x){return `<button class="mini ${S.shortlist.includes(x.c.id)?"kept":""}" data-open="${x.c.id}">
   <div class="t"><div><div class="u">${LEVELS[x.c.lvl]}</div><div class="l">${esc(SECTOR_LABEL[x.c.sector||"Food"])} · ${esc(x.c.region)} · ${esc(refOf(x.c.user))}</div></div></div>
