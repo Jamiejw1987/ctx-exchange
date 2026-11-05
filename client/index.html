@@ -395,6 +395,8 @@ table.log td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align
 .colog{width:64px;height:64px;border-radius:50%;background:#fff;color:var(--navy);display:grid;place-items:center;flex:none;overflow:hidden;font-family:var(--display);font-weight:700;font-size:22px;position:relative;z-index:1}
 .colog img{width:100%;height:100%;object-fit:cover}
 .logoup{display:flex;gap:16px;align-items:center}
+.colog.ctxl{display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1px solid var(--line);font-size:19px;letter-spacing:.01em}
+.colog.ctxl em{font-style:normal;color:#1A69F4}
 .logoup .colog{width:84px;height:84px;border:2px dashed var(--line);background:var(--soft);color:var(--muted);font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer}
 .logoup .colog.has{border:0;background:var(--navy);box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--brand)}
 .colog.has{background:var(--navy)}
@@ -798,7 +800,7 @@ function vCompany(){
       <div class="card stack" style="gap:6px"><b class="num">${visible().length} members · ${visible().filter(c=>score(c).score>=70).length} strong matches</b><span class="muted small">Members scoring 70% or more against your profile today. This updates as you edit.</span><a class="btn line sm" href="#pool" style="align-self:flex-start">Browse the talent pool</a></div>
     </div>
   </div>`;
-  const cover=()=>{$("#cover").innerHTML=`<div class="band">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><small>${STAGES[co.stage]} · ${co.anon?"Location shared on reveal":esc(co.hq)} · ${esc(co.revenue)}</small><h2>${esc(coDisplay(co))}</h2><p>${co.anon?"Name and logo shared when you both agree to reveal.":esc(co.tagline)}</p></div></div>
+  const cover=()=>{$("#cover").innerHTML=`<div class="band">${co.anon?CTX_LOGO:coLogo(co)}<div><small>${STAGES[co.stage]} · ${co.anon?"Location shared on reveal":esc(co.hq)} · ${esc(co.revenue)}</small><h2>${esc(coDisplay(co))}</h2><p>${co.anon?"Name and logo shared when you both agree to reveal.":esc(co.tagline)}</p></div></div>
     <div class="body"><div><h4>About</h4><p>${esc(co.about)}</p></div><div><h4>Why join now</h4><p>${esc(co.why)}</p></div>
     <div><h4>Open roles</h4><div class="stack" style="gap:6px">${co.always?`<div class="openrole"><b>Always looking for great talent</b></div>`:""}${co.roles.map(r=>`<div class="openrole"><b>${esc(r.title||LEVELS[r.lvl])}</b><span class="muted">${esc(r.region)}${r.base?" · "+esc(r.base):""}</span></div>`).join("")||(co.always?"":`<span class="muted">No open roles listed</span>`)}</div></div>
     <div><h4>Sells into</h4><div class="row" style="gap:6px">${co.retailers.map(r=>`<span class="tag brand">${esc(r)}</span>`).join("")}</div></div>
@@ -982,6 +984,8 @@ function vShortlist(){
   app.querySelectorAll("[data-chat]").forEach(b=>b.onclick=()=>{S.activeChat=b.dataset.chat;location.hash="chats"});
   app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.shortlist=S.shortlist.filter(i=>i!==b.dataset.rm);delete S.decided[b.dataset.rm];counts();save();vShortlist()});
 }
+const CTX_LOGO=`<span class="colog ctxl" title="Consumer Talent Exchange" aria-label="Consumer Talent Exchange">CT<em>X</em></span>`;
+const EXCHANGE_EMAIL="exchange@consumer-talent.com";
 function notify(to,t,go){S.notes.unshift({id:"n"+Date.now()+Math.random().toString(36).slice(2,5),to,t,go,at:Date.now(),read:false});bellCount()}
 function sideKey(){return S.mode==="cand"?"cand":S.mode==="admin"?"admin":"client"}
 function bellCount(){const el=$("#bellN");if(el){const n=(S.notes||[]).filter(x=>x.to===sideKey()&&!x.read).length;el.textContent=n?String(n):""}}
@@ -1226,15 +1230,19 @@ function openTermsGate(onDone){
     <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
     <div class="grid2"><label class="field">Full name<input type="text" id="sName" value="${esc(S.company.contact)}" autocomplete="name"></label><label class="field">Job title<input type="text" id="sTitle" value="${esc(S.company.contactTitle)}"></label></div>
     <label class="field">Work email <small>We'll send your signed copy here</small><input type="email" id="sEmail" value="${esc(S.company.email||S.alerts.email_to||"")}" autocomplete="email"></label>
+    ${S.sigReq&&S.sigReq.status==="sent"?`<div class="protect">${lockIcon}<span><b>Waiting for ${esc(S.sigReq.name)} to sign.</b> Sent to ${esc(S.sigReq.email)} ${esc(new Date(S.sigReq.at).toLocaleDateString([], {day:"numeric",month:"short"}))}. If you're authorised yourself, you can sign below instead.</span></div>`:""}
     <label class="check"><input type="checkbox" id="sAuth" ${S.company.auth&&S.company.auth.name===S.company.contact?"checked":""}><span>I am authorised to sign for ${esc(S.company.name||"your company")} and its associated companies.</span></label>
     <label class="check"><input type="checkbox" id="sRead"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
     <div class="row"><button class="btn" id="sGo" disabled>Sign and reveal</button><button class="btn line" id="sX">Cancel</button><a class="btn quiet" href="#terms" id="sAlt">These won't work for us</a></div>
+    <div class="card stack" style="background:var(--soft);gap:8px"><b>Not authorised to sign?</b><span class="muted small">Send the terms to someone who can sign. Until they do, you can keep browsing, shortlisting and chatting, but you can't reveal anyone.</span>
+      <div class="row"><button type="button" class="btn sm" id="sDel">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Send to someone who can sign"}</button><span class="small muted">or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></span></div></div>
   </div></div>`;
   let read=false;const box=$("#termsBox");
   const upd=()=>{$("#sGo").disabled=!(read&&$("#sName").value.trim().length>2&&$("#sTitle").value.trim()&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("#sEmail").value.trim())&&$("#sAuth").checked&&$("#sRead").checked)};
   box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
   ["sName","sTitle","sEmail"].forEach(i=>$("#"+i).oninput=upd);["sAuth","sRead"].forEach(i=>$("#"+i).onchange=upd);
   $("#sX").onclick=()=>layer.innerHTML="";$("#sAlt").onclick=()=>layer.innerHTML="";
+  $("#sDel").onclick=()=>sendForSignature();
   $("#sGo").onclick=()=>{S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -1254,6 +1262,45 @@ function showAgreement(a,{fresh=false}={}){const to=[a.by.email,...a.cc].filter(
   </div></div>`;
   $("#agP").onclick=()=>{document.body.classList.add("printing");window.print();setTimeout(()=>document.body.classList.remove("printing"),400)};
   return new Promise(r=>{$("#agX").onclick=()=>{layer.innerHTML="";r()}})}
+function signLink(){return location.origin+location.pathname+"#sign"}
+function sendForSignature(){
+  const r=S.sigReq||{};
+  layer.innerHTML=`<div class="scrim"><form class="modal" id="sdF" role="dialog" aria-modal="true" aria-labelledby="sdT" style="max-width:520px">
+    <div class="stack" style="gap:4px"><span class="kicker">Terms of engagement</span><h2 id="sdT">Send to someone who can sign</h2>
+    <p class="muted small">We'll email them a secure link to read and sign the terms for ${esc(S.company.name||"your company")}. You'll get a notification here as soon as they've signed.</p></div>
+    <div class="grid2"><label class="field">Their full name<input type="text" id="sdN" value="${esc(r.name||"")}" required placeholder="e.g. Grant Fischer"></label><label class="field">Their job title<input type="text" id="sdJ" value="${esc(r.title||"")}" required placeholder="e.g. CEO"></label></div>
+    <label class="field">Their work email<input type="email" id="sdE" value="${esc(r.email||"")}" required placeholder="name@company.com"></label>
+    <label class="field">Message <small>Optional</small><textarea id="sdM" style="min-height:64px" placeholder="We'd like to start meeting candidates on the Exchange. Can you sign these?">${esc(r.note||"")}</textarea></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="sdX">Back</button><button class="btn" type="submit">Send for signature</button></div>
+    <p class="muted small">Questions about the terms? Email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a>.</p></form></div>`;
+  $("#sdX").onclick=()=>openTermsGate();
+  $("#sdF").onsubmit=e=>{e.preventDefault();const em=$("#sdE").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Enter a valid work email");return}
+    S.sigReq={name:$("#sdN").value.trim(),title:$("#sdJ").value.trim(),email:em,note:$("#sdM").value.trim(),by:S.company.contact||"Your team",at:Date.now(),status:"sent"};
+    logEvent(`Terms sent for signature to ${S.sigReq.name}, ${S.sigReq.title} (${em})`,S.company.contact);
+    notify("admin",`${S.company.name||"A client"} sent the terms to ${S.sigReq.name} (${S.sigReq.title}) to sign`,"clients");
+    save();layer.innerHTML="";toast(`Terms sent to ${S.sigReq.name}`);if(view()==="terms")vTerms();counts()};
+}
+function vSign(){
+  const r=S.sigReq;
+  if(!r){app.innerHTML=`<div class="empty" style="max-width:560px;margin:24px auto"><h2>This signing link has expired</h2><p class="muted">Ask your colleague to send it again, or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a>.</p></div>`;return}
+  if(r.status==="signed"){app.innerHTML=`<div class="card stack" style="max-width:560px;margin:24px auto"><h1>Thank you, ${esc(r.name.split(" ")[0])}</h1><p>The terms for ${esc(S.company.name)} are signed. ${esc(r.by)} can now reveal candidates on the Exchange. A signed copy has been emailed to you.</p></div>`;return}
+  app.innerHTML=`<div style="max-width:680px;margin:0 auto" class="stack">
+    <div class="pagehead" style="margin:0"><span class="kicker">Signature requested</span><h1>Terms of engagement for ${esc(S.company.name)}</h1>
+      <p class="muted">${esc(r.by)} has asked you to sign Consumer Talent Exchange's terms on behalf of ${esc(S.company.name)}. A fee is only due if you hire someone introduced through the Exchange.</p>${r.note?`<div class="protect"><span>“${esc(r.note)}”</span></div>`:""}</div>
+    ${termsHTML()}
+    <p class="muted small" id="scrollNote">Scroll to the end of the terms to continue.</p>
+    <div class="grid2"><label class="field">Full name<input type="text" id="sgN" value="${esc(r.name)}"></label><label class="field">Job title<input type="text" id="sgJ" value="${esc(r.title)}"></label></div>
+    <label class="check"><input type="checkbox" id="sgA"><span>I am authorised to sign for ${esc(S.company.name)} and its associated companies.</span></label>
+    <label class="check"><input type="checkbox" id="sgR"><span>I have read and agree to the Consumer Talent Group contingent terms of business and these Exchange terms.</span></label>
+    <div class="row"><button class="btn" id="sgGo" disabled>Sign terms</button><span class="muted small">Questions? <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></span></div></div>`;
+  let read=false;const box=$("#termsBox");const upd=()=>{$("#sgGo").disabled=!(read&&$("#sgN").value.trim().length>2&&$("#sgJ").value.trim()&&$("#sgA").checked&&$("#sgR").checked)};
+  if(box)box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
+  ["sgN","sgJ"].forEach(i=>$("#"+i).oninput=upd);["sgA","sgR"].forEach(i=>$("#"+i).onchange=upd);
+  $("#sgGo").onclick=()=>{S.terms={name:$("#sgN").value.trim(),title:$("#sgJ").value.trim(),email:r.email,at:Date.now()};r.status="signed";r.signedAt=Date.now();
+    logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title} (via signing link)`,S.terms.name);
+    notify("client",`${S.terms.name} signed the terms. You can now reveal candidates.`,"terms");notify("admin",`${S.company.name} terms signed by ${S.terms.name}, ${S.terms.title}`,"clients");
+    issueAgreement("Standard terms",{...STD},S.terms,()=>vSign())};
+}
 function issueAgreement(kind,tiersAt,by,onDone){
   const a={ref:"CTX-AGR-"+String(Date.now()).slice(-6),kind,co:S.company.name,tiers:tiersAt,by,cc:["jamie@consumer-talent.com","connor@consumer-talent.com"],at:by.at||Date.now()};
   S.agreement=a;logEvent(`Signed copy ${a.ref} emailed to ${[by.email,...a.cc].filter(Boolean).join(", ")}`,"Consumer Talent");save();
@@ -1275,7 +1322,9 @@ function vTerms(){
       ${d.status==="pending"?`<p class="muted">We usually reply within one working day. You can keep browsing and chatting in the meantime.</p>${cmpTable(d.proposed)}`:""}
       ${d.status==="agreed"?cmpTable(d.final,STD,"Agreed"):""}
       ${d.status==="declined"?`<p class="muted">We weren't able to agree that proposal. You can sign our standard terms or send a new proposal.</p>`:""}
-      ${!termsOK()&&d.status!=="pending"&&d.status!=="countered"?`<div class="row"><button class="btn" id="signStd">Sign standard terms</button></div>`:""}
+      ${!termsOK()&&S.sigReq&&S.sigReq.status==="sent"?`<div class="protect">${lockIcon}<span><b>Waiting for ${esc(S.sigReq.name)} (${esc(S.sigReq.title)}) to sign.</b> Sent to ${esc(S.sigReq.email)}. You can browse, shortlist and chat, but reveals unlock once they've signed.</span></div>
+        <div class="row"><button class="btn line sm" id="sigResend">Resend</button><button class="btn line sm" id="sigCopy">Copy signing link</button><a class="btn quiet sm" href="#sign">Open as ${esc(S.sigReq.name.split(" ")[0])} (demo)</a></div>`:""}
+      ${!termsOK()&&d.status!=="pending"&&d.status!=="countered"?`<div class="row"><button class="btn" id="signStd">Sign standard terms</button><button class="btn line" id="sigSend">${S.sigReq&&S.sigReq.status==="sent"?"Send to someone else":"Not authorised? Send to someone who can sign"}</button></div><p class="muted small">Or email us at <a href="mailto:${EXCHANGE_EMAIL}">${EXCHANGE_EMAIL}</a></p>`:""}
       ${termsOK()&&S.agreement?`<div class="protect">${lockIcon}<span><b>Signed copy ${esc(S.agreement.ref)}</b> emailed to ${esc([S.agreement.by.email,...S.agreement.cc].filter(Boolean).join(", "))}.</span></div><div class="row"><button class="btn line sm" id="viewAg">View signed copy</button></div>`:""}
     </div>
     ${!termsOK()&&d.status!=="pending"?`<form class="card stack" id="propF"><h2>Propose different terms</h2><p class="muted small">Tell us what works for you. Consumer Talent will accept, counter or decline, usually within a day.</p>
@@ -1287,6 +1336,9 @@ function vTerms(){
   </div>
   <div class="sticky"><div class="previewlabel">Our standard terms</div>${termsHTML().replace('id="termsBox"','')}</div></div>`;
   const ss=$("#signStd");if(ss)ss.onclick=()=>openTermsGate(()=>vTerms());
+  const sg=$("#sigSend");if(sg)sg.onclick=()=>sendForSignature();
+  const sr=$("#sigResend");if(sr)sr.onclick=()=>{S.sigReq.at=Date.now();logEvent(`Signing link resent to ${S.sigReq.email}`,S.company.contact);save();toast(`Resent to ${S.sigReq.email}`);vTerms()};
+  const sc=$("#sigCopy");if(sc)sc.onclick=()=>{const t=signLink();try{navigator.clipboard.writeText(t).then(()=>toast("Signing link copied"),()=>toast(t))}catch(e){toast(t)}};
   const va=$("#viewAg");if(va)va.onclick=()=>showAgreement(S.agreement);
   const ac=$("#accC");if(ac)ac.onclick=()=>{d.final=d.counter;d.status="agreed";logEvent(`Counter-offer accepted: ${tierRow(d.final)}`,S.company.contact);issueAgreement("Agreed custom terms",{...d.final},{name:S.company.contact,title:S.company.contactTitle,email:S.company.email||S.alerts.email_to,at:Date.now()},()=>vTerms())};
   const dc=$("#decC");if(dc)dc.onclick=()=>{d.status="declined";save();vTerms()};
@@ -1513,7 +1565,7 @@ function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:
 function vRequests(){
   app.innerHTML=`<div class="pagehead"><span class="kicker">Introductions</span><h1>Companies that want to meet you</h1><p class="muted">It's confidential and never costs you anything. Nobody learns who you are unless you accept and then agree to reveal. Your current employer can never see you.</p></div>
   <div class="list" style="max-width:760px">${S.creqs.filter(r=>!proBlocks(r.co)).map(r=>{const co=reqCo(r);return `<div class="item">
-    <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
+    <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
       ${r.status==="new"?`<span class="tag new">New request</span>`:r.status==="yes"?`<span class="tag hit">You accepted</span>`:`<span class="tag">Declined</span>`}</div>
     ${r.prior?`<p class="muted small">${r.prior.prior==="Yes"?`You told us you interviewed with them in ${esc(r.prior.whenLabel)}.`:"You confirmed you haven't interviewed with them before."}</p>`:""}
     <div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>
@@ -1538,7 +1590,7 @@ function vCandMsgs(){
   const r=S.creqs.find(x=>x.id===S.cthread),co=reqCo(r),msgs=S.cthreads[r.id],p=S.cand;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Messages</span><h1>Chats and interviews</h1><p class="muted">You're shown as <b>${esc(p.user)}</b>. Your name, employer and contact details stay hidden until you agree to reveal.</p></div>
   <div class="chat"><div class="threads">${ids.map(k=>{const rr=S.creqs.find(x=>x.id===k),cc=reqCo(rr);return `<button class="thr ${k===r.id?"on":""}" data-t="${k}"><b>${esc(coDisplay(cc))}</b><div class="muted small">${esc(rr.role)}</div></button>`}).join("")}</div>
-    <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?`<span class="colog">?</span>`:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${esc(r.role)} · ${esc(r.base)}</div></div></div>
+    <div class="thread"><div class="thead"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${esc(r.role)} · ${esc(r.base)}</div></div></div>
       <div class="protect">${lockIcon}<span><b>Anonymous chat.</b> Contact details and links are blocked until you both agree to reveal. ${esc(p.current||"Your employer")} can never see your profile.</span></div>
       <div class="row"><button class="btn line sm" id="bFb">${r.fb?"Edit feedback":"Give feedback"}</button></div></div>
       <div class="msgs" id="msgs">${msgs.map((m,k)=>m.f==="rv"?rvCard(m,k,co):m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}.</b> We've added it to your calendar.`:"Pick the time that suits you:"}</span>${m.booked?"":`<div class="row">${m.opts.map((o,j)=>`<button class="btn line sm" data-pick="${k}:${j}">${esc(o)}</button>`).join("")}</div><span class="muted small">None of these work? Just reply and say when you're free.</span>`}</div>`
@@ -1821,7 +1873,7 @@ function vCompanies(){
     .sort((a,b)=>(b.secHit-a.secHit)||(b.lvlHit-a.lvlHit)||(b.grpHit-a.grpHit));
   app.innerHTML=`<div class="pagehead"><span class="kicker">Companies hiring</span><h1>Brands hiring on the Exchange</h1><p class="muted">Register interest in any of them. They'll see your anonymous profile, never your name or employer, and only you decide whether to reveal.</p></div>
   <div class="list" style="max-width:760px">${list.map(({k,lvlHit,grpHit,secHit})=>{const name=k.anon?coDisplay({...k,anon:true}):k.name,on=!!S.interest[k.id];return `<div class="item">
-    <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?`<span class="colog">?</span>`:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
+    <div class="line1"><div class="row" style="flex-wrap:nowrap">${k.anon?CTX_LOGO:coLogo(k)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(name)}</b><div class="muted small">${STAGES[k.stage]} · ${k.anon?"Name shared on reveal":esc(k.hq)} · ${esc(k.revenue)}</div></div></div>
       <div class="row" style="gap:6px"><span class="tag">${esc(SECTOR_LABEL[k.sector])}</span>${secHit&&lvlHit?`<span class="tag hit">Hiring your level</span>`:secHit&&grpHit?`<span class="tag">Hiring in your field</span>`:""}</div></div>
     <p style="font-weight:600">${esc(k.tagline)}</p>
     ${k.roles.map(r=>`<div class="openrole"><b>${esc(r.title)}</b><span class="num">${esc(r.base||"")}</span></div>`).join("")}
@@ -2036,12 +2088,12 @@ function vWaitlist(){const a=sbGet();
 }
 
 /* ---------------- routing ---------------- */
-const VIEWS={waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
+const VIEWS={sign:vSign,waitlist:vWaitlist,feedback:vFeedback,protect:vProtect,intros:vIntros,team:vTeam,clients:vClients,dash:vDash,invites:vInvites,termsadmin:vTermsAdmin,welcome:vWelcome,company:vCompany,foryou:vForYou,discover:vDiscover,pool:vPool,shortlist:vShortlist,chats:vChats,terms:vTerms,alerts:vAlerts,candidate:vProfile,companies:vCompanies,introductions:vRequests,messages:vCandMsgs};
 const CLIENT_TABS=[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["chats","Conversations","c"],["team","Team"],["terms","Terms"],["alerts","Alerts"]];
 const CAND_TABS=[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]];
 const ADMIN_TABS=[["dash","Dashboard"],["waitlist","Waiting list","w"],["intros","Introductions","v"],["protect","Protection","x"],["feedback","Feedback"],["clients","Clients"],["invites","Invites","i"],["termsadmin","Terms requests","t"]];
 const TASTER_TABS=TASTER==="client"?[["company","Company profile"],["foryou","For you","f"],["discover","Discover","d"],["pool","Talent pool","p"],["shortlist","Shortlist","s"],["team","Team"]]:TASTER==="candidate"?[["candidate","My profile"],["companies","Companies hiring"],["introductions","Introductions","r"],["messages","Messages","m"]]:null;
-function view(){const h=location.hash.slice(1);if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
+function view(){const h=location.hash.slice(1);if(h==="sign")return h;if(TASTER){const ok=TASTER_TABS.map(t=>t[0]);return ok.includes(h)?h:ok[0]}return VIEWS[h]?h:"company"}
 function counts(){bellCount();
   const fy=completeness().pct===100;
   const n={w:S.wlNew||"",x:(()=>{try{return S.selfMoves.filter(m=>m.viaExchange||S.creqs.some(r=>sameCo(r.co,m.co))).length+S.moves.filter(m=>matchMove(m).hits.some(r=>r.on)&&!S.claims.some(c=>sameCo(c.co,m.co)&&normName((DATA.find(p=>p.id===c.pid)||{}).name)===normName(m.name))).length||""}catch(e){return ""}})(),v:Object.values(S.intros).filter(i=>i.review==="pending").length,f:"",c:Object.values(S.intros).filter(i=>i.stage>=2).length,m:Object.keys(S.cthreads).length,t:[S.deal,...S.dealReqs].filter(d=>d.status==="pending").length,i:S.leads.filter(l=>l.status===0).length,d:queue().length,p:visible().length,s:S.shortlist.length,r:S.creqs.filter(r=>r.status==="new").length};
@@ -2050,17 +2102,17 @@ function counts(){bellCount();
 function render(){ensureCustom();
   const v=view();S.mode=(v==="candidate"||v==="companies"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
-  const tabs=TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
+  const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
   if(!/^Ref CTX-/.test(S.cand.user))S.cand.user="Ref CTX-4127";document.body.classList.toggle("pro",S.mode==="cand");$("#sideLbl").textContent=S.mode==="cand"?"For professionals":S.mode==="admin"?"Team view":"For hiring teams";$("#partners").hidden=S.mode==="admin"||v==="welcome";
   layer.innerHTML="";deckGo=null;VIEWS[v]();counts();(SC.scrollTop=0);
 }
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
-function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
+function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
   Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
-  S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
+  S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
 if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
