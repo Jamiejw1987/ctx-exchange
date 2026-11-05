@@ -619,7 +619,7 @@ const S={
     headline:"Grew a $25M Kroger and Meijer book by 38% in two years",
     summary:"National Account Manager at Crunchly Foods covering Kroger and Meijer. I lead joint business planning, trade spend and new item launches for a better-for-you salty snack portfolio.",
     hl:["Won 3 new national items at Kroger in 2025","Cut trade spend 12% while growing volume","Managed two broker partners across the Midwest"],
-    retailers:["Kroger","Costco","Target"],prefStage:"SME",prefCats:["Salty snacks","Better-for-you","Protein snacks"],
+    retailers:["Kroger","Costco","Target"],prefStage:"SME",prefStages:["START","CHAL","PEVC"],prefCats:["Salty snacks","Better-for-you","Protein snacks"],
     dream:"Northfield, protein snack brands, PE-backed scale-ups",kw:["Better-for-you","Protein","Chips","Club channel","Clean label","RTD"],hide:"Crunchly Foods",agreed:false},
   interest:{},notes:[],touch:{},moves:[],claims:[],selfMoves:[],
   creqs:[
@@ -711,7 +711,8 @@ function score(c){
   const coReg=co.regions.map(x=>STATEREG[x]||x);
   if(c.region==="National"||coReg.includes(c.region)){s+=12;if(c.region!=="National")why.push(`Based in your ${c.region} territory`)}
   const coS=co.cats.map(x=>x.toLowerCase()),near=a=>b=>{a=a.toLowerCase();return b===a||b.includes(a.split(" ")[0])||a.includes(b.split(" ")[0])};
-  const prefFit=(c.prefStage==="ANY"||c.prefStage===stageFam(co.stage))&&[...c.prefCats,...(c.cats||[])].some(x=>coS.some(near(x)));
+  const stOK=Array.isArray(c.prefStages)&&c.prefStages.length?(c.prefStages.includes("ANY")||c.prefStages.includes(co.stage)||c.prefStages.some(x=>stageFam(x)===stageFam(co.stage)&&x==="SME")):(c.prefStage==="ANY"||c.prefStage===stageFam(co.stage));
+  const prefFit=stOK&&[...c.prefCats,...(c.cats||[])].some(x=>coS.some(near(x)));
   if(prefFit){s+=18;why.push("Wants to work for companies like yours")}
   const ck=[...(co.kw||[]),...co.roles.flatMap(r=>r.kw||[])].map(k=>k.toLowerCase());const cTerms=[...(c.kw||[]),...(c.skills||[]),...(c.retailers||[]),...(c.cats||[])];
   const kwHits=[...new Set(cTerms.filter(k=>ck.includes(k.toLowerCase())))];
@@ -1655,8 +1656,8 @@ function vProfile(){
         </div>
       </div>
       <div class="section"><h3>Your ideal next company</h3>
-        <div class="field">Company stage${picks("prefStage",["SME","EST","ANY"],p.prefStage,{radio:true,label:x=>({SME:"Funded scale-up",EST:"Established brand",ANY:"Either"})[x]})}</div>
-        <div class="field">Categories you'd like to work in${picks("prefCats",CATS,p.prefCats)}</div>
+        <div class="field">Company stage <small>Tick all you'd consider</small>${picks("prefStages",[...CO_STAGES,"ANY"],p.prefStages||[],{label:x=>x==="ANY"?"Any stage":STAGES[x]})}</div>
+        <div class="field">Categories you'd like to work in <small>Pick from the suggestions or type your own and press Enter</small>${tagField("catCand",p.prefCats,"Type a category, e.g. jerky")}</div>
         <label class="field">Companies you'd love to work for <small>Private. We use this to match you and never show it to companies.</small><textarea id="p_dream" style="min-height:60px">${esc(p.dream)}</textarea></label>
       </div>
       <div class="section"><h3>Privacy</h3>
@@ -1679,7 +1680,7 @@ function vProfile(){
   Object.entries(map).forEach(([id,k])=>{const el=$("#"+id);el.addEventListener("input",()=>{p[k]=el.value;prev()});el.addEventListener("change",()=>{p[k]=el.value;prev()})});
   app.querySelectorAll("[data-hl]").forEach(el=>el.addEventListener("input",()=>{p.hl[+el.dataset.hl]=el.value;prev()}));
   bindPicks(app,p,()=>{const y=SC.scrollTop;vProfile();(SC.scrollTop=y)});apCRet.bind();
-  bindTags("kwCand",p.kw,vProfile);
+  bindTags("kwCand",p.kw,vProfile);bindTags("catCand",p.prefCats,vProfile,SECTORS);
   $("#p_agree").onchange=e=>{p.agreed=e.target.checked;prev()};
   $("#p_cv").onchange=e=>{const f=e.target.files[0];if(!f)return;const err=$("#cvErr");
     if(!/\.(pdf|docx?)$/i.test(f.name)){err.textContent="Choose a PDF or Word document.";err.style.display="block";return}
@@ -2334,7 +2335,7 @@ function render(){ensureCustom();
 $("#mClient").onclick=()=>location.hash="company";$("#mCand").onclick=()=>location.hash="candidate";$("#mAdmin").onclick=()=>location.hash="dash";
 function save(){try{nudgeCheck()}catch(e){}try{localStorage.setItem(STORE,JSON.stringify({cal:S.cal||[],chase:S.chase||[],sigReq:S.sigReq||null,company:S.company,decided:S.decided,shortlist:S.shortlist,intros:S.intros,terms:S.terms,log:S.log,alerts:S.alerts,cand:S.cand,creqs:S.creqs,leads:S.leads,autoSend:S.autoSend,welcome:S.welcome,deal:S.deal,dealReqs:S.dealReqs,cthreads:S.cthreads,seenSwipe:!!S.seenSwipe,interest:S.interest,agreement:S.agreement||null,notes:S.notes,touch:S.touch,moves:S.moves,claims:S.claims,selfMoves:S.selfMoves}))}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!d)return;
-  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
+  Object.assign(S.company,d.company||{});if(!CO_STAGES.includes(S.company.stage))S.company.stage=S.company.stage==="EST"?"EST":"CHAL";S.decided=d.decided||{};S.shortlist=d.shortlist||[];S.alerts=Object.assign(S.alerts,d.alerts||{});Object.assign(S.cand,d.cand||{});if(!Array.isArray(S.cand.prefStages)||!S.cand.prefStages.length)S.cand.prefStages=S.cand.prefStage==="EST"?["EST","PUB"]:S.cand.prefStage==="ANY"?["ANY"]:["START","CHAL","PEVC"];S.cand.band=toBand(S.cand.band);if(d.creqs)S.creqs=d.creqs;if(d.leads)S.leads=d.leads;S.autoSend=!!d.autoSend;S.welcome=d.welcome||null;if(d.deal)S.deal=d.deal;if(d.dealReqs)S.dealReqs=d.dealReqs;S.cthreads=d.cthreads||{};S.seenSwipe=!!d.seenSwipe;S.interest=d.interest||{};S.agreement=d.agreement||null;S.notes=d.notes||[];S.touch=d.touch||{};S.moves=d.moves||[];S.claims=d.claims||[];S.selfMoves=d.selfMoves||[];
   S.intros={};for(const [k,v] of Object.entries(d.intros||{}))S.intros[k]={msgs:[],...v,stage:v.stage===1?2:v.stage};
   S.cal=d.cal||[];S.chase=d.chase||[];S.sigReq=d.sigReq||null;S.terms=d.terms||null;S.log=(d.log||[]).map(l=>({...l,at:new Date(l.at)}));
   refN=41+Object.keys(S.intros).length}catch(e){}}
