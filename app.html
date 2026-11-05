@@ -494,8 +494,8 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
   <div class="wrap hbar">
     <a class="logo" href="#company" aria-label="Consumer Talent Exchange home"><span class="mark">CT<em>X</em></span><span><b>Consumer Talent <em>Exchange</em></b><span class="side" id="sideLbl">For hiring teams</span><span class="sub">by Consumer Talent Group · Your Success Story</span></span></a>
     <div class="seg" role="group" aria-label="View as">
-      <button type="button" id="mClient" aria-pressed="true">I'm hiring</button>
-      <button type="button" id="mCand" aria-pressed="false">I'm a professional</button>
+      <button type="button" id="mClient" aria-pressed="true">Company</button>
+      <button type="button" id="mCand" aria-pressed="false">Professional</button>
       <button type="button" id="mAdmin" aria-pressed="false">Consumer Talent</button>
     </div>
   </div>
@@ -512,7 +512,7 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
   </div>
 </section>
 </div>
-<div id="tbar"><a href="#" id="tbHome" class="tbhome">← Exchange</a><span class="tbtxt">Preview · nothing you enter is shared</span><button type="button" class="btn sm" data-invite>Become a founding member</button></div>
+<div id="tbar"><a href="#" id="tbHome" class="tbhome">← Exchange</a><span class="tbtxt">Preview · nothing you enter is shared</span><button type="button" class="btn sm" data-invite>Join the Exchange</button></div>
 <div id="layer"></div>
 
 <script>
@@ -621,7 +621,7 @@ const S={
   leads:[
     {id:"l1",type:"cand",name:"Marcus Reyes",email:"m.reyes@email.com",phone:"+1 614 555 0192",detail:"National Account Manager · Columbus, OH",source:"Apollo email campaign",at:"Today, 09:14",status:0},
     {id:"l2",type:"cand",name:"Priya Nguyen",email:"priya.n@email.com",phone:"+1 312 555 0107",detail:"VP of Sales · Chicago, IL",source:"WhatsApp reply",at:"Today, 08:02",status:0},
-    {id:"l3",type:"cand",name:"Tom Brennan",email:"tbrennan@email.com",phone:"+1 404 555 0133",detail:"Brand Director · Atlanta, GA",source:"Referral from member",at:"Yesterday",status:1,sent:"Yesterday, 16:40"},
+    {id:"l3",type:"cand",name:"Tom Brennan",email:"tbrennan@email.com",phone:"+1 404 555 0133",detail:"Brand Director · Atlanta, GA",source:"Referral",at:"Yesterday",status:1,sent:"Yesterday, 16:40"},
     {id:"l4",type:"cand",name:"Alicia Garza",email:"alicia.garza@email.com",phone:"+1 512 555 0178",detail:"Head of E-commerce · Austin, TX",source:"Website sign-up",at:"Mon",status:2,sent:"Mon, 11:02"},
     {id:"l5",type:"cand",name:"Ryan Holt",email:"ryan.holt@email.com",phone:"+1 206 555 0115",detail:"Category Manager · Seattle, WA",source:"Apollo email campaign",at:"Mon",status:3,sent:"Mon, 10:30"},
     {id:"l6",type:"client",name:"Dana Whitfield",email:"dana@northfieldsnacks.com",phone:"+1 312 555 0148",detail:"VP People · Northfield Snack Co.",company:"Northfield Snack Co.",source:"Demo call",at:"Today, 10:20",status:0},
@@ -828,7 +828,7 @@ function vCompany(){
       <div class="card stack" style="gap:8px">${(()=>{const {pct,checks}=completeness();return `<div class="row" style="justify-content:space-between"><b>Profile ${pct}% complete</b>${pct===100?`<a class="btn sm" href="#foryou">See your picks</a>`:`<span class="muted small">${checks.filter(c=>!c[1]).length} to go</span>`}</div><div class="meterbar"><i style="width:${pct}%"></i></div><span class="muted small">${pct===100?"Your For you list is live.":`Next: ${esc(checks.find(c=>!c[1])[0].toLowerCase())}. Complete your profile to unlock For you.`}</span>`})()}</div>
       <div class="previewlabel">What professionals see${co.anon?" until you reveal":""}</div>
       <div class="cover" id="cover"></div>
-      <div class="card stack" style="gap:6px"><b class="num">${visible().length} members · ${visible().filter(c=>score(c).score>=70).length} strong matches</b><span class="muted small">Members scoring 70% or more against your profile today. This updates as you edit.</span><a class="btn line sm" href="#pool" style="align-self:flex-start">Browse the talent pool</a></div>
+      <div class="card stack" style="gap:6px"><b class="num">${visible().length} professionals · ${visible().filter(c=>score(c).score>=70).length} strong matches</b><span class="muted small">Professionals scoring 70% or more against your profile today. This updates as you edit.</span><a class="btn line sm" href="#pool" style="align-self:flex-start">Browse the talent pool</a></div>
     </div>
   </div>`;
   const cover=()=>{$("#cover").innerHTML=`<div class="band">${co.anon?CTX_LOGO:coLogo(co)}<div><small>${STAGES[co.stage]} · ${co.anon?"Location shared on reveal":esc(co.hq)} · ${esc(co.revenue)}</small><h2>${esc(coDisplay(co))}</h2><p>${co.anon?"Name and logo shared when you both agree to reveal.":esc(co.tagline)}</p></div></div>
@@ -1573,7 +1573,7 @@ function miniCard(x){return `<button class="mini ${S.shortlist.includes(x.c.id)?
 const FY={mode:"grid"};
 function vForYou(){
   const {checks,pct}=completeness(),co=S.company;
-  if(pct<100){app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Finish your profile to unlock picks</h1><p class="muted">Once your profile is complete, we hand-pick professionals for each of your roles and keep the list fresh as new members join.</p></div>
+  if(pct<100){app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Finish your profile to unlock picks</h1><p class="muted">Once your profile is complete, we hand-pick professionals for each of your roles and keep the list fresh as new professionals join.</p></div>
     <div class="card stack" style="max-width:640px"><div class="row" style="justify-content:space-between"><b>Profile ${pct}% complete</b><span class="muted small">${checks.filter(c=>!c[1]).length} to go</span></div><div class="meterbar"><i style="width:${pct}%"></i></div>
       <ul class="why">${checks.map(([k,ok])=>`<li class="${ok?"":"todo"}">${esc(k)}</li>`).join("")}</ul>
       <div><a class="btn" href="#company">Complete my profile</a></div></div>`;return}
@@ -1582,9 +1582,9 @@ function vForYou(){
   const used=new Set(sections.flatMap(s=>s.list.map(x=>x.c.id)));
   const extra=pool.filter(x=>!used.has(x.c.id)&&co.levels.includes(x.c.lvl)).sort((a,b)=>b.score-a.score).slice(0,4);
   const fyAll=[...sections.flatMap(s=>s.list),...extra].filter((x,i,a)=>a.findIndex(y=>y.c.id===x.c.id)===i&&!S.decided[x.c.id]);
-  app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Picked for ${esc(co.name||"your company")}</h1><p class="muted">Your profile is complete, so these are matched to each open role. The list updates as new members join and as you edit your profile.</p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">For you</span><h1>Picked for ${esc(co.name||"your company")}</h1><p class="muted">Your profile is complete, so these are matched to each open role. The list updates as new professionals join and as you edit your profile.</p></div>
   <div class="row" style="justify-content:flex-end;margin-bottom:12px">${modeSeg("fymode",FY.mode)}</div>
-  ${FY.mode==="swipe"?`<section class="deck">${deckHTML(fyAll[0],fyAll.length,`<div class="empty"><h2>You've been through all your picks</h2><p class="muted">We'll add more as new members join. Your shortlist has everyone you liked.</p><a class="btn" href="#shortlist">Go to shortlist</a></div>`)}</section>`:`
+  ${FY.mode==="swipe"?`<section class="deck">${deckHTML(fyAll[0],fyAll.length,`<div class="empty"><h2>You've been through all your picks</h2><p class="muted">We'll add more as new professionals join. Your shortlist has everyone you liked.</p><a class="btn" href="#shortlist">Go to shortlist</a></div>`)}</section>`:`
   ${sections.map(s=>`<div class="stack" style="margin-bottom:26px"><div class="row" style="justify-content:space-between;align-items:baseline"><h2>For your ${esc(s.r.title)} role</h2><span class="muted small">${LEVELS[s.r.lvl]} · ${esc(s.r.region)}</span></div>
     ${s.list.length?`<div class="pool">${s.list.map(miniCard).join("")}</div>`:`<p class="muted">No strong matches yet. Turn on alerts and we'll tell you when someone joins.</p>`}</div>`).join("")}
   ${extra.length?`<div class="stack"><h2>Also worth a look</h2><div class="pool">${extra.map(miniCard).join("")}</div></div>`:""}`}`;
@@ -1595,17 +1595,17 @@ function vForYou(){
 
 function vAlerts(){
   const a=S.alerts,co=S.company,x=queue()[0]||{c:POOL[0],...score(POOL[0])};
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Alerts</span><h1>Hear about new members first</h1><p class="muted">When someone who fits ${esc(co.name||"your company")} joins, we'll let you know. No need to keep checking.</p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Alerts</span><h1>Hear about new professionals first</h1><p class="muted">When someone who fits ${esc(co.name||"your company")} joins, we'll let you know. No need to keep checking.</p></div>
   <div class="cols"><div class="card">
     <div class="toggle"><div><b>Email</b><p class="muted small">${esc(a.email_to)}</p></div><label class="switch"><input type="checkbox" id="aE" ${a.email?"checked":""} aria-label="Email alerts"><span></span></label></div>
     <div class="toggle"><div><b>Text message</b><p class="muted small">${esc(a.phone)}</p></div><label class="switch"><input type="checkbox" id="aS" ${a.sms?"checked":""} aria-label="Text alerts"><span></span></label></div>
     <div class="toggle" style="flex-direction:column;align-items:stretch"><div class="field">How often${picks("freq",["instant","daily","weekly"],a.freq,{radio:true,label:v=>({instant:"As they join",daily:"Daily summary",weekly:"Monday summary"})[v]})}</div></div>
     <div class="toggle" style="flex-direction:column;align-items:stretch;border:0"><div class="field">Only for <b id="aMv">${fitWord(a.min).toLowerCase()}s</b> and above<input type="range" id="aM" min="50" max="95" step="5" value="${a.min}"></div></div>
-    <button class="btn line" id="aSim">Try it: simulate a new member joining</button>
+    <button class="btn line" id="aSim">Try it: simulate a new professional joining</button>
     ${S.feed.length?`<div class="stack" style="margin-top:16px;gap:8px"><b class="small">Alerts sent</b>${S.feed.map(f=>`<div class="small"><span class="muted num">${f.t}</span> · ${esc(f.m)}</div>`).join("")}</div>`:""}
   </div>
   <div class="stack sticky">
-    ${a.email?`<div class="msg"><div class="mh"><b>Consumer Talent Exchange</b> · New ${LEVELS[x.c.lvl]}, ${fitWord(x.score).toLowerCase()}</div><div class="mb"><p>Hi ${esc(co.contact.split(" ")[0])}, a new member who fits ${esc(co.name||"your company")} just joined.</p><p><b>${esc(LEVELS[x.c.lvl])}</b> · ${esc(refOf(x.c.user))}<br>${LEVELS[x.c.lvl]} · ${esc(x.c.region)} · ${esc(x.c.band)}</p><p class="muted">“${esc(x.c.headline)}”</p><div><a class="btn sm" href="#discover">View profile</a></div></div></div>`:""}
+    ${a.email?`<div class="msg"><div class="mh"><b>Consumer Talent Exchange</b> · New ${LEVELS[x.c.lvl]}, ${fitWord(x.score).toLowerCase()}</div><div class="mb"><p>Hi ${esc(co.contact.split(" ")[0])}, a new professional who fits ${esc(co.name||"your company")} just joined.</p><p><b>${esc(LEVELS[x.c.lvl])}</b> · ${esc(refOf(x.c.user))}<br>${LEVELS[x.c.lvl]} · ${esc(x.c.region)} · ${esc(x.c.band)}</p><p class="muted">“${esc(x.c.headline)}”</p><div><a class="btn sm" href="#discover">View profile</a></div></div></div>`:""}
     ${a.sms?`<div class="sms">Consumer Talent: new ${LEVELS[x.c.lvl]} (${fitWord(x.score).toLowerCase()}) with ${esc(x.c.retailers.slice(0,2).join(" & "))} experience just joined. View: cte.link/${x.c.id}</div>`:""}
     ${!a.email&&!a.sms?`<div class="card muted">Alerts are off. Turn on email or text to see a preview.</div>`:""}
   </div></div>`;
@@ -1619,7 +1619,7 @@ function simulate(){
   const sc=score(c).score,t=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
   const ch=[S.alerts.email&&"email",S.alerts.sms&&"text"].filter(Boolean).join(" and ");
   if(sc>=S.alerts.min&&ch){S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Sent by ${ch}${S.alerts.freq!=="instant"?" in your next summary":""}.`});toast(`New ${fitWord(sc).toLowerCase()} joined. Alert sent by ${ch}.`)}
-  else{S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Below your alert setting, so no alert sent.`});toast("New member joined, below your alert setting")}
+  else{S.feed.unshift({t,m:`${refOf(c.user)} joined, ${fitWord(sc).toLowerCase()}. Below your alert setting, so no alert sent.`});toast("New professional joined, below your alert setting")}
   counts();vAlerts();
 }
 
@@ -1688,7 +1688,7 @@ function vProfile(){
         <label class="field">Current employer <small>Private. They will never see your profile.</small><input type="text" id="p_current" value="${esc(p.current)}"></label>
         <label class="field">Also hide me from <small>Separate company names with commas</small><input type="text" id="p_hide" value="${esc(p.hide)}"></label>
         ${p.paused?"":`<div><button type="button" class="btn quiet sm" id="pPause">Pause or remove my profile</button></div>`}
-        <label class="check"><input type="checkbox" id="p_agree" ${p.agreed?"checked":""}><span>If a company I meet on the Exchange contacts me directly or offers me a job, I'll tell Consumer Talent within 7 days. Members who do receive a <b>$500 thank-you</b> when the placement completes.</span></label>
+        <label class="check"><input type="checkbox" id="p_agree" ${p.agreed?"checked":""}><span>If a company I meet on the Exchange contacts me directly or offers me a job, I'll tell Consumer Talent within 7 days. Professionals who do receive a <b>$500 thank-you</b> when the placement completes.</span></label>
         <div class="row"><button class="btn" type="submit" id="pSave">Save profile</button><span class="muted small" id="pNote"></span></div>
       </div>
     </form>
@@ -1883,7 +1883,7 @@ function vInvites(){autoLetIn();
       <label class="field">Email<input type="email" id="nl_e" required placeholder="name@email.com"></label>
       <label class="field">Mobile<input type="tel" id="nl_p" placeholder="+1 555 000 0000"></label>
       <label class="field">Title and company<input type="text" id="nl_d" placeholder="e.g. VP Sales · Prairie Mill Snacks"></label>
-      <label class="field">Source<select id="nl_s"><option>Apollo email campaign</option><option>WhatsApp reply</option><option>Website sign-up</option><option>Referral from member</option><option>Phone call</option></select></label></div>
+      <label class="field">Source<select id="nl_s"><option>Apollo email campaign</option><option>WhatsApp reply</option><option>Website sign-up</option><option>Referral</option><option>Phone call</option></select></label></div>
     <div><button class="btn" type="submit">Add</button></div></form>`;
   app.querySelectorAll("[data-ldec]").forEach(b=>b.onclick=()=>{const l=S.leads.find(x=>x.id===b.dataset.ldec);l.status=-1;save();vInvites();counts();toast(`${l.name} declined`)});
   app.querySelectorAll("[data-lund]").forEach(b=>b.onclick=()=>{const l=S.leads.find(x=>x.id===b.dataset.lund);l.status=0;save();vInvites();counts()});
@@ -2030,7 +2030,7 @@ function vDash(){
     ${kpi("Offers out",open.filter(d=>d.st===4).length,"Waiting on decisions")}
     ${kpi("Placed",placed.length,`${money(won)} in fees`)}
     ${kpi("Dropped out",drops.length,closedN?`${Math.round(drops.length/closedN*100)}% of finished deals`:"")}
-    ${kpi("Members",`${POOL.length}`,`${S.leads.length} leads · ${DCLIENTS.length+1} companies`)}
+    ${kpi("Professionals",`${POOL.length}`,`${S.leads.length} leads · ${DCLIENTS.length+1} companies`)}
   </div>
   <div class="dgrid">
     <div class="card stack"><div><h2>Where deals are now</h2><p class="muted small">Live deals at each stage. Tap "All deals" below to see who's in each.</p></div>${barsSVG(nowStage,SERIES[0],"Live deals by stage")}</div>
@@ -2516,8 +2516,8 @@ function showClaim(r,m){const txt=claimText(r,m),f=feeFor(r.c,r.co);
   $("#clC").onclick=()=>{try{navigator.clipboard.writeText(txt);toast("Copied")}catch(e){toast("Select the text to copy it")}};
   $("#clL").onclick=()=>{if(!S.claims.some(x=>x.pid===r.pid&&x.co===r.co))S.claims.unshift({pid:r.pid,co:r.co,fee:f.fee,at:Date.now(),status:"Claim drafted"});logEvent(`Fee claim logged: ${r.c.name} at ${r.co}`,"Consumer Talent");save();layer.innerHTML="";vProtect();toast("Claim logged")}}
 function evidenceHTML(m){const {regs,hits}=matchMove(m);const c=DATA.find(p=>normName(p.name)===normName(m.name));
-  if(!c)return `<div class="alert ok"><span><b>No member called ${esc(m.name)}.</b> They've never been on the Exchange, so there's nothing to claim.</span></div>`;
-  if(!regs.length)return `<div class="alert ok"><span><b>${esc(c.name)} (${esc(refOf(c.user))}) is a member, but no client has interacted with them.</b></span></div>`;
+  if(!c)return `<div class="alert ok"><span><b>No professional called ${esc(m.name)}.</b> They've never been on the Exchange, so there's nothing to claim.</span></div>`;
+  if(!regs.length)return `<div class="alert ok"><span><b>${esc(c.name)} (${esc(refOf(c.user))}) is on the Exchange, but no client has interacted with them.</b></span></div>`;
   const hitHTML=hits.length?hits.map(r=>`<div class="item" style="border-color:${r.on?"rgba(255,122,110,.5)":"var(--line)"}"><div class="line1"><b>${esc(r.co)}</b><span class="tag ${r.on?"new":""}">${r.on?`Protected until ${fmtDay(r.until)}`:!r.revealed?"Not introduced":`Protection ended ${fmtDay(r.until)}`}</span></div>
       <ul class="evl">${r.ev.map(e=>`<li><span>${fmtDay(new Date(e.at))}</span><span>${esc(e.what)}</span></li>`).join("")}</ul>
       ${r.on?`<div class="row"><button class="btn sm" data-claim="${esc(r.pid)}|${esc(r.co)}">Draft fee claim</button></div>`:`<p class="muted small">${!r.revealed?"This person never accepted a chat with them through the Exchange, so there's no introduction and no fee is due.":"Outside the 12-month window, so no fee is due under the standard terms."}</p>`}</div>`).join("")
@@ -2543,7 +2543,7 @@ function vProtect(){
     ${flagged.length?`<div class="card stack"><h2>Moves needing action</h2>${flagged.map(({m,hits})=>hits.filter(r=>r.on).map(r=>`<div class="item" style="border-color:rgba(255,122,110,.5)"><div class="line1"><div><b>${esc(r.c.name)} → ${esc(m.co)}</b><div class="muted small">${esc(m.title||LEVELS[r.c.lvl])}${m.date?` · from ${esc(m.date)}`:""} · ${esc(m.src)}</div></div><span class="tag new">Protected until ${fmtDay(r.until)}</span></div>
       <p class="small">${esc(r.co)} ${esc(r.ev.map(e=>e.what.toLowerCase()).join(", then ").replace(/ref ctx-\\d+/g,"them"))}, last on ${fmtDay(new Date(r.last))}.</p>
       <div class="row">${S.claims.some(x=>x.pid===r.pid&&x.co===r.co)?`<span class="tag hit">Claim logged</span>`:""}<button class="btn sm" data-claim="${esc(r.pid)}|${esc(r.co)}" data-mv="${esc(m.name)}|${esc(m.co)}">${S.claims.some(x=>x.pid===r.pid&&x.co===r.co)?"View claim":"Draft fee claim"}</button></div></div>`).join("")).join("")}</div>`:""}
-    ${S.selfMoves.length?`<div class="card stack"><h2>Reported by professionals</h2><p class="muted small">Moves members told us about through check-ins or when pausing their profile, matched against companies that asked to meet them.</p>${S.selfMoves.map(m=>{const asked=S.creqs.filter(r=>sameCo(r.co,m.co));return `<div class="item" ${asked.length?`style="border-color:rgba(255,122,110,.5)"`:""}><div class="line1"><div><b>${esc(m.ref)} → ${esc(m.co)}</b><div class="muted small">${esc(m.title||"New role")}${m.date?` · from ${esc(m.date)}`:""} · reported ${fmtDay(new Date(m.at))}</div></div><span class="tag ${asked.length||m.viaExchange?"new":"hit"}">${asked.length||m.viaExchange?"Check for a fee":"No link found"}</span></div>
+    ${S.selfMoves.length?`<div class="card stack"><h2>Reported by professionals</h2><p class="muted small">Moves professionals told us about through check-ins or when pausing their profile, matched against companies that asked to meet them.</p>${S.selfMoves.map(m=>{const asked=S.creqs.filter(r=>sameCo(r.co,m.co));return `<div class="item" ${asked.length?`style="border-color:rgba(255,122,110,.5)"`:""}><div class="line1"><div><b>${esc(m.ref)} → ${esc(m.co)}</b><div class="muted small">${esc(m.title||"New role")}${m.date?` · from ${esc(m.date)}`:""} · reported ${fmtDay(new Date(m.at))}</div></div><span class="tag ${asked.length||m.viaExchange?"new":"hit"}">${asked.length||m.viaExchange?"Check for a fee":"No link found"}</span></div>
       ${asked.length?`<ul class="evl">${asked.map(r=>`<li><span>${r.at?fmtDay(new Date(r.at)):"Earlier"}</span><span>${esc(r.co)} requested ${r.role?"an introduction for "+esc(r.role):"a chat"}${r.status==="yes"?", which they accepted":r.status==="no"?", which they declined":""}</span></li>`).join("")}</ul>`:""}
       ${m.viaExchange?`<p class="small">They say they met this company through the Exchange.</p>`:""}</div>`}).join("")}</div>`:""}
     <form class="card stack" id="cmF"><h2>Check a move</h2><p class="muted small">Heard someone's moved? Check it against everything on the Exchange.</p>
@@ -2583,7 +2583,7 @@ async function loadWL(){WLerr="";try{const t=await sbToken();if(!t){WL=null;retu
   if(!r.ok){WLerr=r.status===401?"Your login has expired. Sign in again.":"Couldn't load the waiting list ("+r.status+").";if(r.status===401)sbSet(null);WL=null;return}
   WL=await r.json();S.wlNew=WL.filter(x=>wlSt(x)==="pending").length;}catch(e){WLerr="Couldn't reach the database. Check your connection and try again.";WL=null}}
 function vWaitlist(){const a=sbGet();
-  if(!a){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Everyone who's joined the waiting list from the landing page or the tasters. Sign in to see them.</p></div>
+  if(!a){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Sign-ups</h1><p class="muted">Everyone who's joined the waiting list from the landing page or the tasters. Sign in to see them.</p></div>
     <form class="card stack" id="sbF" style="max-width:420px" novalidate><h2>Team sign-in</h2>
       <label class="field">Email<input type="email" id="sb_e" autocomplete="username" value="jamie@consumer-talent.com"></label>
       <label class="field">Password<input type="password" id="sb_p" autocomplete="current-password"></label>
@@ -2595,10 +2595,10 @@ function vWaitlist(){const a=sbGet();
         const j=await r.json();if(!r.ok){err.textContent=j.error_description||j.msg||"Those details didn't work.";err.style.display="block";b.disabled=false;b.textContent="Sign in";return}
         sbSet({access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000,email:(j.user||{}).email});await loadWL();vWaitlist();counts()}
       catch(x){err.textContent="Couldn't reach the database. Check your connection.";err.style.display="block";b.disabled=false;b.textContent="Sign in"}};return}
-  if(WL===null&&!WLerr){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Loading...</p></div>`;loadWL().then(()=>{if(view()==="waitlist"){vWaitlist();counts()}});return}
+  if(WL===null&&!WLerr){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Sign-ups</h1><p class="muted">Loading...</p></div>`;loadWL().then(()=>{if(view()==="waitlist"){vWaitlist();counts()}});return}
   const rows=(WL||[]).filter(x=>(WLF.st==="all"||wlSt(x)===WLF.st)&&(WLF.side==="all"||x.side===WLF.side)&&(WLF.sector==="all"||x.sector===WLF.sector||x.sector==="Both")&&(!WLF.q||JSON.stringify(x).toLowerCase().includes(WLF.q.toLowerCase())));
   const all=WL||[],nC=all.filter(x=>x.side==="client").length,nP=all.filter(x=>x.side==="pro").length,wk=all.filter(x=>Date.now()-new Date(x.created_at)<7*864e5).length;
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Founding member sign-ups</h1><p class="muted">Signed in as ${esc(a.email||"")}. <a href="#" id="sbOut">Sign out</a></p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Waiting list</span><h1>Sign-ups</h1><p class="muted">Signed in as ${esc(a.email||"")}. <a href="#" id="sbOut">Sign out</a></p></div>
   <div class="stack" style="max-width:860px;gap:16px">
     ${WLerr?`<div class="alert warn"><span>${esc(WLerr)}</span></div>`:""}
     <div class="pstats"><div><b class="num">${nC}</b><span>Hiring teams</span></div><div><b class="num">${nP}</b><span>Professionals</span></div><div><b class="num">${all.filter(x=>wlSt(x)==="pending").length}</b><span>Companies to review</span></div></div>
@@ -2684,9 +2684,9 @@ function nudge(){if(!TASTER)return;let seen=false;try{seen=!!localStorage.getIte
   try{localStorage.setItem(STORE+"-nudged","1")}catch(e){}
   const pro=TASTER==="candidate";
   layer.innerHTML=`<div class="scrim" id="ngS"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ngT" style="max-width:440px;align-self:end">
-    <div class="stack" style="gap:6px"><span class="kicker">Founding members</span><h2 id="ngT">Like what you see?</h2>
-      <p class="muted">${pro?"Join as a founding member and you're in straight away. It's free, and your employer will never see you.":"Join as a founding member and we'll set up your company before the Exchange opens, with your first picks ready on day one."}</p></div>
-    <div class="stack" style="gap:8px"><a class="btn" href="${joinURL()}" style="justify-content:center">Become a founding member</a><button type="button" class="btn line" id="ngX" style="justify-content:center">Keep exploring</button></div></div></div>`;
+    <div class="stack" style="gap:6px"><span class="kicker">Join the Exchange</span><h2 id="ngT">Like what you see?</h2>
+      <p class="muted">${pro?"Join now and you're in straight away. It's free, and your employer will never see you.":"Join now and we'll set up your company before the Exchange opens, with your first picks ready on day one."}</p></div>
+    <div class="stack" style="gap:8px"><a class="btn" href="${joinURL()}" style="justify-content:center">Join the Exchange</a><button type="button" class="btn line" id="ngX" style="justify-content:center">Keep exploring</button></div></div></div>`;
   $("#ngX").onclick=()=>layer.innerHTML="";$("#ngS").onclick=e=>{if(e.target.id==="ngS")layer.innerHTML=""}}
 let nudgeArmed=false;
 function nudgeCheck(){if(!TASTER||nudgeArmed)return;const done=TASTER==="candidate"?(Object.keys(S.interest||{}).length>=1||S.creqs.some(r=>r.status!=="new")):(S.shortlist.length>=2);if(done){nudgeArmed=true;setTimeout(nudge,1400)}}

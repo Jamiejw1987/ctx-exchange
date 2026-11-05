@@ -7,7 +7,7 @@
 <meta name="description" content="The private exchange for senior food and drink talent in North America. Anonymous, and run by Consumer Talent.">
 <meta name="theme-color" content="#0D0D0E">
 <meta property="og:title" content="Consumer Talent Exchange">
-<meta property="og:description" content="The private exchange for senior food and drink talent in North America. Founding membership now open.">
+<meta property="og:description" content="The private exchange for senior food and drink talent in North America. Now open to join.">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -168,12 +168,12 @@ section,#top{scroll-margin-top:72px}
 <main id="top">
 <div class="hero"><div class="wrap">
   <div>
-    <span class="founding"><i></i>Founding membership now open</span>
+    <span class="founding"><i></i>Now open to join</span>
     <h1>The private exchange for senior <em>food and drink</em> talent in North America</h1>
     <p class="lede">Companies meet the commercial, marketing and operations leaders they need. Professionals explore their next move in confidence, without their employer ever knowing. Professionals join free in minutes, and every hiring company is approved by Consumer Talent.</p>
     <div class="doors">
-      <a class="door c" href="#hiring"><b>I'm hiring</b><span>See how it works for hiring teams</span></a>
-      <a class="door p" href="#professionals"><b>I'm open to a move</b><span>See how it works for professionals</span></a>
+      <a class="door c" href="#hiring"><b>Company</b><span>See how it works for hiring teams</span></a>
+      <a class="door p" href="#professionals"><b>Professional</b><span>See how it works for professionals</span></a>
     </div>
   </div>
   <div class="phones" aria-hidden="true">
@@ -257,12 +257,12 @@ section,#top{scroll-margin-top:72px}
 </div></section>
 
 <section id="join" style="border-top:1px solid var(--line)"><div class="wrap formwrap">
-  <div class="sh" style="margin:0"><span class="kicker">Founding members</span><h2>Join the waiting list</h2>
-    <p class="muted">The full Exchange opens in around six weeks. Founding members get in first. Professionals are in straight away, and we approve every hiring company personally.</p>
+  <div class="sh" style="margin:0"><span class="kicker">Get in first</span><h2>Join the Exchange</h2>
+    <p class="muted">The full Exchange opens in around six weeks, and everyone who joins now gets in first. Professionals are in straight away, and we approve every hiring company personally.</p>
     <p class="fine" style="margin-top:6px">Already know you want in? Tell us a little about you and we'll be in touch.</p></div>
   <div class="panel">
     <form id="wl" novalidate>
-      <div class="seg" role="group" aria-label="I am"><button type="button" data-s="client" aria-pressed="true">I'm hiring</button><button type="button" data-s="pro" aria-pressed="false">I'm open to a move</button></div>
+      <div class="seg" role="group" aria-label="I am"><button type="button" data-s="client" aria-pressed="true">Company</button><button type="button" data-s="pro" aria-pressed="false">Professional</button></div>
       <div style="display:flex;flex-direction:column;gap:14px">
         <p class="fine" id="w_note" hidden>We've brought across what you set up in the taster. Check it and add anything that's missing.</p>
         <div class="grid2"><label class="f">Full name<input type="text" id="w_n" autocomplete="name" required></label><label class="f"><span id="lbl_e">Work email</span><input type="email" id="w_e" autocomplete="email" required></label></div>
@@ -273,7 +273,7 @@ section,#top{scroll-margin-top:72px}
         <label class="f only-pro" hidden><span>LinkedIn profile <small>Optional, only seen by Consumer Talent</small></span><input type="url" id="w_l" placeholder="linkedin.com/in/yourname"></label>
         <label class="check"><input type="checkbox" id="w_ok"><span>I'm happy for Consumer Talent to contact me about the Exchange. We'll never share your details.</span></label>
         <p class="err" id="w_err">Add your name, a valid email and tick the box to continue.</p>
-        <button class="btn gold" type="submit" id="w_go">Request founding membership</button>
+        <button class="btn gold" type="submit" id="w_go">Join the Exchange</button>
       </div>
     </form>
     <div class="done" id="wdone" role="status">
@@ -312,13 +312,13 @@ section,#top{scroll-margin-top:72px}
       company:side==="client"?v("w_c")||null:null,role:side==="client"?v("w_r")||null:null,hiring:side==="client"?v("w_h")||null:null,
       title:side==="pro"?v("w_t")||null:null,region:side==="pro"?v("w_g")||null:null,linkedin:side==="pro"?v("w_l")||null:null};
     const lines=side==="client"
-      ?["Founding membership request: hiring team","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Company: ${v("w_c")}`,`Role: ${v("w_r")}`,`Sector: ${sec}`,`Planning to hire: ${v("w_h")}`]
-      :["Founding membership request: professional","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Current title: ${v("w_t")}`,`Region: ${v("w_g")}`,`Sector: ${sec}`,`LinkedIn: ${v("w_l")}`];
-    const subj=side==="client"?`CTX founding member: ${v("w_n")}${v("w_c")?", "+v("w_c"):""}`:`CTX founding member: ${v("w_n")} (professional)`;
+      ?["Request to join the Exchange: company","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Company: ${v("w_c")}`,`Role: ${v("w_r")}`,`Sector: ${sec}`,`Planning to hire: ${v("w_h")}`]
+      :["Request to join the Exchange: professional","",`Name: ${v("w_n")}`,`Email: ${v("w_e")}`,`Current title: ${v("w_t")}`,`Region: ${v("w_g")}`,`Sector: ${sec}`,`LinkedIn: ${v("w_l")}`];
+    const subj=side==="client"?`CTX join request: ${v("w_n")}${v("w_c")?", "+v("w_c"):""}`:`CTX join request: ${v("w_n")} (professional)`;
     const go=$("#w_go");go.disabled=true;go.textContent="Sending...";
     const done=()=>{form.style.display="none";$("#wdone").style.display="flex";
       $("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"You're in. Your private sign-in link comes by email and text the day the Exchange opens. Your details are never shared with any company.";$("#wd_f").hidden=true};
-    const fail=m=>{go.disabled=false;go.textContent="Request founding membership";const e=$("#w_err");e.innerHTML=`We couldn't save your request just now. Please try again, or email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a>.${m?` <span style="opacity:.7">(${m.replace(/[<>&]/g,"")})</span>`:""}`;e.style.display="block"};
+    const fail=m=>{go.disabled=false;go.textContent="Join the Exchange";const e=$("#w_err");e.innerHTML=`We couldn't save your request just now. Please try again, or email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a>.${m?` <span style="opacity:.7">(${m.replace(/[<>&]/g,"")})</span>`:""}`;e.style.display="block"};
     fetch(SB_URL+"/rest/v1/waitlist",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(row)})
       .then(async r=>{if(r.ok)return done();let m="Error "+r.status;try{const j=await r.json();m=j.message||j.hint||m}catch(e){}fail(m)}).catch(()=>fail("No connection"))};
 })();
