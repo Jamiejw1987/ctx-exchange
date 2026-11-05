@@ -1010,8 +1010,9 @@ function vShortlist(){
     <p class="muted">Browsing and shortlisting are anonymous and free. Starting a chat counts as a reveal, so it needs signed terms, or you can chat through Jamie and Connor while terms are sorted. A fee applies only when you hire.</p></div>
   <div class="cols"><div class="list">${items.length?items.map(x=>{const st=x.i?x.i.stage:0;return `<div class="item">
       <div class="line1"><div><b style="font-size:17px;font-family:var(--display);font-weight:600">${st>=3?esc(x.c.name):esc(x.c.user)}</b><div class="muted small">${LEVELS[x.c.lvl]} · ${esc(x.c.region)}</div></div>
-        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">${termsOK()?"Request introduction":"Sign terms to chat"}</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?(x.i.review==="pending"?`<span class="tag new">With Consumer Talent for review</span>`:x.i.review==="declined"?`<span class="tag">Not taken forward</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:x.i.review==="passed"?`<span class="tag">They declined</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:`<span class="tag new">Sent to them · waiting for their reply</span>`):`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
+        <div class="row">${st===0?`<button class="btn sm" data-intro="${x.c.id}">${termsOK()?"Request introduction":"Sign terms to chat"}</button><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:st===1?(x.i.review==="pending"?`<span class="tag new">With Consumer Talent for review</span>`:x.i.review==="declined"?`<span class="tag">Not taken forward</span><button class="btn quiet sm" data-rm="${x.c.id}">Remove</button>`:x.i.review==="passed"?`<span class="tag">Didn't want to move forward</span>`:`<span class="tag new">Sent to them · waiting for their reply</span>`):`<button class="btn sm" data-chat="${x.c.id}">Open conversation</button>`}</div></div>
       <div class="steps">${STEPS.map((s,i)=>`<div class="${i<=st?"on":""}">${s}</div>`).join("")}</div>
+      ${x.i&&x.i.review==="passed"?`<div class="protect"><span><b>${esc(refOf(x.c.user))} didn't want to move forward at this time.</b> Their identity stays private.</span></div><div class="row"><a class="btn sm" href="#pool">Explore other talent</a><a class="btn line sm" href="#foryou">See your matches</a><button class="btn quiet sm" data-rm="${x.c.id}">Close</button></div>`:""}
       ${st>=3?`<div class="protect">${lockIcon}<span><b>Protected introduction ${esc(x.i.ref)}.</b> Our fee applies to any hire of this person by ${esc(S.company.name||"your company")} or an associated company until <b>${fmtDay(plus12(new Date(x.i.revealedAt||x.i.at)))}</b>.</span></div>`:""}
     </div>`}).join(""):`<div class="empty"><h2>Your shortlist is empty</h2><p class="muted">Shortlist people from For you, Discover or the Talent pool.</p><a class="btn" href="#foryou">See who's picked for you</a></div>`}</div>
     <div class="card stack sticky"><h3>Activity record</h3><p class="muted small">Every view, shortlist, message, reveal and interview is time-stamped and kept as part of your agreement with Consumer Talent.</p>
@@ -1127,14 +1128,15 @@ function vChats(){
     <div class="thread">
       <div class="thead">
         <div class="line1" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><b style="font-family:var(--display);font-size:20px;font-weight:600">${esc(st>=3?c.name:c.user)}</b><div class="muted small">${LEVELS[c.lvl]} · ${esc(c.region)} · Ref ${esc(i.ref)}</div></div>
-          <div class="row">${st===2?(i.revealAsked&&!i.revealNo?`<span class="tag new">Waiting for them to agree</span>`:`<button class="btn sm" id="bReveal">Reveal identities</button>`):""}${st>=3&&st<5?`<button class="btn sm" id="bIv">Schedule interview</button><button class="btn line sm" id="bOffer">Report an offer</button>`:""}<button class="btn line sm" id="bFb">${i.fb&&i.fb.client?"Edit feedback":"Give feedback"}</button><button class="btn quiet sm" id="bProf">View profile</button></div></div>
+          <div class="row">${st===2&&!(i.priorRecent&&!i.priorDecision)&&!i.closed?(i.revealAsked&&!i.revealNo?`<span class="tag new">Waiting for them to agree</span>`:`<button class="btn sm" id="bReveal">Reveal identities</button>`):""}${st>=3&&st<5?`<button class="btn sm" id="bIv">Schedule interview</button><button class="btn line sm" id="bOffer">Report an offer</button>`:""}<button class="btn line sm" id="bFb">${i.fb&&i.fb.client?"Edit feedback":"Give feedback"}</button><button class="btn quiet sm" id="bProf">View profile</button></div></div>
         <div class="steps">${STEPS.map((s,k)=>`<div class="${k<=st?"on":""}">${s}</div>`).join("")}</div>
         ${st<3?`<div class="protect">${lockIcon}<span><b>Anonymous chat${i.brokered&&!termsOK()?" through Jamie and Connor":""}.</b> ${i.brokered&&!termsOK()?"Jamie and Connor at Consumer Talent are looking after this conversation until your terms are signed. ":""}Names, employers, emails, phone numbers and links are blocked until you both agree to reveal. ${termsOK()?"Your terms are in place, so you can reveal whenever you're both ready.":`You'll need agreed terms before revealing. ${TASTER==="candidate"?`<a href="#" data-invite>Ask us about terms</a>`:`<a href="#terms">Review terms</a>`}`}</span></div>`:""}
         ${st===5?`<div class="reveal"><span class="name">Placed</span><span>${esc(i.offer.summary)}</span></div>`:""}
+        ${i.priorRecent&&!i.priorDecision&&!i.closed?`<div class="card stack" style="border:2px solid var(--warn);padding:14px;gap:8px"><b>They've interviewed with you in the last six months</b><span class="small">${i.prior&&i.prior.who?`With ${esc(i.prior.who)}. `:""}${i.prior&&i.prior.outcome?`Outcome: ${esc(i.prior.outcome)}. `:""}${i.prior&&i.prior.detail?esc(i.prior.detail):""}</span><span class="muted small">Would you like to continue the conversation?</span><div class="row"><button class="btn sm" id="pdGo">Continue conversation</button><button class="btn line sm" id="pdEnd">End conversation</button></div></div>`:""}
       </div>
       <div class="msgs" id="msgs">${i.msgs.map(m=>m.f==="fb"?`<div class="fbcard"><b>Feedback from ${esc(m.from)}</b><span>${esc(m.t)}</span></div>`:m.f==="iv"?`<div class="ivcard"><b>Interview request · ${esc(m.fmt)}</b><span class="small">With ${esc(m.who)}. ${m.booked?`<b>Booked for ${esc(m.booked)}</b>`:`Waiting for ${esc(c.user)} to pick a time:`}</span>${m.booked?"":`<div class="row">${m.opts.map(o=>`<span class="tag">${esc(o)}</span>`).join("")}</div>`}</div>`
         :`<div class="m ${m.f}">${m.f==="ct"?`<span class="by">Consumer Talent</span>`:m.f==="them"?`<span class="by">${esc(st>=3?c.name.split(" ")[0]:c.user)}</span>`:""}${esc(m.t)}<span class="by" style="margin:4px 0 0;text-align:right">${esc(m.at||"")}</span></div>`).join("")}</div>
-      ${i.closed?`<div class="closedbar">${i.closed.by==="client"?"You went separate ways.":"They decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="${st<3?"Message anonymously...":"Write a message..."}" aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}
+      ${i.priorRecent&&!i.priorDecision&&!i.closed?`<div class="closedbar">Decide above whether to continue before chatting.</div>`:i.closed?`<div class="closedbar">${i.closed.by==="client"?"You went separate ways.":"They decided not to take this forward."} This conversation is closed.</div>`:`<form class="compose" id="cmp"><input type="text" id="cmpT" placeholder="${st<3?"Message anonymously...":"Write a message..."}" aria-label="Message" autocomplete="off"><button class="btn" type="submit">Send</button></form>`}
     </div>
   </div>`;
   const box=$("#msgs");box.scrollTop=box.scrollHeight;
@@ -1145,6 +1147,8 @@ function vChats(){
     i.msgs.push({f:"me",t:v,at:tnow()});save();vChats();
     setTimeout(()=>{i.msgs.push({f:"them",t:REPLIES[i.msgs.length%REPLIES.length],at:tnow()});save();if(view()==="chats"&&S.activeChat===id)vChats()},1600)});
   const rv=$("#bReveal");if(rv)rv.onclick=()=>termsOK()?doReveal(id):openTermsGate(()=>doReveal(id));
+  const pg=$("#pdGo");if(pg)pg.onclick=()=>{i.priorDecision="continue";logEvent(`Chose to continue with ${refOf(c.user)} after their recent interview was declared`,S.company.contact);autoReveal(i,c,"You chose to continue.");notify("cand",`${S.company.name||"The company"} would like to continue the conversation`,"messages");save();vChats();counts()};
+  const pe=$("#pdEnd");if(pe)pe.onclick=()=>{i.priorDecision="end";i.closed={by:"client",at:Date.now()};logEvent(`Ended the conversation with ${refOf(c.user)} after their recent interview was declared`,S.company.contact);notify("cand",`${S.company.name||"The company"} has decided not to continue this time`,"introductions");notify("admin",`${S.company.name||"A client"} ended the chat with ${refOf(c.user)} after a recent interview was declared (${i.ref})`,"intros");save();vChats();counts();toast("Conversation ended")};
   const iv=$("#bIv");if(iv)iv.onclick=()=>scheduleIv(id);
   const of=$("#bOffer");if(of)of.onclick=()=>reportOffer(id);
 }
@@ -1323,7 +1327,7 @@ function openTermsGate(onDone,chaseRef,onBroker){
   const sb=$("#sBroker");if(sb)sb.onclick=()=>{layer.innerHTML="";notify("admin",`${S.company.name||"A client"} is chatting through you while their terms are unsigned. Look after the conversation and get terms signed.`,"intros");logEvent("Chose to chat through Jamie and Connor until terms are signed",S.company.contact);onBroker()};
   $("#sGo").onclick=()=>{const m=missing();if(m.length){err("To sign, add "+m.join(", ")+".");$("#sErr").scrollIntoView({block:"center",behavior:"smooth"});return}
     if(S.sigReq&&S.sigReq.status==="sent"){S.sigReq.status="superseded";logEvent(`Signed directly, so the request sent to ${S.sigReq.name} was cancelled`,$("#sName").value.trim())}
-    S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);issueAgreement("Standard terms",{...STD},S.terms,onDone)};
+    S.company.email=$("#sEmail").value.trim();S.terms={name:$("#sName").value.trim(),title:$("#sTitle").value.trim(),email:S.company.email,at:Date.now()};logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title}`,S.terms.name);revealSignedChats();issueAgreement("Standard terms",{...STD},S.terms,onDone)};
 }
 function agreementDoc(a){const T=a.tiers,dt=new Date(a.at);const when=dt.toLocaleString([], {day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
   return `<div class="doc" id="printDoc"><div><span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A7A55;font-weight:700">Consumer Talent Exchange</span><h3>Signed terms of engagement</h3></div>
@@ -1377,7 +1381,7 @@ function vSign(){
   if(box)box.addEventListener("scroll",()=>{if(box.scrollTop+box.clientHeight>=box.scrollHeight-8&&!read){read=true;$("#scrollNote").textContent="Thanks for reading the terms.";upd()}});
   ["sgN","sgJ"].forEach(i=>$("#"+i).oninput=upd);["sgA","sgR"].forEach(i=>$("#"+i).onchange=upd);
   $("#sgGo").onclick=()=>{S.terms={name:$("#sgN").value.trim(),title:$("#sgJ").value.trim(),email:r.email,at:Date.now()};r.status="signed";r.signedAt=Date.now();
-    logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title} (via signing link)`,S.terms.name);
+    logEvent(`Terms of business signed by ${S.terms.name}, ${S.terms.title} (via signing link)`,S.terms.name);revealSignedChats();
     notify("client",`${S.terms.name} signed the terms. You can now reveal candidates.`,"terms");notify("admin",`${S.company.name} terms signed by ${S.terms.name}, ${S.terms.title}`,"clients");
     issueAgreement("Standard terms",{...STD},S.terms,()=>vSign())};
 }
@@ -1605,41 +1609,54 @@ function moveForm(kind){const p=S.cand;
     p.lastCheck=Date.now();if(kind==="pause")p.paused={co,at:Date.now(),why:S.pauseWhy||"I've accepted a new role"};else p.open="Quietly exploring";
     save();layer.innerHTML="";vProfile();toast(kind==="pause"?"Your profile is paused":"Thanks for letting us know")}}
 function fmtSize(b){return b>=1048576?(b/1048576).toFixed(1)+"MB":Math.max(1,Math.round(b/1024))+"KB"}
+function autoReveal(i,c,why){if(i.stage!==2||i.brokered&&!termsOK())return;i.stage=3;i.revealedAt=Date.now();
+  i.msgs.push({f:"sys",t:`${why} You can now see who you're talking to: ${c.name}. Everything in this chat is logged on your activity record. Protected introduction ${i.ref} runs until ${fmtDay(plus12(new Date()))}.`,at:tnow()});
+  logEvent(`Names shared: ${refOf(c.user)} is ${c.name} (${i.ref})`,"Consumer Talent")}
+function revealSignedChats(){Object.entries(S.intros).forEach(([k,i])=>{const c=POOL.find(p=>p.id===k);if(c&&i.stage===2&&!i.closed&&(!i.priorRecent||i.priorDecision==="continue")){i.brokered=false;autoReveal(i,c,"Your terms are now signed.");notify("client",`Terms signed. You can now see ${c.name}'s name in your chat.`,"chats")}})}
 function linkAccept(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.stage=2;i.acceptedAt=Date.now();
-  i.msgs.push({f:"ct",t:`Good news: ${refOf(c.user)} has accepted your introduction.${i.prior&&i.prior.prior==="No"?" They've confirmed they haven't interviewed with you before, so this is a protected introduction.":""} You can chat here anonymously. Contact details are hidden until you both agree to reveal. I'm here if you need anything. Jamie, Consumer Talent`,at:tnow()});
-  logEvent(`${refOf(c.user)} accepted the introduction. Anonymous chat opened`,"Professional");
-  notify("client",`${refOf(c.user)} accepted your introduction. Your conversation is open.`,"chats");
-  notify("admin",`${refOf(c.user)} accepted ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
+  const p=i.prior||{},recent=p.prior==="Yes";i.priorRecent=recent;
+  const named=termsOK()&&!i.brokered,nm=named&&!recent?c.name:refOf(c.user);
+  if(recent){
+    i.msgs.push({f:"ct",t:`${nm} has accepted your request to chat, and told us they interviewed with you in the last six months${p.who?`, with ${p.who}`:""}${p.outcome?`. Outcome: ${p.outcome}`:""}${p.detail?` (${p.detail})`:""}. Please decide whether you'd like to continue the conversation. Jamie, Consumer Talent`,at:tnow()});
+    logEvent(`${refOf(c.user)} accepted and declared an interview with you in the last six months${p.who?" with "+p.who:""}${p.outcome?" ("+p.outcome+")":""}`,"Professional");
+    notify("client",`${nm} accepted, but has interviewed with you in the last six months${p.who?" (with "+p.who+")":""}. Decide whether to continue.`,"chats");
+  }else{
+    i.msgs.push({f:"ct",t:`Good news: ${nm} has accepted your request to chat and confirmed they haven't interviewed with you in the last six months.${named?"":" Names stay hidden until your terms are signed, and Jamie and Connor are looking after this conversation."} Everything here is logged. Jamie, Consumer Talent`,at:tnow()});
+    logEvent(`${refOf(c.user)} accepted the request to chat (no interview with you in the last six months)`,"Professional");
+    notify("client",`${nm} accepted your request to chat. Your conversation is open.`,"chats");
+    if(named)autoReveal(i,c,"Terms are signed and they've accepted.");
+  }
+  notify("admin",`${refOf(c.user)} accepted ${S.company.name||"the client"}'s request to chat (${i.ref})${recent?". They interviewed there in the last six months.":""}`,"intros")}
 function linkDecline(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.review="passed";
-  logEvent(`${refOf(c.user)} declined the introduction`,"Professional");
-  notify("client",`${refOf(c.user)} has decided not to take this one forward. Their identity stays private.`,"shortlist");
-  notify("admin",`${refOf(c.user)} declined ${S.company.name||"the client"}'s introduction (${i.ref})`,"intros")}
-function priorCheck(rid,onAccept){const r=S.creqs.find(x=>x.id===rid),co=reqCo(r),F={pq1:"",pq3:""};
+  logEvent(`${refOf(c.user)} declined the request to chat`,"Professional");
+  notify("client",`${refOf(c.user)} didn't want to move forward at this time. Their identity stays private.`,"shortlist");
+  notify("admin",`${refOf(c.user)} declined ${S.company.name||"the client"}'s request to chat (${i.ref})`,"intros")}
+function priorCheck(rid,onAccept){const r=S.creqs.find(x=>x.id===rid),co=reqCo(r),F={pq1:"",outcome:""};
+  const OUT=["I was offered the role","I wasn't taken forward","I withdrew","Still in process","Other"];
   const draw=()=>{const yes=F.pq1==="Yes";
     layer.innerHTML=`<div class="scrim"><form class="modal" id="pcF" role="dialog" aria-modal="true" aria-labelledby="pcT" style="max-width:480px" novalidate>
-      <div class="row" style="flex-wrap:nowrap;gap:12px">${coLogo(co)}<div class="stack" style="gap:2px"><span class="kicker">Introduction request</span><h2 id="pcT" style="margin:0">${esc(co.name)}</h2><span class="muted small">${esc(r.role)}${r.base?" · "+esc(r.base):""}</span></div></div>
-      <p class="muted small">Three quick questions before you respond. ${esc(co.name)} still won't learn who you are unless you both agree to reveal.</p>
-      <div class="field">1. Have you interviewed with ${esc(co.name)} before?${picks("pq1",["Yes","No"],F.pq1,{radio:true})}</div>
-      ${yes?`<label class="field">2. When was it? <small>The month is fine if you're not sure of the date.</small><input type="month" id="pcW" max="${new Date().toISOString().slice(0,7)}" value="${esc(F.when||"")}"></label>`:""}
-      <div class="field">${yes?"3":"2"}. Would you like to speak with them ${yes?"again":"about this role"}?${picks("pq3",["Yes","No"],F.pq3,{radio:true})}</div>
-      <label class="check"><input type="checkbox" id="pcOk" ${F.ok?"checked":""}><span>My answers are accurate. Consumer Talent keeps them on the introduction record.</span></label>
+      <div class="row" style="flex-wrap:nowrap;gap:12px">${coLogo(co)}<div class="stack" style="gap:2px"><span class="kicker">Accept request to chat</span><h2 id="pcT" style="margin:0">${esc(co.name)}</h2><span class="muted small">${esc(r.role)}${r.base?" · "+esc(r.base):""}</span></div></div>
+      <p class="muted small">A quick check before your chat opens. Your answers go on the introduction record.</p>
+      <div class="field">Have you interviewed with ${esc(co.name)} in the last six months?${picks("pq1",["Yes","No"],F.pq1,{radio:true})}</div>
+      ${yes?`<label class="field">Who did you interview with? <small>Their name or job title</small><input type="text" id="pcWho" value="${esc(F.who||"")}" placeholder="e.g. Sarah Lee, Head of Sales"></label>
+      <label class="field">What was the outcome?<select id="pcOut"><option value="">Choose one</option>${OUT.map(o=>`<option ${o===F.outcome?"selected":""}>${o}</option>`).join("")}</select></label>
+      <label class="field">Anything else? <small>Optional</small><input type="text" id="pcDet" value="${esc(F.detail||"")}" placeholder="e.g. Second round in March"></label>`:""}
+      <label class="check"><input type="checkbox" id="pcOk" ${F.ok?"checked":""}><span>My answers are accurate.</span></label>
       <p class="small" id="pcE" style="color:var(--bad);display:none"></p>
-      <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="pcX">Cancel</button><button class="btn" type="submit">Continue</button></div></form></div>`;
-    bindPicks(layer,F,()=>{const w=$("#pcW");if(w)F.when=w.value;F.ok=$("#pcOk").checked;draw()});
+      <div class="row" style="justify-content:flex-end"><button type="button" class="btn line" id="pcX">Cancel</button><button class="btn good" type="submit">Accept and open chat</button></div></form></div>`;
+    const keep=()=>{const w=$("#pcWho");if(w){F.who=w.value;F.outcome=$("#pcOut").value;F.detail=$("#pcDet").value}F.ok=$("#pcOk").checked};
+    bindPicks(layer,F,()=>{keep();draw()});
     $("#pcX").onclick=()=>layer.innerHTML="";
-    $("#pcF").onsubmit=e=>{e.preventDefault();const err=m=>{const x=$("#pcE");x.textContent=m;x.style.display="block"};const w=$("#pcW");if(w)F.when=w.value;
-      if(!F.pq1)return err("Tell us whether you've interviewed with them before.");
-      if(yes&&!F.when)return err("Tell us roughly when you interviewed with them.");
-      if(!F.pq3)return err("Tell us whether you'd like to speak with them.");
-      if(!$("#pcOk").checked)return err("Tick to confirm your answers are accurate.");
-      const whenLabel=F.when?new Date(F.when+"-01T12:00:00").toLocaleDateString([], {month:"long",year:"numeric"}):"";
-      const decl={prior:F.pq1,when:F.when||"",whenLabel,want:F.pq3,at:Date.now()};r.prior=decl;const i=r.intro?S.intros[r.intro]:null,c=r.intro?POOL.find(x=>x.id===r.intro):null;if(i)i.prior=decl;
+    $("#pcF").onsubmit=e=>{e.preventDefault();keep();const err=m=>{const x=$("#pcE");x.textContent=m;x.style.display="block"};
+      if(!F.pq1)return err("Tell us whether you've interviewed with them in the last six months.");
+      if(yes&&!F.who.trim())return err("Tell us who you interviewed with.");
+      if(yes&&!F.outcome)return err("Tell us what the outcome was.");
+      if(!F.ok)return err("Tick to confirm your answers are accurate.");
+      const decl={prior:F.pq1,who:(F.who||"").trim(),outcome:F.outcome,detail:(F.detail||"").trim(),window:"last six months",at:Date.now()};r.prior=decl;const i=r.intro?S.intros[r.intro]:null,c=r.intro?POOL.find(x=>x.id===r.intro):null;if(i)i.prior=decl;
       const tag=c?refOf(c.user):refOf(S.cand.user);
-      logEvent(F.pq1==="Yes"?`${tag} declared a previous interview with ${co.name} in ${whenLabel}`:`${tag} confirmed no previous interview with ${co.name}`,"Professional");
-      if(F.pq1==="Yes")notify("admin",`${tag} says they interviewed with ${co.name} in ${whenLabel}${F.pq3==="Yes"?" and would like to speak again. Check the fee position before reveal.":" and doesn't want to speak again."}`,"intros");
-      layer.innerHTML="";
-      if(F.pq3==="Yes"){onAccept(rid);return}
-      r.status="no";if(r.intro)linkDecline(r);save();counts();vRequests();toast(`Declined. ${co.name} won't learn who you are.`)}};
+      logEvent(F.pq1==="Yes"?`${tag} declared an interview with ${co.name} in the last six months (with ${decl.who}; ${decl.outcome})`:`${tag} confirmed no interview with ${co.name} in the last six months`,"Professional");
+      if(F.pq1==="Yes")notify("admin",`${tag} interviewed with ${co.name} in the last six months (with ${decl.who}; ${decl.outcome}). Check the fee position.`,"intros");
+      layer.innerHTML="";onAccept(rid)}};
   draw()}
 function reqCo(r){return r.co===S.company.name||r.id==="q1"?{...S.company,stage:r.stage,anon:false}:{name:r.co,logo:"",anon:false,stage:r.stage,cats:[]}}
 function vRequests(){
@@ -1647,20 +1664,21 @@ function vRequests(){
   <div class="list" style="max-width:760px">${S.creqs.filter(r=>!proBlocks(r.co)).map(r=>{const co=reqCo(r);return `<div class="item">
     <div class="line1"><div class="row" style="flex-wrap:nowrap">${co.anon?CTX_LOGO:coLogo(co)}<div><b style="font-size:17px;font-family:var(--display);font-weight:600">${esc(coDisplay(co))}</b><div class="muted small">${STAGES[r.stage]} · ${co.anon?"Location shared on reveal":esc(r.hq)}</div></div></div>
       ${r.status==="new"?`<span class="tag new">New request</span>`:r.status==="yes"?`<span class="tag hit">You accepted</span>`:`<span class="tag">Declined</span>`}</div>
-    ${r.prior?`<p class="muted small">${r.prior.prior==="Yes"?`You told us you interviewed with them in ${esc(r.prior.whenLabel)}.`:"You confirmed you haven't interviewed with them before."}</p>`:""}
+    ${r.prior?`<p class="muted small">${r.prior.prior==="Yes"?`You told us you interviewed with them in the last six months${r.prior.who?", with "+esc(r.prior.who):""}${r.prior.outcome?" ("+esc(r.prior.outcome)+")":""}.`:"You confirmed you haven't interviewed with them in the last six months."}</p>`:""}
     <div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>
     <p class="small">${esc(r.why)}</p>
     ${co.anon?`<div class="protect">${lockIcon}<span>This company has chosen to stay anonymous until you both agree to reveal.</span></div>`:""}
-    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Respond</button><button class="btn line" data-no="${r.id}">Not for me</button></div>`:
+    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept</button><button class="btn line" data-no="${r.id}">Decline</button></div>`:
       r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
   </div>`}).join("")}</div>`;
   const acceptReq=yid=>{const r=S.creqs.find(x=>x.id===yid);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
-    S.cthreads[r.id]=[{f:"ct",t:`You accepted ${coDisplay(co)}'s introduction. Chat here anonymously. They won't see your name or employer unless you both agree to reveal. Jamie, Consumer Talent`,at:tnow()},
+    const ii=r.intro?S.intros[r.intro]:null,named=termsOK()&&!(ii&&ii.brokered);
+    S.cthreads[r.id]=[{f:"ct",t:named?`You accepted ${co.name}'s request to chat. Their terms are signed, so they can now see your name, and you're talking directly with ${co.name}. Everything here is logged on the introduction record. Jamie, Consumer Talent`:`You accepted ${coDisplay(co)}'s request to chat. Both sides stay anonymous until their terms are signed, and Jamie and Connor are looking after the conversation. Jamie, Consumer Talent`,at:tnow()},
       {f:"them",t:`Thanks for accepting. We'd love to tell you more about the ${r.role} role. Would a 30-minute video call work?`,at:tnow()},
       {f:"iv",fmt:"Video call in the Exchange",who:co.anon?"Hiring manager":S.company.contact,opts:nextDays().map((d,k)=>{d.setHours([10,14,16][k],0,0,0);return d.toLocaleString([], {weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}),booked:null}];
     S.cthread=r.id;save();counts();location.hash="messages";toast("Accepted. Your conversation is open.")};
   app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.yes,acceptReq));
-  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{const rr=S.creqs.find(r=>r.id===b.dataset.no);rr.status="no";if(rr.intro)linkDecline(rr);save();vRequests();counts();toast("Declined. The company won't see who you are.")});
+  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>{const rr=S.creqs.find(r=>r.id===b.dataset.no);rr.status="no";if(rr.intro)linkDecline(rr);save();vRequests();counts();toast("Declined. They'll be told you didn't want to move forward at this time.")});
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.go});
 }
 function vCandMsgs(){
