@@ -105,7 +105,7 @@ main{padding-block:28px 72px}
 /* forms */
 .field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}
 .field small{font-weight:400;color:var(--muted)}
-input[type=text],input[type=email],input[type=tel],input[type=number],select,textarea{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;width:100%}
+input[type=text],input[type=email],input[type=tel],input[type=number],input[type=password],input[type=search],select,textarea{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--brand-2);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-2) 20%,transparent)}
 textarea{resize:vertical;min-height:90px}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -2655,11 +2655,13 @@ function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||"null");if(!
   refN=41+Object.keys(S.intros).length}catch(e){}}
 if(TASTER==="client"){Object.assign(S.company,{members:[],auth:null,name:"",site:"",hq:"",size:"",tagline:"",about:"",why:"",contact:"",contactTitle:"",logo:"",roles:[],levels:[],regions:[],retailers:[],cats:[],kw:[]});S.alerts.email_to="";S.alerts.phone=""}
 if(TASTER==="candidate"){Object.assign(S.cand,{current:"",headline:"",summary:"",hl:["","",""],retailers:[],prefCats:[],dream:"",kw:[],hide:""})}
+if(!window.CTX_LIVE){
 load();
 $("#bell").onclick=openBell;
 if(!TASTER&&sbGet())loadWL().then(()=>counts());
 window.addEventListener("hashchange",render);
 render();
+}
 if(TASTER){
   $("#tbHome").href=/\/(client|professionals)\/?(index\.html)?$/.test(location.pathname)?"../":"./";
   $("#demoTxt").textContent="Preview · the professionals and companies you'll see are fictional samples";

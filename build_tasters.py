@@ -17,3 +17,18 @@ for folder, side, name in [("client", "client", "CTX for hiring teams"), ("profe
              icons=[dict(i, src="../" + i["src"]) for i in base["icons"]])
     json.dump(m, open(f"{folder}/manifest.webmanifest", "w"), indent=2)
     print("built", folder)
+
+# ---- live app: real accounts and data on Supabase ----
+live = src.replace(taster_line, "const TASTER=null;")
+for a, b in [('href="icon-180.png"', 'href="../icon-180.png"'),
+             ('href="icon-192.png"', 'href="../icon-192.png"'),
+             ('serviceWorker.register("sw.js")', 'serviceWorker.register("../sw.js")'),
+             ('<meta name="apple-mobile-web-app-title" content="CTX">', '<meta name="apple-mobile-web-app-title" content="CTX Exchange">'),
+             ('\n<script>\nconst SC=', '\n<script src="../supabase-js.min.js"></script>\n<script>window.CTX_LIVE=true</script>\n<script>\nconst SC='),
+             ('</script>\n\n<script>if("serviceWorker"', '</script>\n<script>\n' + open("live.js", encoding="utf8").read() + '\n</script>\n\n<script>if("serviceWorker"')]:
+    assert live.count(a) == 1, a
+    live = live.replace(a, b)
+os.makedirs("exchange", exist_ok=True)
+open("exchange/index.html", "w", encoding="utf8").write(live)
+json.dump(dict(base, name="Consumer Talent Exchange", start_url="./", scope="./", icons=[dict(i, src="../" + i["src"]) for i in base["icons"]]), open("exchange/manifest.webmanifest", "w"), indent=2)
+print("built exchange (live)")
