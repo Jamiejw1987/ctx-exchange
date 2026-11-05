@@ -314,6 +314,7 @@ function vAuth(){const mode=L.authMode||"in",side=L.authSide||"pro";
       <label class="field">Email<input type="email" id="auE" required autocomplete="email"></label>
       <label class="field">Password <small>${mode==="up"?"At least 8 characters":""}</small><input type="password" id="auP" required minlength="${mode==="up"?8:1}" autocomplete="${mode==="up"?"new-password":"current-password"}"></label>
       <p class="small" id="auErr" style="color:var(--bad);display:none"></p>
+      ${mode==="up"?`<p class="muted small" style="margin:0">By joining you agree to our <a href="../terms/" target="_blank">terms of use</a> and <a href="../privacy/" target="_blank">privacy policy</a>.</p>`:""}
       <button class="btn" type="submit" style="justify-content:center">${mode==="in"?"Sign in":side==="pro"?"Create my free profile":"Create company account"}</button>
     </form>
     ${mode==="in"?`<p class="small" style="text-align:center;margin:-4px 0 0"><a href="#" id="auFg">Forgot your password?</a></p>`:""}
