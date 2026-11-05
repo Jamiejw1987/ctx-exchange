@@ -1389,9 +1389,9 @@ function termsHTML(){
     <p>These terms add to the Consumer Talent Group contingent terms of business, which apply in full to every candidate introduced through the Exchange. Browsing anonymous profiles and shortlisting are free. <b>Starting a chat with a professional counts as a reveal</b>, so these terms must be signed before you request an introduction.</p>
     <h4>1. When an introduction starts</h4>
     <ol>
-      <li>A candidate counts as introduced by Consumer Talent from the moment you <b>request an introduction to chat with them</b>, which counts as a reveal, or once you've seen their name and full profile, whichever comes first. <span class="cite">(Terms 2.2)</span></li>
+      <li>A candidate counts as introduced by Consumer Talent the moment <b>they accept your request to chat</b>. They see your company name when you ask, so from that point the introduction is ours, whether or not you've seen their name yet. <span class="cite">(Terms 2.2)</span></li>
       <li>Each introduction lasts <b>12 months from your most recent interaction</b> with that candidate, including views, messages and interviews. <span class="cite">(Terms 2.2)</span></li>
-      <li>This applies even if you later identify or find the candidate yourself, through LinkedIn, another agency, a referral or any other route, and whether or not we are the effective cause of the hire. <span class="cite">(Terms 2.2)</span></li>
+      <li>If you hire an introduced candidate within that time, our fee is due. This applies even if <b>the candidate contacts you directly</b>, or you identify or find them yourself through LinkedIn, another agency, a referral or any other route, and whether or not we are the effective cause of the hire. <span class="cite">(Terms 2.2)</span></li>
       <li>When you request an introduction, the professional sees your company name and confirms whether they've interviewed with you before. Previous contact is only taken into account if it's declared at that point. <span class="cite">(Terms 2.2)</span></li>
     </ol>
     <h4>2. When our fee is due</h4>
@@ -1750,7 +1750,8 @@ function linkAccept(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);
     notify("client",`${nm} accepted your request to chat. Your conversation is open.`,"chats");
     if(named)autoReveal(i,c,"Terms are signed and they've accepted.");
   }
-  notify("admin",`${refOf(c.user)} accepted ${S.company.name||"the client"}'s request to chat (${i.ref})${recent?". They interviewed there in the last six months.":""}`,"dash")}
+  i.msgs.push({f:"sys",t:`Introduction made. Protected introduction ${i.ref} runs until ${fmtDay(plus12(new Date()))}, 12 months from your latest interaction. If you hire them in that time, our fee applies, including if either of you gets in touch directly.`,at:tnow()});
+  notify("admin",`Introduction made: ${refOf(c.user)} accepted ${S.company.name||"the client"}'s request to chat (${i.ref}). Protected until ${fmtDay(plus12(new Date()))}.${recent?" They interviewed there in the last six months.":""}`,"protect")}
 function linkDecline(r){const i=S.intros[r.intro],c=POOL.find(p=>p.id===r.intro);if(!i||!c)return;i.review="passed";
   logEvent(`${refOf(c.user)} declined the request to chat`,"Professional");
   notify("client",`${refOf(c.user)} didn't want to move forward at this time. Their identity stays private.`,"shortlist");
@@ -1792,7 +1793,7 @@ function vRequests(){
     ${r.role?`<div class="openrole"><b>${esc(r.role)}</b><span class="num">${esc(r.base)}</span></div>`:`<p class="small"><b>${esc(co.name)}</b> would like to have a chat with you.</p>`}
     ${r.role?`<p class="small">${esc(r.why)}</p>`:""}
     ${co.anon?`<div class="protect">${lockIcon}<span>This company has chosen to stay anonymous until you both agree to reveal.</span></div>`:""}
-    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept</button><button class="btn line" data-no="${r.id}">Decline</button></div>`:
+    ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept</button><button class="btn line" data-no="${r.id}">Decline</button></div><p class="muted small" style="margin:0">Accepting counts as an introduction through the Exchange. Please keep all contact with ${esc(coDisplay(co))} here, so everything stays on record.</p>`:
       r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
   </div>`}).join("")}</div>`;
   const acceptReq=yid=>{const r=S.creqs.find(x=>x.id===yid);r.status="yes";const co=reqCo(r);if(r.intro)linkAccept(r);
@@ -2396,7 +2397,7 @@ function sampleHistory(){if(HIST)return HIST;const cos=["Harbor & Pine Confectio
   out.push({pid:POOL[0].id,co:"Harbor & Pine Confectionery",ev:[{at:Date.now()-132*day,what:"Viewed anonymous profile"},{at:Date.now()-131*day,what:"Shortlisted"},{at:Date.now()-126*day,what:"Identities revealed, name and full profile seen"}]});
   POOL.slice(1,160).forEach((c,i)=>{const h=hash(c.id+"hist");if(h%4)return;const co=cos[h%cos.length],k=kinds[(h>>>3)%5],start=Date.now()-((h>>>5)%440+3)*day;out.push({pid:c.id,co,ev:k.map((w,j)=>({at:start+j*2*day,what:w}))})});
   return HIST=out}
-const isReveal=e=>/identit(y|ies) revealed/i.test(e.what);
+const isReveal=e=>/identit(y|ies) revealed|introduction accepted|accepted the request to chat|accepted and declared|names shared|^revealed ref|started a chat through consumer talent/i.test(e.what);
 function register(){const live=Object.entries(S.touch).filter(([id])=>DATA.some(p=>p.id===id)).map(([id,t])=>({pid:id,co:t.co,ev:t.ev,live:true}));
   return [...live,...sampleHistory()].map(r=>{const c=DATA.find(p=>p.id===r.pid),last=Math.max(...r.ev.map(e=>e.at)),until=plus12(new Date(last)),revealed=r.ev.some(isReveal);return {...r,c,last,until,revealed,on:revealed&&until>new Date()}}).sort((a,b)=>b.last-a.last)}
 function coContact(co){if(sameCo(co,S.company.name||"Northfield Snack Co."))return S.company.contact||"there";const a=CLIENT_ACCOUNTS.find(x=>sameCo(x.co,co));return a?a.members[0][0]:"there"}
@@ -2412,7 +2413,7 @@ We understand ${c.name} has joined ${r.co}${m&&m.title?` as ${m.title}`:""}${m&&
 ${c.name} was introduced to ${r.co} through the Consumer Talent Exchange:
 ${r.ev.map(e=>`  • ${fmtDay(new Date(e.at))}: ${e.what}`).join("\n")}
 
-Under clause 2.2 of our terms${ag?` (signed ${fmtDay(new Date(ag.at))}, ref ${ag.ref})`:""}, an introduction stays protected for 12 months from the most recent interaction, in this case until ${fmtDay(r.until)}. Our fee of ${f.pc}% of first-year remuneration therefore applies. On an estimated package of $${f.v.toLocaleString()}, that's $${f.fee.toLocaleString()}.
+Under clause 2.2 of our terms${ag?` (signed ${fmtDay(new Date(ag.at))}, ref ${ag.ref})`:""}, an introduction starts when the candidate accepts a request to chat and stays protected for 12 months from the most recent interaction, including any direct contact outside the Exchange, in this case until ${fmtDay(r.until)}. Our fee of ${f.pc}% of first-year remuneration therefore applies. On an estimated package of $${f.v.toLocaleString()}, that's $${f.fee.toLocaleString()}.
 
 Could you confirm ${c.name.split(" ")[0]}'s start date and package so we can raise the invoice?
 
@@ -2431,12 +2432,12 @@ function showClaim(r,m){const txt=claimText(r,m),f=feeFor(r.c,r.co);
 function evidenceHTML(m){const {regs,hits}=matchMove(m);const c=DATA.find(p=>normName(p.name)===normName(m.name));
   if(!c)return `<div class="alert ok"><span><b>No member called ${esc(m.name)}.</b> They've never been on the Exchange, so there's nothing to claim.</span></div>`;
   if(!regs.length)return `<div class="alert ok"><span><b>${esc(c.name)} (${esc(refOf(c.user))}) is a member, but no client has interacted with them.</b></span></div>`;
-  const hitHTML=hits.length?hits.map(r=>`<div class="item" style="border-color:${r.on?"rgba(255,122,110,.5)":"var(--line)"}"><div class="line1"><b>${esc(r.co)}</b><span class="tag ${r.on?"new":""}">${r.on?`Protected until ${fmtDay(r.until)}`:!r.revealed?"Anonymous only":`Protection ended ${fmtDay(r.until)}`}</span></div>
+  const hitHTML=hits.length?hits.map(r=>`<div class="item" style="border-color:${r.on?"rgba(255,122,110,.5)":"var(--line)"}"><div class="line1"><b>${esc(r.co)}</b><span class="tag ${r.on?"new":""}">${r.on?`Protected until ${fmtDay(r.until)}`:!r.revealed?"Not introduced":`Protection ended ${fmtDay(r.until)}`}</span></div>
       <ul class="evl">${r.ev.map(e=>`<li><span>${fmtDay(new Date(e.at))}</span><span>${esc(e.what)}</span></li>`).join("")}</ul>
-      ${r.on?`<div class="row"><button class="btn sm" data-claim="${esc(r.pid)}|${esc(r.co)}">Draft fee claim</button></div>`:`<p class="muted small">${!r.revealed?"They never saw this person's name or full profile on the Exchange, so no fee is due.":"Outside the 12-month window, so no fee is due under the standard terms."}</p>`}</div>`).join("")
+      ${r.on?`<div class="row"><button class="btn sm" data-claim="${esc(r.pid)}|${esc(r.co)}">Draft fee claim</button></div>`:`<p class="muted small">${!r.revealed?"This person never accepted a chat with them through the Exchange, so there's no introduction and no fee is due.":"Outside the 12-month window, so no fee is due under the standard terms."}</p>`}</div>`).join("")
     :`<div class="alert ok"><span><b>${esc(m.co)} never interacted with ${esc(c.name)} on the Exchange.</b></span></div>`;
   const others=regs.filter(r=>!hits.includes(r));
-  return hitHTML+(others.length?`<p class="muted small">Other clients who've interacted with ${esc(c.name)}: ${others.map(r=>`${esc(r.co)} (${r.on?"protected":!r.revealed?"anonymous only":"expired"})`).join(", ")}.</p>`:"")}
+  return hitHTML+(others.length?`<p class="muted small">Other clients who've interacted with ${esc(c.name)}: ${others.map(r=>`${esc(r.co)} (${r.on?"protected":!r.revealed?"not introduced":"expired"})`).join(", ")}.</p>`:"")}
 const SAMPLE_MOVES=()=>{const R=sampleHistory(),a=POOL[0],exp=R.find(r=>!plus12(new Date(Math.max(...r.ev.map(e=>e.at))))||(plus12(new Date(Math.max(...r.ev.map(e=>e.at))))<new Date())),act=R.slice(1).find(r=>plus12(new Date(Math.max(...r.ev.map(e=>e.at))))>new Date()&&r.ev.some(isReveal));
   const pe=exp?DATA.find(p=>p.id===exp.pid):POOL[5],pa=act?DATA.find(p=>p.id===act.pid):POOL[7];
   const dd=n=>new Date(Date.now()-n*864e5).toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"});
@@ -2450,7 +2451,7 @@ const PF2={q:"",shown:20};
 function vProtect(){
   const reg=register(),flagged=S.moves.map(m=>({m,...matchMove(m)})).filter(x=>x.hits.some(r=>r.on));
   const q=normName(PF2.q),shown=reg.filter(r=>!q||normName(r.c.name+" "+r.co+" "+r.c.user).includes(q));
-  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Protection</span><h1>Protected introductions</h1><p class="muted">Every client's interactions with every professional. Protection starts once a client has seen the professional's name and full profile, and runs 12 months from the last interaction. Check any move against it, or import job-change alerts and let the app find matches.</p></div>
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Protection</span><h1>Protected introductions</h1><p class="muted">Every client's interactions with every professional. Protection starts the moment a professional accepts a client's request to chat. That's the introduction. It runs 12 months from the last interaction, and a fee is due on any hire in that time, even if the professional or the client makes contact directly. Check any move against it, or import job-change alerts and let the app find matches.</p></div>
   <div class="stack" style="max-width:860px;gap:16px">
     <div class="pstats"><div><b class="num">${reg.filter(r=>r.on).length}</b><span>Protected pairs</span></div><div><b class="num">${flagged.length}</b><span>Moves needing action</span></div><div><b class="num">${S.claims.length}</b><span>Claims logged</span></div></div>
     ${flagged.length?`<div class="card stack"><h2>Moves needing action</h2>${flagged.map(({m,hits})=>hits.filter(r=>r.on).map(r=>`<div class="item" style="border-color:rgba(255,122,110,.5)"><div class="line1"><div><b>${esc(r.c.name)} → ${esc(m.co)}</b><div class="muted small">${esc(m.title||LEVELS[r.c.lvl])}${m.date?` · from ${esc(m.date)}`:""} · ${esc(m.src)}</div></div><span class="tag new">Protected until ${fmtDay(r.until)}</span></div>
@@ -2465,10 +2466,10 @@ function vProtect(){
       <div><button class="btn" type="submit">Check</button></div><div id="cmOut" class="stack" style="gap:10px"></div></form>
     <div class="card stack"><h2>Import job-change alerts</h2><p class="muted small">Export job changes from Apollo or a LinkedIn Recruiter project as a CSV and drop it here. Every move is checked against the register automatically. Columns can be first and last name or full name, plus company, and optionally title and start date.</p>
       <div class="row"><label class="btn line" for="mvFile">Choose CSV</label><input type="file" id="mvFile" class="sr" accept=".csv,text/csv"><button type="button" class="btn quiet" id="mvSample">Try with sample alerts</button></div>
-      ${S.moves.length?`<div class="reg">${S.moves.slice(0,12).map(m=>{const {hits}=matchMove(m),on=hits.some(r=>r.on);return `<div class="r"><div class="mi"><b>${esc(m.name)} → ${esc(m.co)}</b><span>${esc(m.src)}${m.date?` · ${esc(m.date)}`:""}</span></div><span class="tag ${on?"new":hits.length?"":"hit"}">${on?"Match · protected":hits.length?(hits.some(r=>r.revealed)?"Match · expired":"Match · anonymous only"):"No match"}</span></div>`}).join("")}</div>`:""}</div>
+      ${S.moves.length?`<div class="reg">${S.moves.slice(0,12).map(m=>{const {hits}=matchMove(m),on=hits.some(r=>r.on);return `<div class="r"><div class="mi"><b>${esc(m.name)} → ${esc(m.co)}</b><span>${esc(m.src)}${m.date?` · ${esc(m.date)}`:""}</span></div><span class="tag ${on?"new":hits.length?"":"hit"}">${on?"Match · protected":hits.length?(hits.some(r=>r.revealed)?"Match · expired":"Match · not introduced"):"No match"}</span></div>`}).join("")}</div>`:""}</div>
     <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Register</h2><span class="muted small">${reg.length} pairs</span></div>
       <input type="search" id="rgQ" placeholder="Search a name, reference or company" value="${esc(PF2.q)}">
-      <div class="reg">${shown.slice(0,PF2.shown).map(r=>`<div class="r"><div class="mi"><b>${esc(r.c.name)} → ${esc(r.co)}</b><span>${esc(refOf(r.c.user))} · ${esc(LEVELS[r.c.lvl])} · ${r.ev.length} interaction${r.ev.length>1?"s":""}, last ${fmtDay(new Date(r.last))}${r.live?" · live":""}</span></div><span class="tag ${r.on?"new":""}">${r.on?`Protected to ${new Date(r.until).toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})}`:!r.revealed?"Anonymous only":"Expired"}</span></div>`).join("")||`<p class="muted">No matches.</p>`}</div>
+      <div class="reg">${shown.slice(0,PF2.shown).map(r=>`<div class="r"><div class="mi"><b>${esc(r.c.name)} → ${esc(r.co)}</b><span>${esc(refOf(r.c.user))} · ${esc(LEVELS[r.c.lvl])} · ${r.ev.length} interaction${r.ev.length>1?"s":""}, last ${fmtDay(new Date(r.last))}${r.live?" · live":""}</span></div><span class="tag ${r.on?"new":""}">${r.on?`Protected to ${new Date(r.until).toLocaleDateString([], {day:"numeric",month:"short",year:"numeric"})}`:!r.revealed?"Not introduced":"Expired"}</span></div>`).join("")||`<p class="muted">No matches.</p>`}</div>
       ${shown.length>PF2.shown?`<button class="btn line sm" id="rgMore" style="align-self:flex-start">Show more</button>`:""}</div>
   </div>`;
   const bindClaims=root=>root.querySelectorAll("[data-claim]").forEach(b=>b.onclick=()=>{const [pid,co]=b.dataset.claim.split("|"),r=register().find(x=>x.pid===pid&&x.co===co);const mv=b.dataset.mv?b.dataset.mv.split("|"):null;const m=mv?S.moves.find(x=>x.name===mv[0]&&x.co===mv[1]):PF2.lastMove;if(r)showClaim(r,m)});
