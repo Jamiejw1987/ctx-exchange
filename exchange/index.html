@@ -2760,7 +2760,8 @@ async function hydrateClient(uid){
   setArr(POOL,pubs.filter(p=>p.user_id!==uid).map(p=>toPool(p,pv[p.user_id])));setArr(DATA,POOL);for(const k in REFID)delete REFID[k];POOL.forEach(p=>REFID[p.user]=p.id);
   const ids=intros.map(i=>i.id);const msgs=ids.length?await q(sb.from("messages").select("*").in("intro_id",ids).order("id")):[];
   S.intros={};L.rows.intros={};
-  intros.forEach(i=>{const c=POOL.find(p=>p.id===i.pro_id);const cs=i.client_state||{};
+  intros.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));L.closedChats={};
+  intros.forEach(i=>{if(i.closed||i.status==="closed"){L.closedChats[i.pro_id]=i;return}const c=POOL.find(p=>p.id===i.pro_id);const cs=i.client_state||{};
     let stage=i.status==="accepted"||i.status==="closed"&&i.accepted_at?2:1;if(stage===2&&c&&c._named)stage=3;if(cs.cstage&&cs.cstage>stage)stage=cs.cstage;
     const review=i.status==="blocked"?"declined":i.status==="declined"?"passed":"approved";
     const ii=Object.assign({},cs,{dbId:i.id,ref:i.ref,stage,review,at:ago(i.created_at),role:i.role,base:i.base,note:i.note,by:"",prior:i.prior||undefined,priorRecent:!!(i.prior&&i.prior.prior==="Yes"),
@@ -2839,7 +2840,7 @@ async function sync(){if(L.busy){L.dirty=true;return}L.busy=true;L.dirty=false;L
           if(r.data.status==="blocked"){i.review="declined"}}
         else{const cs=J(cleanCS(i)),row=L.rows.intros[pid]||{};const upd={};
           if(cs!==row.cs)upd.client_state=JSON.parse(cs);
-          if(i.closed&&!row.closed&&i.closed.by!=="pro")upd.closed={by:"client",at:new Date().toISOString()};
+          if(i.closed&&!row.closed&&i.closed.by!=="pro"){upd.closed={by:"client",at:new Date().toISOString()};upd.status="closed"}
           if(Object.keys(upd).length){await q(sb.from("intros").update(upd).eq("id",i.dbId));L.rows.intros[pid]={cs,closed:!!i.closed};changed=true}}
         for(const m of i.msgs||[]){if(m.dbId||m._ins||m.f==="them"||!i.dbId)continue;m._ins=true;const me=m.f==="me";
           const payload=Object.assign({},m);delete payload.t;delete payload._ins;delete payload.at;
@@ -3219,7 +3220,14 @@ vChats=function(){_vChats();
   ["#bIv","#bOffer","[data-ivnew]"].forEach(s=>app.querySelectorAll(s).forEach(x=>x.remove()));
   {const id=S.activeChat,i=S.intros[id],c=POOL.find(p=>p.id===id);const th=app.querySelector(".thead");
    if(i&&c&&th){const canBook=i.stage>=3&&!i.closed&&!ivActive(i.dbId).length&&termsOK();
-     const row=th.querySelector(".line1 .row");if(row&&canBook){const b=document.createElement("button");b.className="btn sm";b.id="bIvLive";b.textContent="Schedule interview";row.prepend(b);b.onclick=()=>ivPropose(i,c,null)}
+     const row=th.querySelector(".line1 .row");
+     if(row&&!i.closed&&i.stage>=2){const cb=document.createElement("button");cb.className="btn quiet sm";cb.textContent="Close chat";row.appendChild(cb);
+       cb.onclick=async()=>{if(!confirmInline(cb,"Tap again: close and return them to the talent pool"))return;cb.disabled=true;
+         const {error}=await sb.from("intros").update({closed:{by:"client",at:new Date().toISOString()},status:"closed"}).eq("id",i.dbId);
+         if(error){cb.disabled=false;return toast("Couldn't close the chat. Please try again.")}
+         logEvent(`Closed the chat with ${refOf(c.user)} and returned them to the talent pool`,S.company.contact||"");
+         S.activeChat=null;await refresh();location.hash="pool";toast("Chat closed. They're back in your talent pool.")}}
+     if(row&&canBook){const b=document.createElement("button");b.className="btn sm";b.id="bIvLive";b.textContent="Schedule interview";row.prepend(b);b.onclick=()=>ivPropose(i,c,null)}
      const pn=ivClientPanel(i,c);if(pn){const d=document.createElement("div");d.className="stack";d.style.gap="8px";d.innerHTML=pn;th.appendChild(d)}
      app.querySelectorAll(".blkcard .muted.small").forEach(x=>x.textContent=i.stage>=3?"Use Schedule interview at the top and contact details are shared automatically.":"Schedule interview is available once you can see their name.");
      bindIvClient(i,c)}}
