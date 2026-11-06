@@ -487,6 +487,9 @@ input[type=range]{width:100%;accent-color:var(--brand-2)}
   .m{max-width:88%}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* phones: 16px text in boxes stops iPhone zooming on tap, and nothing can widen the page */
+html,body{overflow-x:clip;max-width:100%}
+@media (max-width:760px){input,select,textarea{font-size:16px !important}}
 </style>
 <style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 </head>

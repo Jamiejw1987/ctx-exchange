@@ -168,6 +168,9 @@ section,#top{scroll-margin-top:72px}
   .panel{padding:20px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* phones: 16px text in boxes stops iPhone zooming on tap, and nothing can widen the page */
+html,body{overflow-x:clip;max-width:100%}
+@media (max-width:760px){input,select,textarea{font-size:16px !important}}
 </style>
 </head>
 <body>
