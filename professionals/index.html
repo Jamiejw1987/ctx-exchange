@@ -2642,7 +2642,7 @@ function counts(){try{ensureApplies()}catch(e){}try{ensureAccess()}catch(e){}try
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="allcos"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="allcos"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="notifications"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");

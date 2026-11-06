@@ -31,7 +31,8 @@ function sideOf(){return L.role==="pro"?"cand":L.role==="admin"?"admin":"client"
 async function q(p){const r=await p;if(r.error){console.error(r.error);throw r.error}return r.data}
 async function hydrate(){
   const uid=L.user.id;
-  const notes=await q(sb.from("notifications").select("*").order("created_at",{ascending:false}).limit(60));
+  const notes=await q(sb.from("notifications").select("*").order("created_at",{ascending:false}).limit(L.role==="admin"?500:60));
+  L.noteRows=notes;
   S.notes=notes.map(n=>({id:"db"+n.id,dbId:n.id,to:sideOf(),t:n.text,go:n.go,at:ago(n.created_at),read:n.read}));
   L.snap.notes=Object.fromEntries(notes.map(n=>[n.id,n.read]));
   if(L.role==="client")await hydrateClient(uid);else if(L.role==="pro")await hydratePro(uid);else await hydrateAdmin();
@@ -91,6 +92,7 @@ async function hydrateAdmin(){
   const [cos,mem,profs,pubs,privs,intros,events]=await Promise.all([q(sb.from("companies").select("*").order("created_at",{ascending:false})),q(sb.from("company_members").select("*")),q(sb.from("profiles").select("*")),
     q(sb.from("pro_public").select("*")),q(sb.from("pro_private").select("*")),q(sb.from("intros").select("*")),q(sb.from("events").select("*").order("at").limit(5000))]);
   L.rows={cos,mem,profs,intros,events};L.ivs=await q(sb.from("interviews").select("*").order("created_at"));
+  try{L.wl=await q(sb.from("waitlist").select("*").order("created_at",{ascending:false}))}catch(e){}
   L.rows.deals=await q(sb.from("terms_deals").select("*").neq("status","withdrawn").order("created_at",{ascending:false}));
   S.deal={status:"none"};S.dealReqs=L.rows.deals.map(d=>({id:d.id,status:d.status}));
   const pv=Object.fromEntries(privs.map(p=>[p.user_id,p]));
@@ -480,6 +482,79 @@ function vInterviewsLive(){const R=L.rows,ivs=(L.ivs||[]).slice();const coN=id=>
   app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivs.find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]}: ${coN(v.company_id)} and ${proN(v.pro_id)}`)})}
 VIEWS.interviews=vInterviewsLive;
 
+/* ---------- Consumer Talent: all notifications in one place ---------- */
+const NCAT=[["signup","Sign-ups",/^(New company signed up|New professional joined|Team member joined|Launch list)/i],
+  ["intro","Introductions",/(Introduction made|accepted .*request|request to chat|interested in|didn't want to move forward|declined|changed their mind|applied)/i],
+  ["iv","Interviews",/(Interview|interview)/],["terms","Terms",/(terms|signed)/i],["msg","Messages",/^Message from/i],
+  ["alert","Deals and alerts",/(Offer coming|Drop-out|Next round|contact details|access|removed|Feedback)/i]];
+const ncat=t=>(NCAT.find(c=>c[2].test(t))||["other","Other"])[0];
+function vNotesLive(){const rows=L.noteRows||[];const f=L.nf||"all";const q0=(L.nq||"").trim().toLowerCase();
+  const list=rows.filter(n=>(f==="all"||(f==="unread"?!n.read:ncat(n.text)===f))&&(!q0||n.text.toLowerCase().includes(q0)));
+  const cnt=k=>rows.filter(n=>k==="unread"?!n.read:ncat(n.text)===k).length;
+  const day=d=>{const x=new Date(d),t=new Date();const y=new Date(t);y.setDate(t.getDate()-1);return x.toDateString()===t.toDateString()?"Today":x.toDateString()===y.toDateString()?"Yesterday":x.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})};
+  let last="";const items=list.map(n=>{const d=day(n.created_at),h=d!==last?`<div class="kicker" style="margin:14px 0 4px;color:var(--muted)">${d}</div>`:"";last=d;const c=ncat(n.text),lab=(NCAT.find(x=>x[0]===c)||[0,"Other"])[1];
+    return h+`<div class="item" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;${n.read?"opacity:.72":""}">
+      <span style="width:8px;height:8px;border-radius:50%;background:${n.read?"transparent":"var(--gold,#c8a96a)"}"></span>
+      <div style="min-width:0"><div>${esc(n.text)}</div><div class="muted small">${esc(lab)} · ${new Date(n.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</div></div>
+      <div class="row" style="flex-wrap:nowrap">${n.go?`<button class="btn line sm" data-ngo="${n.id}">Open</button>`:""}${n.read?"":`<button class="btn quiet sm" data-nread="${n.id}">Mark read</button>`}</div></div>`}).join("");
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent</span><h1>Notifications</h1><p class="muted">Everything that's happened on the Exchange, newest first. You also get these as pushes and emails.</p></div>
+    <div class="stack" style="max-width:900px;gap:12px">
+    <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Show" style="flex-wrap:wrap">${[["all","All",rows.length],["unread","Unread",cnt("unread")],...NCAT.map(c=>[c[0],c[1],cnt(c[0])])].map(([k,l,n])=>`<button data-nf="${k}" aria-pressed="${f===k}">${l} <span class="muted">${n}</span></button>`).join("")}</div>
+      <div class="row"><input type="search" id="nq" placeholder="Search notifications" value="${esc(L.nq||"")}" style="max-width:240px">${cnt("unread")?`<button class="btn line sm" id="nAll">Mark all read</button>`:""}</div></div>
+    <div class="list">${items||`<div class="empty"><h2>Nothing here</h2><p class="muted">${q0||f!=="all"?"No notifications match.":"When anything happens on the Exchange it shows up here."}</p></div>`}</div></div>`;
+  app.querySelectorAll("[data-nf]").forEach(b=>b.onclick=()=>{L.nf=b.dataset.nf;vNotesLive()});
+  const nq=$("#nq");nq.oninput=()=>{L.nq=nq.value;const pos=nq.selectionStart;vNotesLive();const x=$("#nq");x.focus();try{x.setSelectionRange(pos,pos)}catch(e){}};
+  const markRead=async ids=>{if(!ids.length)return;await sb.from("notifications").update({read:true}).in("id",ids);rows.forEach(n=>{if(ids.includes(n.id))n.read=true});(S.notes||[]).forEach(n=>{if(ids.includes(n.dbId)){n.read=true;L.snap.notes[n.dbId]=true}});counts();vNotesLive()};
+  app.querySelectorAll("[data-nread]").forEach(b=>b.onclick=()=>markRead([+b.dataset.nread]));
+  app.querySelectorAll("[data-ngo]").forEach(b=>b.onclick=async()=>{const n=rows.find(x=>x.id===+b.dataset.ngo);if(!n.read)await markRead([n.id]);location.hash=n.go});
+  const na=$("#nAll");if(na)na.onclick=()=>markRead(rows.filter(n=>!n.read).map(n=>n.id))}
+VIEWS.notifications=vNotesLive;
+// badges: unread notifications, and launch-list sign-ups since you last looked
+const _countsLive=counts;
+counts=function(){_countsLive();if(L.role!=="admin")return;
+  const un=(L.noteRows||[]).filter(n=>!n.read).length,el=document.querySelector('[data-count="n"]');if(el)el.textContent=un?String(un):"";
+  let seen=0;try{seen=+localStorage.getItem("ctx_wl_seen")||0}catch(e){}
+  const wn=(L.wl||[]).filter(x=>new Date(x.created_at).getTime()>seen).length,ew=document.querySelector('[data-count="w"]');if(ew)ew.textContent=wn&&view()!=="waitlist"?String(wn):""};
+
+/* ---------- Consumer Talent: the launch list ---------- */
+async function vLaunchList(){
+  if(!L.wl){app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent</span><h1>Launch list</h1></div><p class="muted">Loading...</p>`}
+  if(!L.wl||L.wlStale){const {data,error}=await sb.from("waitlist").select("*").order("created_at",{ascending:false});if(error){toast("Couldn't load the launch list");return}L.wl=data;L.wlStale=false}
+  if(view()!=="waitlist")return;
+  try{localStorage.setItem("ctx_wl_seen",String(Date.now()))}catch(e){}
+  const all=L.wl,f=L.wf||"all",q0=(L.wq||"").trim().toLowerCase();
+  const isCo=x=>x.side==="client";
+  const list=all.filter(x=>(f==="all"||(f==="co"?isCo(x):!isCo(x)))&&(!q0||[x.name,x.email,x.company,x.role,x.title,x.region,x.sector].join(" ").toLowerCase().includes(q0)));
+  const dupes=new Set(all.map(x=>(x.email||"").toLowerCase()).filter((e,i,a)=>a.indexOf(e)!==i));
+  const wk=all.filter(x=>Date.now()-new Date(x.created_at)<7*864e5).length;
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent</span><h1>Launch list</h1><p class="muted">Everyone who's joined from the landing page, waiting for launch. Newest first.</p></div>
+  <div class="stack" style="gap:12px">
+    <div class="row" style="gap:10px;flex-wrap:wrap">${[["Total",all.length],["Companies",all.filter(isCo).length],["Professionals",all.filter(x=>!isCo(x)).length],["This week",wk]].map(([l,n])=>`<div class="card" style="padding:12px 16px;min-width:120px"><b style="font-family:var(--display);font-size:26px">${n}</b><div class="muted small">${l}</div></div>`).join("")}</div>
+    <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div class="seg" role="group" aria-label="Show">${[["all","Everyone"],["co","Companies"],["pro","Professionals"]].map(([k,l])=>`<button data-wf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
+      <div class="row" style="flex-wrap:wrap"><input type="search" id="wq" placeholder="Search name, company, region..." value="${esc(L.wq||"")}" style="max-width:260px">
+        <button class="btn line sm" id="wCopy">Copy emails (${list.length})</button><button class="btn sm" id="wCsv">Download spreadsheet</button></div></div>
+    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:14px"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:820px">
+      <thead><tr style="text-align:left;color:var(--muted);font-size:12px">${["Joined","Type","Name","Email","Company / title","Region","Sector","Details",""].map(h=>`<th style="padding:10px 12px;font-weight:500;border-bottom:1px solid var(--line)">${h}</th>`).join("")}</tr></thead>
+      <tbody>${list.map(x=>`<tr style="border-top:1px solid var(--line)">
+        <td style="padding:10px 12px;white-space:nowrap;font-variant-numeric:tabular-nums">${new Date(x.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</td>
+        <td style="padding:10px 12px"><span class="tag ${isCo(x)?"brand":""}">${isCo(x)?"Company":"Professional"}</span></td>
+        <td style="padding:10px 12px"><b>${esc(x.name||"")}</b>${dupes.has((x.email||"").toLowerCase())?` <span class="tag new" title="This email is on the list more than once">Duplicate</span>`:""}</td>
+        <td style="padding:10px 12px;word-break:break-all">${esc(x.email||"")}</td>
+        <td style="padding:10px 12px">${esc(isCo(x)?[x.company,x.role].filter(Boolean).join(" · "):x.title||"")}</td>
+        <td style="padding:10px 12px">${esc(x.region||"")}</td><td style="padding:10px 12px">${esc(x.sector||"")}</td>
+        <td style="padding:10px 12px" class="small">${isCo(x)?(x.hiring?"Hiring: "+esc(x.hiring):""):(x.linkedin?`<a href="${esc(/^https?:/i.test(x.linkedin)?x.linkedin:"https://"+x.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`:"")}</td>
+        <td style="padding:10px 12px;text-align:right"><button class="btn quiet sm" data-wdel="${x.id}">Remove</button></td></tr>`).join("")||`<tr><td colspan="9" style="padding:20px 12px" class="muted">${q0||f!=="all"?"Nobody matches.":"Nobody has joined yet."}</td></tr>`}</tbody></table></div></div>`;
+  app.querySelectorAll("[data-wf]").forEach(b=>b.onclick=()=>{L.wf=b.dataset.wf;vLaunchList()});
+  const wq=$("#wq");wq.oninput=()=>{L.wq=wq.value;const pos=wq.selectionStart;vLaunchList().then(()=>{const x=$("#wq");if(x){x.focus();try{x.setSelectionRange(pos,pos)}catch(e){}}})};
+  $("#wCopy").onclick=async()=>{const t=[...new Set(list.map(x=>x.email).filter(Boolean))].join(", ");try{await navigator.clipboard.writeText(t);toast(`${list.length} emails copied`)}catch(e){toast("Couldn't copy. Use Download spreadsheet instead.")}};
+  $("#wCsv").onclick=()=>{const cols=[["Joined",x=>new Date(x.created_at).toISOString().slice(0,10)],["Type",x=>isCo(x)?"Company":"Professional"],["Name",x=>x.name],["Email",x=>x.email],["Company",x=>x.company],["Role",x=>x.role],["Title",x=>x.title],["Region",x=>x.region],["Sector",x=>x.sector],["Hiring",x=>x.hiring],["LinkedIn",x=>x.linkedin]];
+    const cell=v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const csv=[cols.map(c=>c[0]).join(","),...list.map(x=>cols.map(c=>cell(c[1](x))).join(","))].join("\r\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download=`CTX-launch-list-${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
+  app.querySelectorAll("[data-wdel]").forEach(b=>b.onclick=async()=>{if(!confirmInline(b,"Tap again"))return;const {error}=await sb.from("waitlist").delete().eq("id",b.dataset.wdel);if(error)return toast("Couldn't remove them");L.wl=L.wl.filter(x=>String(x.id)!==b.dataset.wdel);toast("Removed from the launch list");vLaunchList()})}
+VIEWS.waitlist=()=>vLaunchList();
+
 /* ---------- team members for companies ---------- */
 async function vTeamLive(){const co=S.company;
   if(!L.team){app.innerHTML=`<div class="pagehead"><span class="kicker">Team</span><h1>${esc(co.name||"Your company")} on the Exchange</h1></div><p class="muted">Loading your team...</p>`;}
@@ -555,7 +630,9 @@ VIEWS.chats=vChats;
 const keep=(arr,ok)=>{const k=arr.filter(t=>ok.includes(t[0]));arr.length=0;k.forEach(t=>arr.push(t))};
 keep(CLIENT_TABS,["company","foryou","applicants","discover","pool","shortlist","chats","team","terms"]);
 keep(CAND_TABS,["candidate","companies","allcos","introductions","messages"]);
-keep(ADMIN_TABS,["dash","interviews","invites","clients","termsadmin","protect","waitlist"]);
+ADMIN_TABS.splice(1,0,["notifications","Notifications","n"]);
+keep(ADMIN_TABS,["dash","notifications","interviews","invites","clients","termsadmin","protect","waitlist"]);
+ADMIN_TABS.forEach(t=>{if(t[0]==="waitlist")t[1]="Launch list"});
 const ai=ADMIN_TABS.find(t=>t[0]==="invites");if(ai){ai[1]="Sign-ups";ai[2]="i"}
 const ROLE_TABS={client:CLIENT_TABS,pro:CAND_TABS,admin:ADMIN_TABS};
 view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="sign"&&L.role==="client")return h;const ok=ROLE_TABS[L.role].map(t=>t[0]);return ok.includes(h)?h:ok[0]};
@@ -753,7 +830,7 @@ async function start(session){L.user=session.user;L.token=session.access_token;
   S.mode=sideOf();
   await hydrate();subscribe();
   $("#lvOut").hidden=false;$("#lvAcc").hidden=false;$("#lvHelp").hidden=L.role==="admin";$("#lvWho").textContent=L.user.email;
-  if(L.role==="admin"){sbSet({email:L.user.email,access_token:session.access_token,refresh_token:session.refresh_token,exp:(session.expires_at||0)*1000});try{await loadWL()}catch(e){}}
+  if(L.role==="admin"){sbSet({email:L.user.email,access_token:session.access_token,refresh_token:session.refresh_token,exp:(session.expires_at||0)*1000});try{await loadWL()}catch(e){}try{const {data}=await sb.from("waitlist").select("*").order("created_at",{ascending:false});if(data)L.wl=data}catch(e){}}
   location.hash=location.hash&&location.hash!=="#auth"?location.hash:"#"+ROLE_TABS[L.role][0][0];render();
 }
 let refT=null;

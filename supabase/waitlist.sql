@@ -8,3 +8,7 @@ begin
 end $$;
 drop trigger if exists waitlist_notify on public.waitlist;
 create trigger waitlist_notify after insert on public.waitlist for each row execute function public.waitlist_notify();
+
+-- the team can remove duplicate or test entries from the launch list
+drop policy if exists "team can delete" on public.waitlist;
+create policy "team can delete" on public.waitlist for delete to authenticated using (public.is_admin());
