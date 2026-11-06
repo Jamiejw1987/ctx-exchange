@@ -11,13 +11,13 @@
 <meta property="og:site_name" content="Consumer Talent Exchange">
 <meta property="og:url" content="https://exchange.consumer-talent.com/">
 <meta property="og:title" content="Consumer Talent Exchange">
-<meta property="og:description" content="The private exchange for senior food and drink talent in North America. Anonymous, approved companies only. Now open to join.">
+<meta property="og:description" content="The private exchange for senior food and drink talent in North America. Anonymous, approved companies only. Join the launch list.">
 <meta property="og:image" content="https://exchange.consumer-talent.com/og-image.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Consumer Talent Exchange: the private exchange for senior food and drink talent">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Consumer Talent Exchange">
-<meta name="twitter:description" content="The private exchange for senior food and drink talent in North America. Now open to join.">
+<meta name="twitter:description" content="The private exchange for senior food and drink talent in North America. Join the launch list.">
 <meta name="twitter:image" content="https://exchange.consumer-talent.com/og-image.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -182,7 +182,7 @@ html,body{overflow-x:clip;max-width:100%}
 <main id="top">
 <div class="hero"><div class="wrap">
   <div>
-    <span class="founding"><i></i>Now open to join</span>
+    <span class="founding"><i></i>Launching soon · join the list</span>
     <h1>The private exchange for senior <em>food and drink</em> talent in North America</h1>
     <p class="lede">Companies meet the commercial, marketing and operations leaders they need. Professionals explore their next move in confidence, without their employer ever knowing. Professionals join free in minutes, and every hiring company is approved by Consumer Talent.</p>
     <div class="doors">
@@ -271,9 +271,9 @@ html,body{overflow-x:clip;max-width:100%}
 </div></section>
 
 <section id="join" style="border-top:1px solid var(--line)"><div class="wrap formwrap">
-  <div class="sh" style="margin:0"><span class="kicker">Now open</span><h2>Join the Exchange</h2>
-    <p class="muted">The Exchange is open. Professionals are in straight away, and Jamie and Connor approve every hiring company personally.</p>
-    <p class="fine" style="margin-top:6px">Tell us a little about you, then choose a password on the next screen. Already joined? <a href="exchange/">Sign in</a>.</p></div>
+  <div class="sh" style="margin:0"><span class="kicker">Launching soon</span><h2>Join the Exchange</h2>
+    <p class="muted">The Exchange opens soon. Join the list and you'll be among the first in when it does. Jamie and Connor approve every hiring company personally.</p>
+    <p class="fine" style="margin-top:6px">Tell us a little about you and we'll let you know the moment it opens.</p></div>
   <div class="panel">
     <form id="wl" novalidate>
       <div class="seg" role="group" aria-label="I am"><button type="button" data-s="client" aria-pressed="true">Company</button><button type="button" data-s="pro" aria-pressed="false">Professional</button></div>
@@ -287,7 +287,7 @@ html,body{overflow-x:clip;max-width:100%}
         <label class="f only-pro" hidden><span>LinkedIn profile <small>Optional, only seen by Consumer Talent</small></span><input type="url" id="w_l" placeholder="linkedin.com/in/yourname"></label>
         <label class="check"><input type="checkbox" id="w_ok"><span>I'm happy for Consumer Talent to contact me about the Exchange, and I agree to the <a href="terms/" target="_blank">terms</a> and <a href="privacy/" target="_blank">privacy policy</a>. We'll never share your details.</span></label>
         <p class="err" id="w_err">Add your name, a valid email and tick the box to continue.</p>
-        <button class="btn gold" type="submit" id="w_go">Continue</button>
+        <button class="btn gold" type="submit" id="w_go">Join the list</button>
       </div>
     </form>
     <div class="done" id="wdone" role="status">
@@ -333,10 +333,10 @@ html,body{overflow-x:clip;max-width:100%}
     const handOver=()=>{try{localStorage.setItem("ctx_join",JSON.stringify({side,name:v("w_n"),email:v("w_e"),company:v("w_c"),title:side==="client"?v("w_r"):v("w_t"),region:v("w_g")}))}catch(e){}
       location.href="exchange/?join="+(side==="client"?"company":"pro")};
     const done=()=>{form.style.display="none";$("#wdone").style.display="flex";
-      $("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"You're in. Your private sign-in link comes by email and text the day the Exchange opens. Your details are never shared with any company.";$("#wd_f").hidden=true};
-    const fail=m=>{go.disabled=false;go.textContent="Continue";const e=$("#w_err");e.innerHTML=`We couldn't save your request just now. Please try again, or email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a>.${m?` <span style="opacity:.7">(${m.replace(/[<>&]/g,"")})</span>`:""}`;e.style.display="block"};
+      $("#wd_k").textContent="You're on the list";$("#wd_h").textContent=`Thanks, ${v("w_n").split(" ")[0]}`;$("#wd_p").textContent=side==="client"?"Jamie or Connor will be in touch personally to set up your company before the Exchange opens.":"We'll email you the day the Exchange opens so you can build your anonymous profile. Your details are never shared with any company.";$("#wd_f").hidden=true};
+    const fail=m=>{go.disabled=false;go.textContent="Join the list";const e=$("#w_err");e.innerHTML=`We couldn't save your request just now. Please try again, or email <a href="mailto:jamie@consumer-talent.com">jamie@consumer-talent.com</a>.${m?` <span style="opacity:.7">(${m.replace(/[<>&]/g,"")})</span>`:""}`;e.style.display="block"};
     fetch(SB_URL+"/rest/v1/waitlist",{method:"POST",headers:{apikey:SB_KEY,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(row)})
-      .then(handOver,handOver)};
+      .then(async r=>{if(r.ok)return done();let m="Error "+r.status;try{const j=await r.json();m=j.message||j.hint||m}catch(e){}fail(m)}).catch(()=>fail("No connection"))};
 })();
 </script>
 </body>
