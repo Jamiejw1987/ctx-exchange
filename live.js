@@ -459,6 +459,27 @@ function vTermsLive(){const R=L.rows,deals=R.deals||[];const coN=id=>(R.cos.find
       go(d.id,"counter",{t1:n("ct1"),t2:n("ct2"),t3:n("ct3"),repl:n("crepl"),pay:n("cpay")},$("#cnote").value.trim())}})}
 VIEWS.termsadmin=vTermsLive;
 
+/* ---------- Consumer Talent: every interview across the Exchange ---------- */
+function vInterviewsLive(){const R=L.rows,ivs=(L.ivs||[]).slice();const coN=id=>(R.cos.find(c=>c.id===id)||{}).name||"A company";
+  const pr=id=>R.profs.find(p=>p.user_id===id)||{};const proN=id=>pr(id).name||pr(id).email||"Professional";
+  const uk=iso=>new Date(iso).toLocaleString("en-GB",{timeZone:"Europe/London",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+" UK";
+  const now=Date.now(),t=v=>new Date(v.starts_at||v.slots[0]).getTime();
+  const upcoming=ivs.filter(v=>v.status==="booked"&&t(v)>=now).sort((a,b)=>t(a)-t(b));
+  const waiting=ivs.filter(v=>v.status==="proposed"||v.status==="new_times").sort((a,b)=>t(a)-t(b));
+  const past=ivs.filter(v=>v.status==="held"||(v.status==="booked"&&t(v)<now)).sort((a,b)=>t(b)-t(a));
+  const cancelled=ivs.filter(v=>v.status==="cancelled").sort((a,b)=>t(b)-t(a));
+  const OUT={next:["Another round","brand"],offer:["Making an offer","hit"],no:["Not progressing",""]};
+  const row=(v,mode)=>`<div class="item"><div class="line1"><div><b style="font-size:16px;font-family:var(--display);font-weight:600">${esc(coN(v.company_id))} · ${esc(proN(v.pro_id))}</b>
+      <div class="muted small">${IVK[v.kind]} · round ${v.round} · ${v.minutes} min${v.location?` · ${v.kind==="video"?`<a href="${esc(/^https?:/i.test(v.location)?v.location:"https://"+v.location)}" target="_blank" rel="noopener">video link</a>`:esc(v.location)}`:""}</div></div>
+      ${mode==="up"?`<span class="tag hit">${esc(uk(v.starts_at))}</span>`:mode==="wait"?`<span class="tag new">${v.status==="new_times"?"Asked for new times":"Waiting for them to pick"}</span>`:mode==="past"?(v.outcome?`<span class="tag ${OUT[v.outcome][1]}">${OUT[v.outcome][0]}</span>`:`<span class="tag">Outcome not recorded</span>`):`<span class="tag">Cancelled by ${v.cancelled&&v.cancelled.by==="pro"?"candidate":"company"}</span>`}</div>
+    ${mode==="wait"?`<p class="small muted">Options: ${v.slots.map(x=>esc(uk(x))).join(" · ")}</p>`:mode==="past"||mode==="cx"?`<p class="small muted">${esc(uk(v.starts_at||v.slots[0]))}${mode==="cx"&&v.cancelled&&v.cancelled.reason?` · “${esc(v.cancelled.reason)}”`:""}</p>`:""}
+    ${mode==="up"?`<div class="row"><button class="btn line sm" data-ivcal="${v.id}">Add to my calendar</button></div>`:""}</div>`;
+  const sec=(h,list,mode,empty)=>`<div class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h2>${h}</h2><span class="tag">${list.length}</span></div>${list.length?`<div class="list">${list.map(v=>row(v,mode)).join("")}</div>`:`<p class="muted small">${empty}</p>`}</div>`;
+  app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Interviews</span><h1>Interviews</h1><p class="muted">Every interview booked through the Exchange. You and Connor also get each one as a calendar invite in Outlook, updated if it moves or is cancelled. Times are UK time.</p></div>
+  <div class="stack" style="max-width:900px;gap:14px">${sec("Coming up",upcoming,"up","No interviews booked yet.")}${sec("Waiting for a time",waiting,"wait","Nothing waiting.")}${sec("Happened",past,"past","None yet.")}${cancelled.length?sec("Cancelled",cancelled,"cx",""):""}</div>`;
+  app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivs.find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]}: ${coN(v.company_id)} and ${proN(v.pro_id)}`)})}
+VIEWS.interviews=vInterviewsLive;
+
 /* ---------- team members for companies ---------- */
 async function vTeamLive(){const co=S.company;
   if(!L.team){app.innerHTML=`<div class="pagehead"><span class="kicker">Team</span><h1>${esc(co.name||"Your company")} on the Exchange</h1></div><p class="muted">Loading your team...</p>`;}
@@ -534,7 +555,7 @@ VIEWS.chats=vChats;
 const keep=(arr,ok)=>{const k=arr.filter(t=>ok.includes(t[0]));arr.length=0;k.forEach(t=>arr.push(t))};
 keep(CLIENT_TABS,["company","foryou","applicants","discover","pool","shortlist","chats","team","terms"]);
 keep(CAND_TABS,["candidate","companies","allcos","introductions","messages"]);
-keep(ADMIN_TABS,["dash","invites","clients","termsadmin","protect","waitlist"]);
+keep(ADMIN_TABS,["dash","interviews","invites","clients","termsadmin","protect","waitlist"]);
 const ai=ADMIN_TABS.find(t=>t[0]==="invites");if(ai){ai[1]="Sign-ups";ai[2]="i"}
 const ROLE_TABS={client:CLIENT_TABS,pro:CAND_TABS,admin:ADMIN_TABS};
 view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="sign"&&L.role==="client")return h;const ok=ROLE_TABS[L.role].map(t=>t[0]);return ok.includes(h)?h:ok[0]};

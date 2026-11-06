@@ -114,6 +114,8 @@ begin
     select 'pro' as side, coalesce(nullif(pro.email,''),u.email) as email, pro.tz as tz from auth.users u where u.id=v.pro_id
     union all
     select 'client', u.email, pr.tz from public.company_members m join auth.users u on u.id=m.user_id left join public.profiles pr on pr.user_id=u.id where m.company_id=v.company_id
+    union all
+    select 'ct', trim(x), 'Europe/London' from unnest(string_to_array(private.setting('admin_emails'),',')) x
   loop
     continue when coalesce(r.email,'')='' or r.email like '%@ctx-test.dev';
     if p_cancel then
@@ -121,11 +123,13 @@ begin
       body:=private.iv_kind(v.kind)||' on '||private.fmt_local(v.starts_at,r.tz)||' has been cancelled'
         ||case when v.cancelled->>'reason'<>'' then ': '||(v.cancelled->>'reason') else '.' end||' Your calendar should update automatically.';
     else
-      contact:=case when r.side='pro'
+      contact:=case when r.side='ct'
+        then 'Company contact: '||booker.name||coalesce(', '||nullif(booker.title,''),'')||' at '||co.name||', '||coalesce(booker.email,'')||coalesce(', '||nullif(co.private->>'phone',''),'')||'. Candidate: '||pro.name||', '||coalesce(pro.email,'')||coalesce(', '||nullif(pro.phone,''),'')||'. Shown in UK time; your calendar converts it if you are elsewhere.'
+        when r.side='pro'
         then 'Your contact at '||co.name||': '||booker.name||coalesce(', '||nullif(booker.title,''),'')||', '||coalesce(booker.email,'')||coalesce(', '||nullif(co.private->>'phone',''),'')||'.'
         else 'Candidate: '||pro.name||', '||coalesce(pro.email,'')||coalesce(', '||nullif(pro.phone,''),'')||'.' end;
       subj:=case when v.seq>0 then 'Updated: ' else 'Booked: ' end||title;
-      heading:=case when v.seq>0 then 'Interview moved' else 'Interview booked' end;
+      heading:=case when r.side='ct' then co.name||' is interviewing '||pro.name when v.seq>0 then 'Interview moved' else 'Interview booked' end;
       body:=private.iv_kind(v.kind)||' (round '||v.round||'), '||v.minutes||' minutes, on '||private.fmt_local(v.starts_at,r.tz)||'. '
         ||case v.kind when 'video' then 'Join here: '||v.location||'. ' when 'phone' then coalesce(nullif(v.location,'')||'. ','') else 'Address: '||v.location||'. ' end
         ||contact||' The calendar invite is attached.';
@@ -133,7 +137,7 @@ begin
     perform net.http_post(url:='https://api.postmarkapp.com/email',
       headers:=jsonb_build_object('Accept','application/json','Content-Type','application/json','X-Postmark-Server-Token',tok),
       body:=jsonb_build_object('From',private.setting('mail_from'),'To',r.email,'Subject',subj,
-        'HtmlBody',private.email_html(heading,body,'Open the chat',url||'#'||case when r.side='pro' then 'messages' else 'chats' end),
+        'HtmlBody',private.email_html(heading,body,case when r.side='ct' then 'Open interviews' else 'Open the chat' end,url||'#'||case when r.side='pro' then 'messages' when r.side='ct' then 'interviews' else 'chats' end),
         'TextBody',heading||E'\n\n'||body||E'\n\n'||url,'MessageStream','outbound','Tag','interview',
         'Attachments',jsonb_build_array(jsonb_build_object('Name',case when p_cancel then 'cancel.ics' else 'invite.ics' end,
           'Content',encode(convert_to(ics,'UTF8'),'base64'),
