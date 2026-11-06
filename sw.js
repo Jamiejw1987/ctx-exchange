@@ -1,10 +1,11 @@
 // Network-first so updates show straight away; falls back to cache offline. Also shows push notifications.
-const C="ctx-v47";
+const C="ctx-v48";
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET"||new URL(e.request.url).origin!==location.origin)return;
   e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request)));});
 self.addEventListener("push",e=>{let d={};try{d=e.data?e.data.json():{}}catch(x){d={body:e.data&&e.data.text()}}
+  self.clients.matchAll({type:"window",includeUncontrolled:true}).then(cs=>cs.forEach(c=>c.postMessage({type:"ctx-push"})));
   e.waitUntil(self.registration.showNotification(d.title||"Consumer Talent Exchange",{body:d.body||"",tag:d.tag||"ctx",renotify:true,
     icon:new URL("icon-192.png",self.registration.scope).href,badge:new URL("icon-192.png",self.registration.scope).href,
     data:{url:d.url||new URL("exchange/",self.registration.scope).href}}))});

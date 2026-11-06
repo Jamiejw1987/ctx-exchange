@@ -3554,7 +3554,22 @@ window.CTX_refresh=refresh;
 let chan=null;
 function subscribe(){if(chan)sb.removeChannel(chan);chan=sb.channel("ctx-live");
   ["messages","intros","notifications","applies","companies","picks","interviews","terms_deals"].forEach(t=>chan.on("postgres_changes",{event:"*",schema:"public",table:t},()=>refreshSoon(350)));
-  chan.subscribe()}
+  chan.subscribe(st=>{L.live=st==="SUBSCRIBED";if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED")setTimeout(()=>{if(L.user&&!L.live)subscribe()},3000)})}
+
+/* ---------- staying up to date when the app has been in the background ---------- */
+// Phones pause the app's live connection in the background. Coming back reconnects, catches up,
+// and reloads onto a new version of the app if one has gone live since it was opened.
+async function getVer(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});return (await r.json()).v}catch(e){return null}}
+getVer().then(v=>{L.ver=v});
+async function checkVersion(){const v=await getVer();if(!v||!L.ver||v===L.ver)return;
+  const busy=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||layer.innerHTML.trim();
+  if(busy){L.verWaiting=true;return}location.reload()}
+function wake(){if(!L.user)return;checkVersion();if(!L.live)subscribe();refreshSoon(100)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")wake()});
+window.addEventListener("focus",wake);window.addEventListener("online",wake);window.addEventListener("pageshow",wake);
+setInterval(()=>{if(L.user&&document.visibilityState==="visible"){refreshSoon(0);if(L.verWaiting||Math.random()<.25)checkVersion()}},60000);
+// a push that arrives while the app is open updates the screen straight away
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="ctx-push")refreshSoon(150)});
 
 // header: who's signed in, sign out; hide the demo-only switch
 const hdr=document.querySelector("header .seg");if(hdr)hdr.style.display="none";

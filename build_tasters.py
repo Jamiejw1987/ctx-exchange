@@ -31,5 +31,8 @@ for a, b in [('href="icon-180.png"', 'href="../icon-180.png"'),
     live = live.replace(a, b)
 os.makedirs("exchange", exist_ok=True)
 open("exchange/index.html", "w", encoding="utf8").write(live)
+# version stamp: the open app checks this and reloads itself when a new version goes live
+import hashlib
+json.dump({"v": hashlib.sha1(live.encode("utf8")).hexdigest()[:12]}, open("exchange/version.json", "w"))
 json.dump(dict(base, name="Consumer Talent Exchange", start_url="./", scope="./", icons=[dict(i, src="../" + i["src"]) for i in base["icons"]]), open("exchange/manifest.webmanifest", "w"), indent=2)
 print("built exchange (live)")
