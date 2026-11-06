@@ -259,14 +259,20 @@ vRequests=function(){
     ${r.why?`<p class="small">${esc(r.why)}</p>`:""}
     ${co.anon?`<div class="protect">${lockIcon}<span>This company has chosen to stay anonymous until you both agree to reveal.</span></div>`:""}
     ${r.status==="new"?`<div class="row"><button class="btn good" data-yes="${r.id}">Accept</button><button class="btn line" data-no="${r.id}">Decline</button></div><p class="muted small" style="margin:0">Accepting counts as an introduction through the Exchange. Please keep all contact with ${esc(coDisplay(co))} here, so everything stays on record.</p>`:
-      r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:""}
+      r.status==="yes"?`<div class="row"><a class="btn sm" href="#messages" data-go="${r.id}">Open conversation</a></div>`:
+      r.status==="no"&&!r.closed&&!S.creqs.some(x=>x!==r&&x.co===r.co&&(x.status==="new"||x.status==="yes"))?`<div class="row"><button class="btn line sm" data-reopen="${r.id}">Changed your mind? Accept now</button></div><p class="muted small" style="margin:0">Timing not right before? You can still accept and start chatting. ${esc(coDisplay(co))} will be told you're now open to it.</p>`:""}
   </div>`}).join(""):`<div class="empty"><h2>No requests yet</h2><p class="muted">When a company asks to meet you, it appears here and you get a notification. The more complete your profile, the more you'll be found.</p><a class="btn" href="#candidate">Improve my profile</a></div>`}</div>`;
   app.querySelectorAll("[data-yes]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.yes,async rid=>{const r=S.creqs.find(x=>x.id===rid);
     const up=await sb.from("intros").update({accepted_at:new Date().toISOString(),status:"accepted",prior:r.prior||{prior:"No"}}).eq("id",rid);
     if(up.error){toast("Couldn't accept just now. Please try again.");return}
     await sb.from("messages").insert({intro_id:rid,author:L.user.id,side:"ct",audience:"pro",body:`You accepted ${coDisplay(reqCo(r))}'s request to chat. Your name is only shared with them once their terms are signed. Everything here is logged on the introduction record. Jamie, Consumer Talent`});
     S.cthread=rid;await refresh();location.hash="messages";toast("Accepted. Your conversation is open.")}));
-  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{await sb.from("intros").update({declined_at:new Date().toISOString(),status:"declined"}).eq("id",b.dataset.no);await refresh();toast("Declined. They'll be told you didn't want to move forward at this time.")});
+  app.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{await sb.from("intros").update({declined_at:new Date().toISOString(),status:"declined"}).eq("id",b.dataset.no);await refresh();toast("Declined. If the timing changes, you can accept it later from here.")});
+  app.querySelectorAll("[data-reopen]").forEach(b=>b.onclick=()=>priorCheck(b.dataset.reopen,async rid=>{const r=S.creqs.find(x=>x.id===rid);
+    const up=await sb.from("intros").update({accepted_at:new Date().toISOString(),declined_at:null,status:"accepted",prior:r.prior||{prior:"No"}}).eq("id",rid);
+    if(up.error){toast(/duplicate|unique/i.test(up.error.message)?"You already have an open conversation with this company.":"Couldn't accept just now. Please try again.");return}
+    await sb.from("messages").insert({intro_id:rid,author:L.user.id,side:"ct",audience:"pro",body:`You accepted ${coDisplay(reqCo(r))}'s request to chat after all. Your name is only shared with them once their terms are signed. Everything here is logged on the introduction record. Jamie, Consumer Talent`});
+    S.cthread=rid;await refresh();location.hash="messages";toast("Accepted. Your conversation is open.")}));
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.cthread=b.dataset.go});
 };
 VIEWS.introductions=vRequests;
