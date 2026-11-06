@@ -2649,7 +2649,7 @@ function counts(){try{ensureApplies()}catch(e){}try{ensureAccess()}catch(e){}try
   document.querySelectorAll("[data-count]").forEach(el=>el.textContent=n[el.dataset.count]);
 }
 function render(){ensureCustom();
-  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="allcos"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="notifications"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
+  const v=view();S.mode=(v==="candidate"||v==="companies"||v==="allcos"||v==="introductions"||v==="messages")?"cand":(v==="dash"||v==="notifications"||v==="deal"||v==="interviews"||v==="waitlist"||v==="feedback"||v==="protect"||v==="intros"||v==="clients"||v==="invites"||v==="welcome"||v==="termsadmin")?"admin":"client";
   $("#mClient").setAttribute("aria-pressed",S.mode==="client");$("#mCand").setAttribute("aria-pressed",S.mode==="cand");$("#mAdmin").setAttribute("aria-pressed",S.mode==="admin");
   const tabs=v==="sign"?[]:TASTER?TASTER_TABS:v==="welcome"?[]:S.mode==="client"?CLIENT_TABS:S.mode==="cand"?CAND_TABS:ADMIN_TABS;
   $("#tabs").innerHTML=tabs.map(([k,l,c])=>`<a href="#${k}" class="${k===v?"on":""}">${l}${c?` <span class="badge num" data-count="${c}">0</span>`:""}</a>`).join("");
@@ -2801,6 +2801,7 @@ async function hydrateAdmin(){
     q(sb.from("pro_public").select("*")),q(sb.from("pro_private").select("*")),q(sb.from("intros").select("*")),q(sb.from("events").select("*").order("at").limit(5000))]);
   L.rows={cos,mem,profs,intros,events};L.ivs=await q(sb.from("interviews").select("*").order("created_at"));
   try{L.wl=await q(sb.from("waitlist").select("*").order("created_at",{ascending:false}))}catch(e){}
+  L.dealStale=true;
   L.rows.deals=await q(sb.from("terms_deals").select("*").neq("status","withdrawn").order("created_at",{ascending:false}));
   S.deal={status:"none"};S.dealReqs=L.rows.deals.map(d=>({id:d.id,status:d.status}));
   const pv=Object.fromEntries(privs.map(p=>[p.user_id,p]));
@@ -3183,11 +3184,12 @@ function vInterviewsLive(){const R=L.rows,ivs=(L.ivs||[]).slice();const coN=id=>
       <div class="muted small">${IVK[v.kind]} · round ${v.round} · ${v.minutes} min${v.location?` · ${v.kind==="video"?`<a href="${esc(/^https?:/i.test(v.location)?v.location:"https://"+v.location)}" target="_blank" rel="noopener">video link</a>`:esc(v.location)}`:""}</div></div>
       ${mode==="up"?`<span class="tag hit">${esc(uk(v.starts_at))}</span>`:mode==="wait"?`<span class="tag new">${v.status==="new_times"?"Asked for new times":"Waiting for them to pick"}</span>`:mode==="past"?(v.outcome?`<span class="tag ${OUT[v.outcome][1]}">${OUT[v.outcome][0]}</span>`:`<span class="tag">Outcome not recorded</span>`):`<span class="tag">Cancelled by ${v.cancelled&&v.cancelled.by==="pro"?"candidate":"company"}</span>`}</div>
     ${mode==="wait"?`<p class="small muted">Options: ${v.slots.map(x=>esc(uk(x))).join(" · ")}</p>`:mode==="past"||mode==="cx"?`<p class="small muted">${esc(uk(v.starts_at||v.slots[0]))}${mode==="cx"&&v.cancelled&&v.cancelled.reason?` · “${esc(v.cancelled.reason)}”`:""}</p>`:""}
-    ${mode==="up"?`<div class="row"><button class="btn line sm" data-ivcal="${v.id}">Add to my calendar</button></div>`:""}</div>`;
+    <div class="row">${mode==="up"?`<button class="btn line sm" data-ivcal="${v.id}">Add to my calendar</button>`:""}<button class="btn quiet sm" data-deal="${v.intro_id}">View deal</button></div></div>`;
   const sec=(h,list,mode,empty)=>`<div class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between"><h2>${h}</h2><span class="tag">${list.length}</span></div>${list.length?`<div class="list">${list.map(v=>row(v,mode)).join("")}</div>`:`<p class="muted small">${empty}</p>`}</div>`;
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent · Interviews</span><h1>Interviews</h1><p class="muted">Every interview booked through the Exchange. You and Connor also get each one as a calendar invite in Outlook, updated if it moves or is cancelled. Times are UK time.</p></div>
   <div class="stack" style="max-width:900px;gap:14px">${sec("Coming up",upcoming,"up","No interviews booked yet.")}${sec("Waiting for a time",waiting,"wait","Nothing waiting.")}${sec("Happened",past,"past","None yet.")}${cancelled.length?sec("Cancelled",cancelled,"cx",""):""}</div>`;
-  app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivs.find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]}: ${coN(v.company_id)} and ${proN(v.pro_id)}`)})}
+  app.querySelectorAll("[data-ivcal]").forEach(b=>b.onclick=()=>{const v=ivs.find(x=>x.id===b.dataset.ivcal);ivICS(v,`${IVK[v.kind]}: ${coN(v.company_id)} and ${proN(v.pro_id)}`)});
+  app.querySelectorAll("[data-deal]").forEach(b=>b.onclick=()=>openDeal(b.dataset.deal))}
 VIEWS.interviews=vInterviewsLive;
 
 /* ---------- Consumer Talent: all notifications in one place ---------- */
@@ -3204,7 +3206,7 @@ function vNotesLive(){const rows=L.noteRows||[];const f=L.nf||"all";const q0=(L.
     return h+`<div class="item" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;${n.read?"opacity:.72":""}">
       <span style="width:8px;height:8px;border-radius:50%;background:${n.read?"transparent":"var(--gold,#c8a96a)"}"></span>
       <div style="min-width:0"><div>${esc(n.text)}</div><div class="muted small">${esc(lab)} · ${new Date(n.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</div></div>
-      <div class="row" style="flex-wrap:nowrap">${n.go?`<button class="btn line sm" data-ngo="${n.id}">Open</button>`:""}${n.read?"":`<button class="btn quiet sm" data-nread="${n.id}">Mark read</button>`}</div></div>`}).join("");
+      <div class="row" style="flex-wrap:nowrap">${n.go||n.intro_id?`<button class="btn line sm" data-ngo="${n.id}">${n.intro_id?"Open deal":"Open"}</button>`:""}${n.read?"":`<button class="btn quiet sm" data-nread="${n.id}">Mark read</button>`}</div></div>`}).join("");
   app.innerHTML=`<div class="pagehead"><span class="kicker">Consumer Talent</span><h1>Notifications</h1><p class="muted">Everything that's happened on the Exchange, newest first. You also get these as pushes and emails.</p></div>
     <div class="stack" style="max-width:900px;gap:12px">
     <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Show" style="flex-wrap:wrap">${[["all","All",rows.length],["unread","Unread",cnt("unread")],...NCAT.map(c=>[c[0],c[1],cnt(c[0])])].map(([k,l,n])=>`<button data-nf="${k}" aria-pressed="${f===k}">${l} <span class="muted">${n}</span></button>`).join("")}</div>
@@ -3214,9 +3216,51 @@ function vNotesLive(){const rows=L.noteRows||[];const f=L.nf||"all";const q0=(L.
   const nq=$("#nq");nq.oninput=()=>{L.nq=nq.value;const pos=nq.selectionStart;vNotesLive();const x=$("#nq");x.focus();try{x.setSelectionRange(pos,pos)}catch(e){}};
   const markRead=async ids=>{if(!ids.length)return;await sb.from("notifications").update({read:true}).in("id",ids);rows.forEach(n=>{if(ids.includes(n.id))n.read=true});(S.notes||[]).forEach(n=>{if(ids.includes(n.dbId)){n.read=true;L.snap.notes[n.dbId]=true}});counts();vNotesLive()};
   app.querySelectorAll("[data-nread]").forEach(b=>b.onclick=()=>markRead([+b.dataset.nread]));
-  app.querySelectorAll("[data-ngo]").forEach(b=>b.onclick=async()=>{const n=rows.find(x=>x.id===+b.dataset.ngo);if(!n.read)await markRead([n.id]);location.hash=n.go});
+  app.querySelectorAll("[data-ngo]").forEach(b=>b.onclick=async()=>{const n=rows.find(x=>x.id===+b.dataset.ngo);if(!n.read)await markRead([n.id]);
+    if(n.intro_id){openDeal(n.intro_id);return}location.hash=n.go==="feedback"?"dash":n.go});
   const na=$("#nAll");if(na)na.onclick=()=>markRead(rows.filter(n=>!n.read).map(n=>n.id))}
 VIEWS.notifications=vNotesLive;
+
+/* the reveal note: the introduction's real reference is only known once it's saved, so don't quote a guessed one */
+autoReveal=function(i,c,why){if(i.stage!==2||i.brokered&&!termsOK())return;i.stage=3;i.revealedAt=Date.now();
+  i.msgs.push({f:"sys",t:`${why} You can now see who you're talking to: ${c.name}. Everything in this chat is logged on your activity record, and the introduction is protected until ${fmtDay(plus12(new Date()))}, 12 months from your latest interaction.`,at:tnow()});
+  logEvent(`Names shared: ${refOf(c.user)} is ${c.name}${i.dbId&&i.ref?` (${i.ref})`:""}`,"Consumer Talent")};
+
+/* ---------- Consumer Talent: one deal (introduction) in full ---------- */
+function openDeal(id){L.dealId=id;L.dealFrom=view();if(view()==="deal")vDealLive();else location.hash="deal"}
+async function vDealLive(){const R=L.rows,i=(R.intros||[]).find(x=>x.id===L.dealId);
+  if(!i){app.innerHTML=`<div class="empty"><h2>Deal not found</h2><p class="muted">It may have been deleted.</p><a class="btn" href="#notifications">Back to notifications</a></div>`;return}
+  const co=R.cos.find(c=>c.id===i.company_id)||{},pp=R.profs.find(p=>p.user_id===i.pro_id)||{};
+  if(L.dealData&&L.dealData.id!==i.id)L.dealData=null;
+  if(!L.dealData||L.dealStale){if(!L.dealData)app.innerHTML=`<div class="pagehead"><span class="kicker">Deal</span><h1>${esc(co.name||"")} · ${esc(pp.name||"")}</h1></div><p class="muted">Loading...</p>`;L.dealStale=false;
+    const [msgs,pub,fbs]=await Promise.all([q(sb.from("messages").select("*").eq("intro_id",i.id).order("id")),q(sb.from("pro_public").select("ref").eq("user_id",i.pro_id)),
+      q(sb.from("iv_feedback").select("*").in("iv_id",(L.ivs||[]).filter(v=>v.intro_id===i.id).map(v=>v.id).concat(["00000000-0000-0000-0000-000000000000"])))]);
+    L.dealData={id:i.id,msgs,ref:(pub[0]||{}).ref,fbs};if(view()!=="deal")return}
+  const D=L.dealData,cs=i.client_state||{},ivs=(L.ivs||[]).filter(v=>v.intro_id===i.id),ev=(R.events||[]).filter(e=>e.intro_id===i.id).sort((a,b)=>new Date(a.at)-new Date(b.at));
+  const ukd=d=>new Date(d).toLocaleString("en-GB",{timeZone:"Europe/London",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  const st=i.closed||i.status==="closed"?["Closed",""]:i.status==="declined"?["Declined",""]:cs.offerOut?["Offer out","hit"]:ivs.some(v=>v.status==="booked"||v.status==="held")?["Interviewing","brand"]:i.accepted_at?["Chatting","hit"]:["Requested","new"];
+  const lastAt=Math.max(...ev.map(e=>new Date(e.at).getTime()),i.accepted_at?new Date(i.accepted_at).getTime():0);
+  const until=i.accepted_at?new Date(new Date(lastAt).setFullYear(new Date(lastAt).getFullYear()+1)):null;
+  const who=m=>m.side==="client"?[co.name||"Company","var(--gold,#c8a96a)"]:m.side==="pro"?[pp.name||"Professional","var(--pew-2,#c3cad1)"]:m.side==="ct"?["Consumer Talent","var(--ink)"]:["Exchange","var(--muted)"];
+  const msgHTML=D.msgs.map(m=>{const [n,c]=who(m);const sys=m.side==="sys";return `<div style="display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:${sys?"transparent":"var(--soft,#201f1c)"};${sys?"border:1px dashed var(--line)":""}">
+      <div class="small" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="color:${c}">${esc(n)}</b><span class="muted">${m.audience!=="both"?`Only the ${m.audience==="client"?"company":"professional"} sees this · `:""}${esc(ukd(m.created_at))}</span></div>
+      <div style="${sys?"color:var(--muted);font-size:13.5px":""}">${esc(m.body)}${m.payload&&m.payload.blocked?` <span class="tag new">Blocked: contact details</span>`:""}</div></div>`}).join("")||`<p class="muted small">No messages yet.</p>`;
+  const fb=cs.fb||{};const fbCard=(k,lab)=>{const f=fb[k];if(!f)return "";return `<div class="stack" style="gap:4px;padding-top:10px;border-top:1px solid var(--line)"><b class="small">${lab} · ${esc(f.rating||"")}</b>
+      ${f.priv?`<span class="small"><span class="muted">Private to Consumer Talent:</span> ${esc(f.priv)}</span>`:""}${f.shared?`<span class="small"><span class="muted">Shared with the other side:</span> ${esc(f.shared)}</span>`:""}
+      <span class="muted small">${esc(f.by||"")}${f.at?" · "+esc(ukd(f.at)):""}${f.next==="part"?" · chose to go separate ways":""}</span></div>`};
+  const ivFb=D.fbs.map(f=>`<div class="small" style="padding-top:8px;border-top:1px solid var(--line)"><b>${f.side==="client"?esc(co.name||"Company"):esc(pp.name||"Professional")} on the interview:</b> ${esc(f.body)}</div>`).join("");
+  const OUT={next:"Another round",offer:"Making an offer",no:"Not progressing"};
+  app.innerHTML=`<div class="pagehead"><a href="#${esc(L.dealFrom&&L.dealFrom!=="deal"?L.dealFrom:"notifications")}" class="small muted" style="text-decoration:none">← Back</a>
+    <span class="kicker" style="margin-top:8px">Deal · ${esc(i.ref||"")}</span><h1>${esc(co.name||"Company")} · ${esc(pp.name||"Professional")}</h1>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><span class="tag ${st[1]}">${st[0]}</span>${D.ref?`<span class="tag">${/^Ref /.test(D.ref)?"":"Ref "}${esc(D.ref)}</span>`:""}${i.role?`<span class="tag">${esc(i.role)}</span>`:""}${i.from_apply?`<span class="tag">They applied</span>`:""}
+      <span class="muted small">${i.accepted_at?`Introduced ${esc(ukd(i.accepted_at))} · protected until ${esc(until.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}))}`:`Requested ${esc(ukd(i.created_at))} · not introduced yet`}</span></div></div>
+  <div class="cols"><div class="card stack" style="gap:8px;min-width:0"><h2>Conversation</h2><p class="muted small" style="margin:0">Everything said in this chat, including notes only one side sees.</p>${msgHTML}</div>
+    <div class="stack" style="gap:12px;min-width:0">
+      <div class="card stack" style="gap:6px"><h3>Feedback</h3>${fbCard("client",co.name||"Company")+fbCard("pro",pp.name||"Professional")+ivFb||`<p class="muted small" style="margin:0">No feedback yet.</p>`}</div>
+      <div class="card stack" style="gap:8px"><h3>Interviews</h3>${ivs.map(v=>`<div class="small" style="padding-top:8px;border-top:1px solid var(--line)"><b>${IVK[v.kind]} · round ${v.round}</b><br><span class="muted">${v.starts_at?esc(ukd(v.starts_at))+" UK":"Times suggested, not picked yet"} · ${v.status==="cancelled"?"Cancelled":v.outcome?OUT[v.outcome]:v.status==="booked"?"Booked":v.status==="held"?"Held":"Waiting"}</span></div>`).join("")||`<p class="muted small" style="margin:0">None yet.</p>`}</div>
+      <div class="card stack" style="gap:6px"><h3>Protection record</h3>${ev.map(e=>`<div class="small" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px"><span class="muted" style="white-space:nowrap;font-variant-numeric:tabular-nums">${esc(new Date(e.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}</span><span>${esc(e.what)}</span></div>`).join("")||`<p class="muted small" style="margin:0">Nothing logged yet.</p>`}</div>
+    </div></div>`}
+VIEWS.deal=()=>vDealLive();
 // badges: unread notifications, and launch-list sign-ups since you last looked
 const _countsLive=counts;
 counts=function(){_countsLive();if(L.role!=="admin")return;
@@ -3343,7 +3387,7 @@ keep(ADMIN_TABS,["dash","notifications","interviews","invites","clients","termsa
 ADMIN_TABS.forEach(t=>{if(t[0]==="waitlist")t[1]="Launch list"});
 const ai=ADMIN_TABS.find(t=>t[0]==="invites");if(ai){ai[1]="Sign-ups";ai[2]="i"}
 const ROLE_TABS={client:CLIENT_TABS,pro:CAND_TABS,admin:ADMIN_TABS};
-view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="sign"&&L.role==="client")return h;const ok=ROLE_TABS[L.role].map(t=>t[0]);return ok.includes(h)?h:ok[0]};
+view=function(){const h=location.hash.slice(1);if(!L.role)return "auth";if(h==="sign"&&L.role==="client")return h;if(h==="deal"&&L.role==="admin"&&L.dealId)return h;const ok=ROLE_TABS[L.role].map(t=>t[0]);return ok.includes(h)?h:ok[0]};
 VIEWS.auth=vAuth;
 
 /* ---------- sign in / join ---------- */
